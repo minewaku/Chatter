@@ -26,6 +26,10 @@ spring:
               - Path=/api/v1/messages/**
   profiles:
     active: dev
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
 
 eureka:
   client:

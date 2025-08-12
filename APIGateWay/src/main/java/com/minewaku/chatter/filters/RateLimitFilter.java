@@ -8,32 +8,26 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.time.Instant;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.TimeUnit;
 
 @Component
-@Order(Ordered.HIGHEST_PRECEDENCE + 20)
+@Order(Ordered.HIGHEST_PRECEDENCE + 30)
 public class RateLimitFilter extends OncePerRequestFilter {
 
     private static final int HTTP_STATUS_TOO_MANY_REQUESTS = 429;
 
     private final RateLimitProperties properties;
+    private final StringRedisTemplate stringRedisTemplate;
 
-    private static class Counter {
-        volatile long windowEpochSecond;
-        final AtomicInteger count = new AtomicInteger(0);
-    }
-
-    private final Map<String, Counter> keyToCounter = new ConcurrentHashMap<>();
-
-    public RateLimitFilter(RateLimitProperties properties) {
+    public RateLimitFilter(RateLimitProperties properties, StringRedisTemplate stringRedisTemplate) {
         this.properties = properties;
+        this.stringRedisTemplate = stringRedisTemplate;
     }
 
     @Override
@@ -43,38 +37,34 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        String key = resolveKey(request);
-        long nowSec = Instant.now().getEpochSecond();
-        Counter counter = keyToCounter.computeIfAbsent(key, k -> {
-            Counter c = new Counter();
-            c.windowEpochSecond = nowSec;
-            return c;
-        });
+        String username = resolveUsername(request);
+        if (username == null || username.isBlank()) {
+            // If no username, optionally fallback to IP or skip limiting
+            username = properties.isUseIpFallback() ? request.getRemoteAddr() : "global";
+        }
 
-        synchronized (counter) {
-            if (nowSec - counter.windowEpochSecond >= properties.getWindowSeconds()) {
-                counter.windowEpochSecond = nowSec;
-                counter.count.set(0);
-            }
-            int current = counter.count.incrementAndGet();
-            if (current > properties.getRequestsPerMinute()) {
-                response.setStatus(HTTP_STATUS_TOO_MANY_REQUESTS);
-                response.setHeader("Retry-After", String.valueOf(properties.getWindowSeconds()));
-                throw new RateLimitExceededException("Rate limit exceeded");
-            }
+        long nowSec = Instant.now().getEpochSecond();
+        long window = properties.getWindowSeconds();
+        long windowStart = nowSec - (nowSec % window);
+        String redisKey = String.format("ratelimit:%s:%d", username, windowStart);
+
+        Long current = stringRedisTemplate.opsForValue().increment(redisKey);
+        if (current != null && current == 1L) {
+            stringRedisTemplate.expire(redisKey, window, TimeUnit.SECONDS);
+        }
+
+        int limit = properties.getRequestsPerMinute();
+        if (current != null && current > limit) {
+            response.setStatus(HTTP_STATUS_TOO_MANY_REQUESTS);
+            response.setHeader("Retry-After", String.valueOf(window));
+            throw new RateLimitExceededException("Rate limit exceeded");
         }
 
         filterChain.doFilter(request, response);
     }
 
-    private String resolveKey(HttpServletRequest request) {
-        String header = request.getHeader(properties.getKeyHeader());
-        if (header != null && !header.isBlank()) {
-            return header;
-        }
-        if (properties.isUseIpFallback()) {
-            return request.getRemoteAddr();
-        }
-        return "global";
+    private String resolveUsername(HttpServletRequest request) {
+        Object attr = request.getAttribute(AuthenticationFilter.REQUEST_ATTR_USERNAME);
+        return attr != null ? String.valueOf(attr) : null;
     }
 }

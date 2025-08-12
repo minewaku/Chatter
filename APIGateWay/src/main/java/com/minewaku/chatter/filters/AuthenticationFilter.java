@@ -1,6 +1,8 @@
 package com.minewaku.chatter.filters;
 
 import com.minewaku.chatter.exceptions.UnauthorizedException;
+import com.minewaku.chatter.utils.JWTUtils;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -9,20 +11,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
-import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Map;
+import java.util.Optional;
 
 @Component
-@Order(Ordered.HIGHEST_PRECEDENCE + 30)
+@Order(Ordered.HIGHEST_PRECEDENCE + 20)
 public class AuthenticationFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(AuthenticationFilter.class);
@@ -33,10 +30,12 @@ public class AuthenticationFilter extends OncePerRequestFilter {
             "/api/auth/refresh"
     };
 
-    private final RestTemplate restTemplate;
+    public static final String REQUEST_ATTR_USERNAME = "AUTHENTICATED_USERNAME";
 
-    public AuthenticationFilter(RestTemplate restTemplate) {
-        this.restTemplate = restTemplate;
+    private final JWTUtils jwtUtils;
+
+    public AuthenticationFilter(JWTUtils jwtUtils) {
+        this.jwtUtils = jwtUtils;
     }
 
     @Override
@@ -59,27 +58,20 @@ public class AuthenticationFilter extends OncePerRequestFilter {
         }
 
         String token = authHeader.substring(7);
-        try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setBearerAuth(token);
-            HttpEntity<Void> httpEntity = new HttpEntity<>(headers);
-            // Delegate to AuthService for token validation
-            ResponseEntity<Void> validateResponse = restTemplate.exchange(
-                    "http://AUTH-SERVICE/api/auth/validate",
-                    HttpMethod.GET,
-                    httpEntity,
-                    Void.class
-            );
-            if (!validateResponse.getStatusCode().is2xxSuccessful()) {
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                throw new UnauthorizedException("Invalid token");
-            }
-        } catch (RestClientException ex) {
-            log.warn("Auth validation failed: {}", ex.getMessage());
+        Optional<Claims> claimsOptional = jwtUtils.parseClaims(token);
+        if (claimsOptional.isEmpty()) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            throw new UnauthorizedException("Unauthorized");
+            throw new UnauthorizedException("Invalid token");
         }
 
+        Claims claims = claimsOptional.get();
+        String username = claims.getSubject();
+        if (username == null || username.isBlank()) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            throw new UnauthorizedException("Invalid token subject");
+        }
+
+        request.setAttribute(REQUEST_ATTR_USERNAME, username);
         filterChain.doFilter(request, response);
     }
 }
