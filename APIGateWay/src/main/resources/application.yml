@@ -8,10 +8,7 @@ spring:
     gateway:
       mvc:
         routes:
-          - id: auth-service
-            uri: lb://AUTH-SERVICE
-            predicates:
-              - Path=/api/auth/**
+          # Removed direct auth-service route to handle via Feign in controller
           - id: user-service-v1
             uri: lb://USER-SERVICE
             predicates:
@@ -26,6 +23,10 @@ spring:
               - Path=/api/v1/messages/**
   profiles:
     active: dev
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
 
 eureka:
   client:
