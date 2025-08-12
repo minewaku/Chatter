@@ -79,9 +79,19 @@
 		</dependency>
 		<!-- Bucket4j core (Redis integration can be added later if needed) -->
 		<dependency>
-			<groupId>com.bucket4j</groupId>
+			<groupId>io.github.bucket4j</groupId>
 			<artifactId>bucket4j-core</artifactId>
-			<version>8.9.0</version>
+			<version>8.8.0</version>
+		</dependency>
+		<dependency>
+			<groupId>io.github.bucket4j</groupId>
+			<artifactId>bucket4j-redis-lettuce</artifactId>
+			<version>8.8.0</version>
+		</dependency>
+		<dependency>
+			<groupId>io.lettuce</groupId>
+			<artifactId>lettuce-core</artifactId>
+			<version>6.5.2.RELEASE</version>
 		</dependency>
 	</dependencies>
 	<dependencyManagement>
