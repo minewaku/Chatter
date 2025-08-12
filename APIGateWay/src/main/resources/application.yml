@@ -8,7 +8,10 @@ spring:
     gateway:
       mvc:
         routes:
-          # Removed direct auth-service route to handle via Feign in controller
+          - id: auth-service
+            uri: lb://AUTH-SERVICE
+            predicates:
+              - Path=/api/auth/**
           - id: user-service-v1
             uri: lb://USER-SERVICE
             predicates:
