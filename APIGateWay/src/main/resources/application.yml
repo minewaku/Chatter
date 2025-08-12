@@ -1,0 +1,57 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: APIGateWay
+  cloud:
+    gateway:
+      mvc:
+        routes:
+          - id: auth-service
+            uri: lb://AUTH-SERVICE
+            predicates:
+              - Path=/api/auth/**
+          - id: user-service-v1
+            uri: lb://USER-SERVICE
+            predicates:
+              - Path=/api/v1/users/**
+          - id: chat-service-v1
+            uri: lb://CHAT-SERVICE
+            predicates:
+              - Path=/api/v1/chats/**
+          - id: message-service-v1
+            uri: lb://MESSAGE-SERVICE
+            predicates:
+              - Path=/api/v1/messages/**
+  profiles:
+    active: dev
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info,metrics,loggers,env"
+
+# Gateway custom properties
+gateway:
+  ratelimit:
+    enabled: true
+    requests-per-minute: 120
+    key-header: X-API-KEY
+    use-ip-fallback: true
+
+cors:
+  allowed-origins: "*"
+  allowed-methods: "GET,POST,PUT,DELETE,OPTIONS"
+  allowed-headers: "Authorization,Content-Type,X-Requested-With"
+
+logging:
+  level:
+    root: INFO
+    com.minewaku.chatter: DEBUG
