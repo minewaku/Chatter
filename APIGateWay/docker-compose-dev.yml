@@ -1,0 +1,20 @@
+version: '3.8'
+
+networks:
+  chatter-net:
+    name: chatter-net
+    driver: bridge
+
+services:
+  redis:
+    image: redis:7
+    container_name: api-gateway-redis-chatter
+    restart: always
+    ports:
+      - "6380:6380"
+    volumes:
+      - ./docker/redis/data:/data
+      - ./docker/redis/config/redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf --port 6380 --appendonly yes
+    networks:
+      - chatter-net

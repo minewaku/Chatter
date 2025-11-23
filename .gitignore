@@ -1,0 +1,91 @@
+###################################
+# Java / JVM
+###################################
+*.class
+*.war
+*.ear
+*.jar
+*.jpi
+*.zip
+*.tar.gz
+
+###################################
+# IntelliJ
+###################################
+**/.idea/
+**/*.iml
+**/*.ipr
+**/*.iws
+**/out/
+
+###################################
+# VS Code
+###################################
+**/.vscode/
+
+###################################
+# Eclipse
+###################################
+**/.project
+**/.classpath
+**/.factorypath
+**/.settings/
+**/bin/
+
+###################################
+# OS Files
+###################################
+.DS_Store
+Thumbs.db
+
+###################################
+# Maven
+###################################
+**/target/
+!.mvn/wrapper/maven-wrapper.jar
+**/.mvn/timing.properties
+**/.mvn/wrapper/maven-wrapper.properties
+**/release.properties
+**/dependency-reduced-pom.xml
+
+###################################
+# Gradle
+###################################
+**/.gradle/
+**/build/
+!**/gradle/wrapper/gradle-wrapper.jar
+gradlew
+gradlew.bat
+
+###################################
+# Spring Boot Logs
+###################################
+*.log
+**/logs/
+tomcat.*
+hs_err_pid*
+
+###################################
+# Docker
+###################################
+*.pid
+**/docker/volumes/
+**/docker-data/
+**/data/
+
+###################################
+# Test outputs
+###################################
+**/test-output/
+**/surefire-reports/
+**/jacoco.exec
+
+###################################
+# Temporary files
+###################################
+**/tmp/
+**/tmp-1/
+*.tmp
+*.bak
+*.orig
+**/.env

@@ -1,0 +1,19 @@
+apiVersion: api.cerbos.dev/v1
+resourcePolicy:
+  resource: "gay"
+  version: "default"
+  importDerivedRoles:
+    - user_roles
+  rules:
+    - actions: ['view', 'edit']
+      derivedRoles:
+        - admin
+        - moderator
+      effect: EFFECT_ALLOW
+      condition:
+        match:
+          all:
+            of:
+              # 1. Resource attributes
+              - expr: request.resource.attr.imgay == true
+              - expr: request.resource.attr.age >= 18

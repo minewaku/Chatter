@@ -1,77 +1,83 @@
 package com.minewaku.chatter.filters;
 
-import com.minewaku.chatter.exceptions.UnauthorizedException;
-import com.minewaku.chatter.utils.JWTUtils;
-import io.jsonwebtoken.Claims;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.Ordered;
-import org.springframework.core.annotation.Order;
+import org.springframework.cloud.gateway.filter.GatewayFilter;
+import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
-import org.springframework.web.filter.OncePerRequestFilter;
 
-import java.io.IOException;
-import java.util.Optional;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.minewaku.chatter.constants.ExchangeAttr;
+import com.minewaku.chatter.exceptions.InvalidTokenException;
+import com.minewaku.chatter.utils.JwtUtil;
 
 @Component
-@Order(Ordered.HIGHEST_PRECEDENCE + 20)
-public class AuthenticationFilter extends OncePerRequestFilter {
+public class AuthenticationFilter extends AbstractGatewayFilterFactory<AuthenticationFilter.Config> {
 
     private static final Logger log = LoggerFactory.getLogger(AuthenticationFilter.class);
 
-    private static final String[] WHITELIST = new String[]{
-            "/api/auth/login",
-            "/api/auth/register",
-            "/api/auth/refresh"
-    };
+    private final JwtUtil jwtUtils;
+    private final ObjectMapper objectMapper;
 
-    public static final String REQUEST_ATTR_USERNAME = "AUTHENTICATED_USERNAME";
-
-    private final JWTUtils jwtUtils;
-
-    public AuthenticationFilter(JWTUtils jwtUtils) {
+    public AuthenticationFilter(
+        JwtUtil jwtUtils,
+        ObjectMapper objectMapper) {
+        
+        super(Config.class);
         this.jwtUtils = jwtUtils;
+        this.objectMapper = objectMapper;
     }
 
     @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getRequestURI();
-        for (String open : WHITELIST) {
-            if (path.startsWith(open)) {
-                return true;
+    public GatewayFilter apply(Config config) {
+        return (exchange, chain) -> {
+            String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+            String token = extractBearerToken(authHeader);
+            if (token == null) {
+                exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                return exchange.getResponse().setComplete();
             }
-        }
-        return false;
+
+            return jwtUtils.parseClaims(token)
+                .flatMap(claims -> {
+                    String username = claims.get("email", String.class);
+                    Long userId = Long.parseLong(claims.getSubject());
+                    List<String> roles = objectMapper.convertValue(
+                        claims.get("roles"),
+                        new TypeReference<List<String>>() {});
+
+                    if (username == null || username.isBlank()) {
+                        log.warn("Invalid username in token");
+                        exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                        return exchange.getResponse().setComplete();
+                    }
+
+                    ExchangeAttr.USERNAME.put(exchange, username);
+                    ExchangeAttr.USER_ID.put(exchange, userId);
+                    ExchangeAttr.ROLES.put(exchange, java.util.Arrays.asList(roles));
+
+                    return chain.filter(exchange);
+                })
+                .onErrorResume(InvalidTokenException.class, e -> {
+                    exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                    return exchange.getResponse().setComplete();
+                });
+        };
     }
 
-    @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            throw new UnauthorizedException("Authorization header is missing or invalid");
-        }
+    private String extractBearerToken(String header) {
+        if (header == null || !header.startsWith("Bearer ")) return null;
+        return header.substring(7);
+    }
 
-        String token = authHeader.substring(7);
-        Optional<Claims> claimsOptional = jwtUtils.parseClaims(token);
-        if (claimsOptional.isEmpty()) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            throw new UnauthorizedException("Invalid token");
-        }
+    public static class Config {
 
-        Claims claims = claimsOptional.get();
-        String username = claims.getSubject();
-        if (username == null || username.isBlank()) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            throw new UnauthorizedException("Invalid token subject");
-        }
-
-        request.setAttribute(REQUEST_ATTR_USERNAME, username);
-        filterChain.doFilter(request, response);
     }
 }
+

@@ -1,0 +1,73 @@
+version: '3.8'
+
+networks:
+  chatter-net:
+    name: chatter-net
+    driver: bridge
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: authentication-mysql-chatter
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: chatter
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: admin
+    ports:
+      - "3314:3314"
+    command:
+      --default-authentication-plugin=mysql_native_password
+      --binlog_format=ROW
+      --server-id=3
+      --log-bin=mysql-bin
+      --binlog-do-db=outbox
+      --binlog-format=ROW 
+      --binlog-row-image=FULL
+      --port=3314
+    volumes:
+      - ./docker/mysql/data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d
+    networks:
+      - chatter-net
+
+  redis:
+      image: redis:7
+      container_name: authentication-redis-chatter
+      restart: always
+      ports:
+        - "6387:6387"
+      volumes:
+        - ./docker/redis/data:/data
+        - ./docker/redis/config/redis.conf:/usr/local/etc/redis/redis.conf
+      command: redis-server /usr/local/etc/redis/redis.conf --port 6387 --appendonly yes
+      networks:
+        - chatter-net
+  postgresql:
+    image: postgres:15
+    container_name: authentication-postgresql-chatter
+    restart: always
+    environment:
+      POSTGRES_DB: chatter
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "5440:5440"
+    command:
+      - "postgres"
+      - "-c"
+      - "listen_addresses=*"
+      - "-c"
+      - "port=5440"
+      - "-c"
+      - "wal_level=logical"
+      - "-c"
+      - "max_wal_senders=10"
+      - "-c"
+      - "max_replication_slots=10"
+    volumes:
+      - ./docker/postgresql/data:/var/lib/postgresql/data
+      - ./docker/postgresql/init:/docker-entrypoint-initdb.d
+    networks:
+      - chatter-net

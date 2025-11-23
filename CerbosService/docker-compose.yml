@@ -1,0 +1,22 @@
+version: '3.8'
+
+networks:
+  chatter-net:
+    name: chatter-net
+
+services:
+  cerbos:
+    image: ghcr.io/cerbos/cerbos:latest
+    container_name: cerbos-chatter
+    restart: unless-stopped
+    ports:
+      - "3599:3599"
+      - "3600:3600"
+    volumes:
+      - ./docker/policies:/policies
+      - ./docker/data:/data
+      - ./docker/config/config.yaml:/config.yaml
+    command: ["server", "--config=/config.yaml"]
+
+
+

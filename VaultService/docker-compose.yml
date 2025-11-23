@@ -1,0 +1,40 @@
+version: '3.8'
+
+networks:
+  chatter-net:
+    name: chatter-net
+    driver: bridge
+
+services:
+  vault:
+    image: hashicorp/vault:1.17
+    container_name: vault-chatter
+    environment:
+      VAULT_ADDR: http://127.0.0.1:5002
+      VAULT_LOCAL_CONFIG: |
+        {
+          "listener": {
+            "tcp": {
+              "address": "0.0.0.0:5002",
+              "tls_disable": 1
+            }
+          },
+          "storage": {
+            "file": {
+              "path": "/vault/file"
+            }
+          },
+          "ui": true
+        }
+
+    cap_add:
+      - IPC_LOCK                     # prevent swapping from secret to disk
+    ports:
+      - "5002:5002"
+    volumes:
+      - ./vault/config:/vault/config # map from config to host
+      - ./vault/data:/vault/file     # map from data to host
+      - ./vault/tmp:/vault/tmp       # map from tmp to host
+    networks:
+      - chatter-net
+    command: server

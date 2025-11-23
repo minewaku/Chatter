@@ -1,0 +1,59 @@
+version: '3.8'
+
+networks:
+  chatter-net:
+    name: chatter-net
+
+services:
+  kafka-zookeeper-chatter:
+    image: confluentinc/cp-zookeeper:7.6.0
+    container_name: kafka-zookeeper-chatter
+    user: root
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_SERVER_ID: 1
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_INIT_LIMIT: 5
+      ZOOKEEPER_SYNC_LIMIT: 2
+    ports:
+      - "2181:2181"
+    volumes:
+      - ./data/zookeeper_data:/var/lib/zookeeper
+    networks:
+      - chatter-net
+
+  kafka-chatter:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: kafka-chatter
+    user: root
+    depends_on:
+      - kafka-zookeeper-chatter
+    ports:
+      - "5003:5003"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: kafka-zookeeper-chatter:2181
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:5003
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-chatter:5003
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_ALLOW_PLAINTEXT_LISTENER: "yes"   # required when running as root
+    volumes:
+      - ./data/kafka_data:/var/lib/kafka/data
+      - ./scripts:/opt/kafka/scripts
+    networks:
+      - chatter-net
+
+  kafka-ui-chatter:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui-chatter
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:5003
+      - KAFKA_CLUSTERS_0_READONLY=false
+    depends_on:
+      - kafka-chatter
+    networks:
+      - chatter-net

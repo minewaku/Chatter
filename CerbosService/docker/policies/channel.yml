@@ -1,0 +1,27 @@
+apiVersion: api.cerbos.dev/v1
+resourcePolicy:
+  resource: "channel"
+  version: "default"
+  importDerivedRoles:
+    - user_roles
+
+  rules:
+    - actions: ['view', 'edit']
+      roles:
+        - user
+      effect: EFFECT_ALLOW
+      condition:
+        match:
+          all:
+            of:
+              - expr: request.resource.attr.isMember == true
+              - expr: request.principal.attr.age >= 18
+              - expr: request.resource.attr.visibility == "public" || request.resource.attr.asshole == true
+              - any:
+                  of:
+                    - expr: request.resource.attr.category == "entertainment"
+                    - expr: request.resource.attr.category == "education"
+              - none:  # Không được phép nếu...
+                  of:
+                    - expr: request.resource.attr.isBanned == true
+                    - expr: request.resource.attr.reportedCount > 5
