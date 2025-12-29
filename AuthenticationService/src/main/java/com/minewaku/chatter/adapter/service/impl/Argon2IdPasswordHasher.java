@@ -10,24 +10,23 @@ import com.password4j.Hash;
 @Service
 public class Argon2IdPasswordHasher implements PasswordHasher {
 
-	@Override
+    @Override
     public HashedPassword hash(Password rawPassword) {
         Hash hash = com.password4j.Password.hash(rawPassword.getValue())
                 .addRandomSalt(16)
-                .withArgon2(); // mặc định là Argon2id
+                .withArgon2();
+
+        System.out.println("Generated salt (base64): " + hash.toString());
 
         return new HashedPassword(
                 "argon2id",
                 hash.getResult(),
-                hash.getSalt().getBytes()
-        );
+                hash.getSalt().getBytes());
     }
 
-	@Override
-	public boolean matches(Password password, HashedPassword hashedPassword) {
-		   return com.password4j.Password.check(password.getValue(), hashedPassword.getHash())
-                   .addSalt(new String(hashedPassword.getSalt()))
-                   .withArgon2();
-	}
-
+    @Override
+    public boolean matchesBetweenRawAndHashed(Password rawPassword, HashedPassword hashedPassword) {
+        return com.password4j.Password.check(rawPassword.getValue(), hashedPassword.getHash())
+                .withArgon2();
+    }
 }

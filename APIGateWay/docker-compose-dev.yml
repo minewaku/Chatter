@@ -6,7 +6,7 @@ networks:
     driver: bridge
 
 services:
-  redis:
+  api-gateway-redis-chatter:
     image: redis:7
     container_name: api-gateway-redis-chatter
     restart: always

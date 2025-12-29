@@ -5,17 +5,17 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 
-import com.minewaku.chatter.config.properties.CacheProperties;
+import com.minewaku.chatter.config.properties.VaultRedisProperties;
 
 @Configuration
 public class AppConfig {
- 
+
     @Bean
     @Primary
-    RedisProperties redisProperties(CacheProperties cacheProperties) {
+    RedisProperties redisProperties(VaultRedisProperties vaultRedisProperties) {
         RedisProperties redisProperties = new RedisProperties();
-        redisProperties.setUsername(cacheProperties.getUsername());
-        redisProperties.setPassword(cacheProperties.getPassword());
+        redisProperties.setUsername(vaultRedisProperties.getUsername());
+        redisProperties.setPassword(vaultRedisProperties.getPassword());
 
         return redisProperties;
     }

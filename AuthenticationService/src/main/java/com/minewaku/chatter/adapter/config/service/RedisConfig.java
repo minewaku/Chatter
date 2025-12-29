@@ -3,7 +3,6 @@ package com.minewaku.chatter.adapter.config.service;
 import java.time.Duration;
 
 import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
-import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -15,32 +14,51 @@ import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactor
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.GenericToStringSerializer;
+import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
-import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
-import com.minewaku.chatter.adapter.config.properties.CacheProperties;
-import com.minewaku.chatter.domain.model.ConfirmationToken;
-import com.minewaku.chatter.domain.model.RefreshToken;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.minewaku.chatter.adapter.db.redis.dto.ConfirmationTokenDto;
+import com.minewaku.chatter.adapter.db.redis.dto.RefreshTokenDto;
 
 @Configuration
 public class RedisConfig {
 
     @Bean
-    LettuceConnectionFactory redisConnectionFactory(RedisProperties redisProperties, CacheProperties cacheProperties) {
+    LettuceConnectionFactory redisConnectionFactory(RedisProperties redisProperties) {
         RedisStandaloneConfiguration config = new RedisStandaloneConfiguration(
                 redisProperties.getHost(),
                 redisProperties.getPort());
-        config.setUsername(cacheProperties.getUsername());
-        config.setPassword(cacheProperties.getPassword());
+
+        config.setUsername(redisProperties.getUsername());
+        config.setPassword(redisProperties.getPassword());
 
         LettuceConnectionFactory factory = new LettuceConnectionFactory(config);
         return factory;
     }
 
     @Bean
+    GenericJackson2JsonRedisSerializer customJsonRedisSerializer() {
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+
+        // Enable default typing to include type information during serialization
+        // (without it, the deserializer have no idea how to convert the whole class
+        // back, so it gonna convert it into LinkedHashMap)
+        objectMapper.activateDefaultTyping(
+                LaissezFaireSubTypeValidator.instance,
+                ObjectMapper.DefaultTyping.NON_FINAL);
+
+        return new GenericJackson2JsonRedisSerializer(objectMapper);
+    }
+
+    @Bean
     @Primary
-    public RedisTemplate<Object, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
+    RedisTemplate<Object, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
         RedisTemplate<Object, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(redisConnectionFactory);
         template.setKeySerializer(new GenericToStringSerializer<>(Object.class));
@@ -58,26 +76,46 @@ public class RedisConfig {
     }
 
     @Bean
-    public RedisTemplate<String, RefreshToken> redisTemplateRefreshToken(RedisConnectionFactory connectionFactory) {
-        RedisTemplate<String, RefreshToken> template = new RedisTemplate<>();
-        template.setConnectionFactory(connectionFactory);
-        template.setKeySerializer(new StringRedisSerializer());
-        template.setValueSerializer(new GenericJackson2JsonRedisSerializer());
-        return template;
-    }
-
-    @Bean
-    public RedisTemplate<String, ConfirmationToken> redisTemplateConfirmationToken(
+    RedisTemplate<String, RefreshTokenDto> redisTemplateRefreshTokenDto(
             RedisConnectionFactory connectionFactory) {
-        RedisTemplate<String, ConfirmationToken> template = new RedisTemplate<>();
+        RedisTemplate<String, RefreshTokenDto> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+        Jackson2JsonRedisSerializer<RefreshTokenDto> serializer = new Jackson2JsonRedisSerializer<>(objectMapper,
+                RefreshTokenDto.class);
+
         template.setKeySerializer(new StringRedisSerializer());
-        template.setValueSerializer(new GenericJackson2JsonRedisSerializer());
+        template.setValueSerializer(serializer);
+        template.afterPropertiesSet();
         return template;
     }
 
     @Bean
-    public RedisTemplate<Object, Object> hashRedisTemplate(RedisConnectionFactory redisConnectionFactory) {
+    RedisTemplate<String, ConfirmationTokenDto> redisTemplateConfirmationTokenDto(
+            RedisConnectionFactory connectionFactory) {
+        RedisTemplate<String, ConfirmationTokenDto> template = new RedisTemplate<>();
+        template.setConnectionFactory(connectionFactory);
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+        Jackson2JsonRedisSerializer<ConfirmationTokenDto> serializer = new Jackson2JsonRedisSerializer<>(objectMapper,
+                ConfirmationTokenDto.class);
+
+        template.setKeySerializer(new StringRedisSerializer());
+        template.setValueSerializer(serializer);
+        template.afterPropertiesSet();
+        return template;
+    }
+
+    @Bean
+    RedisTemplate<Object, Object> hashRedisTemplate(RedisConnectionFactory redisConnectionFactory) {
+
         RedisTemplate<Object, Object> redisTemplate = new RedisTemplate<>();
         redisTemplate.setConnectionFactory(redisConnectionFactory);
         redisTemplate.setKeySerializer(new GenericToStringSerializer<>(Object.class));
@@ -88,17 +126,20 @@ public class RedisConfig {
     }
 
     @Bean
-    public RedisCacheManager cacheManager(RedisConnectionFactory redisConnectionFactory) {
-        RedisCacheConfiguration cacheConfiguration = RedisCacheConfiguration.defaultCacheConfig()
+    RedisCacheManager cacheManager(
+            RedisConnectionFactory connectionFactory,
+            GenericJackson2JsonRedisSerializer genericJackson2JsonRedisSerializer) {
+        RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(Duration.ofMinutes(10))
                 .disableCachingNullValues()
                 .serializeKeysWith(
                         RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
                 .serializeValuesWith(
-                        RedisSerializationContext.SerializationPair.fromSerializer(RedisSerializer.json()));
+                        RedisSerializationContext.SerializationPair.fromSerializer(genericJackson2JsonRedisSerializer));
 
-        return RedisCacheManager.builder(redisConnectionFactory)
-                .cacheDefaults(cacheConfiguration)
+        return RedisCacheManager.builder(connectionFactory)
+                .cacheDefaults(config)
                 .build();
     }
+
 }

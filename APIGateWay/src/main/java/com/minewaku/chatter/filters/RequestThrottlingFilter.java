@@ -54,6 +54,8 @@ public class RequestThrottlingFilter extends AbstractGatewayFilterFactory<Reques
             List<String> roles = objectMapper.convertValue(
                 ExchangeAttr.ROLES.get(exchange),
                 new TypeReference<List<String>>() {});
+            
+            log.info("Incoming request: {}", config.toString());
 
             RateLimitRule matchedRule = rateLimitConfig.getRules().stream()
                     .filter(rule -> rule.pathMatches(path))

@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 
+import com.minewaku.chatter.domain.exception.BusinessRuleViolationException;
 import com.minewaku.chatter.domain.value.id.UserId;
 
 import lombok.Getter;
@@ -13,73 +14,91 @@ import lombok.ToString;
 @Getter
 @ToString
 public class RefreshToken {
-	
-	@NonNull
+
+    @NonNull
     private final String token;
 
-	@NonNull
+    @NonNull
     private final Duration duration;
 
-	@NonNull
+    @NonNull
     private final Instant issuedAt;
 
-	@NonNull
+    @NonNull
     private final Instant expiresAt;
 
-	@NonNull
+    @NonNull
     private final UserId userId;
-    
+
     private boolean revoked = false;
-    
+
     @NonNull
     private Instant revokedAt;
-    
+
     @NonNull
     private String replacedBy;
 
     // Private constructor
-    private RefreshToken(@NonNull String token, @NonNull Duration duration, 
-            @NonNull Instant issuedAt, @NonNull UserId userId, 
-            String replacedBy, boolean revoked, Instant revokedAt) {
-    	
-        if (replacedBy.isBlank()) {
-            throw new IllegalArgumentException("ReplacedBy cannot be blank");
-        }
-        
+    private RefreshToken(
+            @NonNull String token,
+            @NonNull Duration duration,
+            @NonNull Instant issuedAt,
+            @NonNull Instant expiresAt,
+            @NonNull UserId userId,
+            String replacedBy,
+            boolean revoked,
+            Instant revokedAt) {
+
         this.token = token;
         this.duration = duration;
         this.issuedAt = issuedAt;
-        this.expiresAt = issuedAt.plus(duration);
+        this.expiresAt = expiresAt;
         this.userId = userId;
         this.revoked = revoked;
         this.revokedAt = revokedAt;
         this.replacedBy = replacedBy;
     }
 
-    // Static factory for loading existing data
-    public static RefreshToken reconstitute(@NonNull String token, @NonNull Duration duration, @NonNull Instant issuedAt, @NonNull UserId userId, String replacedBy, boolean revoked, Instant revokedAt) {
-        return new RefreshToken(token, duration, issuedAt, userId, replacedBy, revoked, revokedAt);
+    public static RefreshToken reconstitute(
+            @NonNull String token,
+            @NonNull Duration duration,
+            @NonNull Instant issuedAt,
+            @NonNull Instant expiresAt,
+            @NonNull UserId userId,
+            String replacedBy,
+            boolean revoked,
+            Instant revokedAt) {
+
+        return new RefreshToken(token, duration, issuedAt, expiresAt, userId, replacedBy, revoked, revokedAt);
     }
 
     // Static factory for loading existing data
-    public static RefreshToken createNew(@NonNull String token, @NonNull Duration duration, @NonNull Instant issuedAt, @NonNull UserId userId) {
-        return new RefreshToken(token, duration, issuedAt, userId, null, false, null);
+    public static RefreshToken createNew(
+            @NonNull String token,
+            Duration duration,
+            @NonNull UserId userId) {
+
+        Instant now = Instant.now();
+        Duration dur = Objects.isNull(duration) ? Duration.ofMinutes(15L) : duration;
+
+        RefreshToken refreshToken = new RefreshToken(token, dur, now, now.plus(dur), userId, null, false, null);
+        return refreshToken;
     }
 
     public void replace(RefreshToken replacedBy) {
         revoke();
-        if(token.equals(replacedBy.getToken())) {
-            throw new IllegalStateException("New token cannot reuse old token value");
+        if (token.equals(replacedBy.getToken())) {
+            throw new BusinessRuleViolationException("New token cannot reuse old token value");
         }
         this.replacedBy = replacedBy.getToken();
     }
 
     public void revoke() {
         if (revoked) {
-            throw new IllegalStateException("Token already revoked at " + revokedAt);
+            throw new BusinessRuleViolationException("Token already revoked at " + revokedAt);
         }
         if (Instant.now().isAfter(expiresAt)) {
-            throw new IllegalStateException("Cannot revoke an expired token");
+            throw new BusinessRuleViolationException("Cannot revoke an expired token");
         }
         this.revoked = true;
         this.revokedAt = Instant.now();
@@ -87,8 +106,10 @@ public class RefreshToken {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof RefreshToken)) return false;
+        if (this == o)
+            return true;
+        if (!(o instanceof RefreshToken))
+            return false;
         RefreshToken that = (RefreshToken) o;
         return Objects.equals(token, that.token);
     }

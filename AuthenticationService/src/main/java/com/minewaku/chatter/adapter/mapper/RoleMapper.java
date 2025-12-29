@@ -1,16 +1,16 @@
 package com.minewaku.chatter.adapter.mapper;
 
+import java.time.Instant;
 import java.util.Optional;
 
 import org.springframework.stereotype.Component;
 
 import com.minewaku.chatter.adapter.entity.JpaRoleEntity;
+import com.minewaku.chatter.adapter.web.response.RoleDto;
 import com.minewaku.chatter.domain.model.Role;
+import com.minewaku.chatter.domain.value.AuditMetadata;
 import com.minewaku.chatter.domain.value.Code;
 import com.minewaku.chatter.domain.value.id.RoleId;
-import com.minewaku.chatter.domain.value.AuditMetadata;
-import com.minewaku.chatter.adapter.web.response.RoleDTO;
-import java.time.Instant;
 
 @Component
 public class RoleMapper {
@@ -19,8 +19,8 @@ public class RoleMapper {
 
         // Build audit metadata from BaseEntity fields (created/modified timestamps)
         AuditMetadata auditMetadata = new AuditMetadata(
-            entity.getCreatedDate(),
-            entity.getModifiedDate()
+            entity.getCreatedAt(),
+            entity.getModifiedAt()
         );
 
         return Role.reconstitute(
@@ -29,7 +29,8 @@ public class RoleMapper {
             new Code(entity.getCode()),
             entity.getDescription(),
             auditMetadata,
-            entity.getIsDeleted() != null && entity.getIsDeleted()
+            entity.getIsDeleted() != null && entity.getIsDeleted(),
+            entity.getDeletedAt()
         );
     }
 
@@ -41,6 +42,9 @@ public class RoleMapper {
         entity.setCode(domain.getCode() != null ? domain.getCode().getValue() : null);
         entity.setDescription(domain.getDescription());
         entity.setIsDeleted(domain.isDeleted());
+        entity.setDeletedAt(domain.getDeletedAt());
+        entity.setCreatedAt(domain.getAuditMetadata().getCreatedAt());
+        entity.setModifiedAt(domain.getAuditMetadata().getModifiedAt());
         return entity;
     }
 
@@ -51,7 +55,7 @@ public class RoleMapper {
     /**
      * Map JPA entity to RoleDTO for presentation layers.
      */
-    public RoleDTO entityToDto(JpaRoleEntity entity) {
+    public RoleDto entityToDto(JpaRoleEntity entity) {
         if (entity == null) return null;
 
         long id = entity.getId() != null ? entity.getId().longValue() : -1L;
@@ -59,11 +63,12 @@ public class RoleMapper {
         String code = entity.getCode();
         String description = entity.getDescription();
 
-        // JpaRoleEntity does not track deletedAt timestamp; set to null
-        Instant deletedAt = null;
-        Instant createdAt = entity.getCreatedDate();
-        Instant modifiedAt = entity.getModifiedDate();
+        Instant createdAt = entity.getCreatedAt();
+        Instant modifiedAt = entity.getModifiedAt();
 
-        return new RoleDTO(id, name, code, description, deletedAt, createdAt, modifiedAt);
+        Boolean isDeleted = entity.getIsDeleted() != null && entity.getIsDeleted();
+        Instant deletedAt = entity.getDeletedAt();
+
+        return new RoleDto(id, name, code, description, createdAt, modifiedAt, isDeleted, deletedAt);
     }
 }

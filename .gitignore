@@ -42,6 +42,7 @@ Thumbs.db
 # Maven
 ###################################
 **/target/
+**/*.properties
 !.mvn/wrapper/maven-wrapper.jar
 **/.mvn/timing.properties
 **/.mvn/wrapper/maven-wrapper.properties

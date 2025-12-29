@@ -1,30 +1,30 @@
+# user_roles.yaml
 apiVersion: "api.cerbos.dev/v1"
-description: |-
-  Derived roles for users.
+description: Derived roles for users.
 derivedRoles:
   name: user_roles
   variables:
     local:
       owner_id_resource: request.resource.attr.owner
+      
   definitions:
-    - name: default
-      parentRoles: ["user"]
+    - name: anonymous
+      parentRoles: ["*"]
 
     - name: owner
-      parentRoles: ["user"]
+      parentRoles: ["*"]
       condition:
         match:
-          expr: request.resource.attr.owner == request.principal.id
+          expr: variables.owner_id_resource == request.principal.id
 
     - name: admin
-      parentRoles: ["user"]  # ← Kế thừa từ role cơ bản (từ JWT hoặc principal)
-      condition:             # ← Tùy chọn: điều kiện để activate derived role
-        match:
-          expr: request.resource.attr.isAdmin == true  # Ví dụ: kiểm tra attribute từ principal
-
-    - name: moderator
-      parentRoles: ["user"]
+      parentRoles: ["*"]
       condition:
         match:
-          expr: request.principal.attr.isModerator == true
+          expr: '"ADMIN" in request.principal.roles'
 
+    - name: moderator
+      parentRoles: ["*"]
+      condition:
+        match:
+          expr: '"MODERATOR" in request.principal.roles'

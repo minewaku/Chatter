@@ -1,5 +1,8 @@
 package com.minewaku.chatter.application.service.role;
 
+import org.springframework.transaction.annotation.Transactional;
+
+import com.minewaku.chatter.application.exception.EntityNotFoundException;
 import com.minewaku.chatter.domain.model.Role;
 import com.minewaku.chatter.domain.port.in.role.RestoreRoleUseCase;
 import com.minewaku.chatter.domain.port.out.repository.RoleRepository;
@@ -14,12 +17,13 @@ public class RestoreRoleApplicationService implements RestoreRoleUseCase {
 	}
 	
 	@Override
+	@Transactional
 	public Void handle(RoleId roleId) {
 		Role role = roleRepository.findById(roleId).orElseThrow(
-				() -> new IllegalArgumentException("Role does not exist"));
-		role.setDeleted(false);
+				() -> new EntityNotFoundException("Role does not exist"));
+		role.restore();
 		
-		roleRepository.update(role);
+		roleRepository.restore(role);
 		
 		return null;
 	}

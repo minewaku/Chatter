@@ -8,7 +8,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.MapsId;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -32,23 +31,32 @@ public class JpaUserRoleEntity {
     @EmbeddedId
     private JpaUserRoleId id;
     
-    //these references are used only for joins, not for direct access
+    // //these references are used only for joins, not for direct access
+    // @Getter(AccessLevel.NONE)
+    // @ManyToOne(fetch = FetchType.LAZY)
+    // @MapsId("userId")
+    // @JoinColumn(name = "user_id", nullable = false)
+    // private JpaUserEntity user;
+
+    // //these references are used only for joins, not for direct access
+    // @Getter(AccessLevel.NONE)
+    // @ManyToOne(fetch = FetchType.LAZY)
+    // @MapsId("roleId")
+    // @JoinColumn(name = "role_id", nullable = false)
+    // private JpaRoleEntity role;
+
+    // BỎ @MapsId đi
+    // Thêm insertable = false, updatable = false để field này chỉ dùng để đọc (JOIN)
     @Getter(AccessLevel.NONE)
     @ManyToOne(fetch = FetchType.LAZY)
-    @MapsId("userId")
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", insertable = false, updatable = false) 
     private JpaUserEntity user;
 
-    //these references are used only for joins, not for direct access
     @Getter(AccessLevel.NONE)
     @ManyToOne(fetch = FetchType.LAZY)
-    @MapsId("roleId")
-    @JoinColumn(name = "role_id", nullable = false)
+    @JoinColumn(name = "role_id", insertable = false, updatable = false)
     private JpaRoleEntity role;
     
     @Column(name = "created_by", updatable = false)
     private Long createdBy;
-    
-    @Column(name = "is_deleted", nullable = false)
-    private boolean isDeleted;
 }

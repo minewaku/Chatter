@@ -4,7 +4,6 @@ import java.util.Arrays;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.minewaku.chatter.domain.exception.BusinessRuleViolationException;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -60,11 +59,5 @@ public class HashedPassword {
     public byte[] salt() {
         return Arrays.copyOf(salt, salt.length);
     }
-    
-    
-    public void ensureNotSameAs(HashedPassword newHashedPassword) {
-        if (this.equals(newHashedPassword)) {
-            throw new BusinessRuleViolationException("New password cannot be the same as the current password.");
-        }
-    }
+
 }

@@ -21,6 +21,7 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Past;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -37,13 +38,13 @@ import lombok.experimental.SuperBuilder;
 @EqualsAndHashCode(callSuper = true)
 
 @Entity
-@Table(name = "user")
+@Table(name = "\"user\"")
 @DynamicUpdate
 @SuperBuilder
-public class JpaUserEntity extends BaseEntity implements UserDetails, CredentialsContainer {	
-	
+public class JpaUserEntity extends BaseEntity implements UserDetails, CredentialsContainer {
+
 	private static final long serialVersionUID = 1L;
-	
+
 	// This relationship exists only for join/cascade mapping, not for direct access
 	@Getter(AccessLevel.NONE)
 	@Builder.Default
@@ -55,33 +56,32 @@ public class JpaUserEntity extends BaseEntity implements UserDetails, Credential
 	@NotBlank(message = "Email is required")
 	@NotNull(message = "Email cannot be null")
 	private String email;
-	
+
 	@Column(name = "username", length = 255, nullable = false, unique = true, updatable = false)
 	@NotBlank(message = "Username is required")
 	@NotNull(message = "Username cannot be null")
 	private String username;
 
-	@Column(name = "birthday", length = 255, nullable = false, unique = true)
-	@NotBlank(message = "Birthday is required")
+	@Column(name = "birthday", length = 255, nullable = false)
+	@Past(message = "Birthday must be in the past")
 	@NotNull(message = "Birthday cannot be null")
 	private LocalDate birthday;
 
 	@Column(name = "is_enabled", nullable = false)
 	@NotNull(message = "isEnabled is required")
 	private Boolean isEnabled;
-	
+
 	@Column(name = "is_locked", nullable = false)
 	@NotNull(message = "isLocked is required")
 	private Boolean isLocked;
-	
+
 	@Column(name = "is_deleted", nullable = false)
 	@NotNull(message = "isDeleted is required")
 	private Boolean isDeleted;
-	
+
 	@Column(name = "deleted_at", nullable = true)
 	private Instant deletedAt;
-	
-	
+
 	@PrePersist
 	protected void onCreate() {
 		super.onCreate();
@@ -89,27 +89,26 @@ public class JpaUserEntity extends BaseEntity implements UserDetails, Credential
 		if (isEnabled == null) {
 			isEnabled = false;
 		}
-		
-		if (isLocked == null) {			
+
+		if (isLocked == null) {
 			isLocked = false;
 		}
-		
-		if( isDeleted == null) {
-			isDeleted = false;			
+
+		if (isDeleted == null) {
+			isDeleted = false;
 		}
 	}
-	
+
 	@Override
 	public String getUsername() {
-		return email;
+		return username;
 	}
 
 	@Override
 	public boolean isAccountNonExpired() {
 		return true;
 	}
-	
-	
+
 	@Override
 	public boolean isAccountNonLocked() {
 		return !isLocked;
@@ -120,7 +119,6 @@ public class JpaUserEntity extends BaseEntity implements UserDetails, Credential
 		return true;
 	}
 
-	
 	@Override
 	public boolean isEnabled() {
 		return isEnabled;

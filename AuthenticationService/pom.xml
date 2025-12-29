@@ -158,6 +158,12 @@
 		    <artifactId>spring-kafka</artifactId>
 		</dependency>
 
+		<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-devtools -->
+		<!-- 3.5.4 -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-devtools</artifactId>
+		</dependency>
 
 		<!-- https://mvnrepository.com/artifact/org.glassfish.jersey.core/jersey-client -->
 		<!-- 3.1.10 -->
@@ -203,19 +209,6 @@
 
 
 		<!-- 
-			*** CERBOS PACKAGES ***
-		-->
-
-		<!-- https://mvnrepository.com/artifact/dev.cerbos/cerbos-sdk-java -->
-		<dependency>
-			<groupId>dev.cerbos</groupId>
-			<artifactId>cerbos-sdk-java</artifactId>
-			<version>0.16.0</version>
-		</dependency>
-
-
-
-		<!-- 
 			*** JSON HELPER PACKAGES ***
 		-->
 		
@@ -225,6 +218,25 @@
 	        <groupId>com.fasterxml.jackson.core</groupId>
 	        <artifactId>jackson-databind</artifactId>
 	    </dependency>
+
+
+
+		<!-- 
+			*** FLYWAY PACKAGES ***
+		-->
+
+		<!--  https://mvnrepository.com/artifact/org.flywaydb/flyway-core  -->
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-core</artifactId>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/org.flywaydb/flyway-database-postgresql -->
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-database-postgresql</artifactId>
+			<scope>runtime</scope>
+		</dependency>
 	    
 	    
 	    
@@ -305,7 +317,7 @@
 
 
 		
-	   <!-- 
+	    <!-- 
 			*** DOCS GENERATOR PACKAGES ***
 		-->
 		
@@ -313,7 +325,7 @@
 		<dependency>
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-			<version>2.6.0</version>
+			<version>2.8.0</version>
 		</dependency>
 
 	    

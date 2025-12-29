@@ -7,7 +7,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.minewaku.chatter.adapter.db.mysql.JpaOutboxRepository;
+import com.minewaku.chatter.adapter.db.postgresql.JpaOutboxRepository;
 
 @Configuration
 public class OutboxIntegrationFlow {

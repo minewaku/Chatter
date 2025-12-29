@@ -6,7 +6,7 @@ networks:
     driver: bridge
 
 services:
-  vault:
+  vault-chatter:
     image: hashicorp/vault:1.17
     container_name: vault-chatter
     environment:

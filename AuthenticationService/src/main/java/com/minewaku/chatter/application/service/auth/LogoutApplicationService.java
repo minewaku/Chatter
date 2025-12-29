@@ -1,5 +1,7 @@
 package com.minewaku.chatter.application.service.auth;
 
+import org.springframework.transaction.annotation.Transactional;
+
 import com.minewaku.chatter.application.exception.EntityNotFoundException;
 import com.minewaku.chatter.domain.model.RefreshToken;
 import com.minewaku.chatter.domain.port.in.auth.LogoutUseCase;
@@ -16,6 +18,7 @@ public class LogoutApplicationService implements LogoutUseCase {
 
 	
     @Override
+	@Transactional
     public Void handle(String refreshToken) {
 		RefreshToken existRefreshToken = refreshTokenRepository.findByToken(refreshToken)
 			.orElseThrow(() -> new EntityNotFoundException("Refresh token does not exist"));

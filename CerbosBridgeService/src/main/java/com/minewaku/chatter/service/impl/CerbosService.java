@@ -5,6 +5,8 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -23,6 +25,8 @@ import dev.cerbos.sdk.builders.ResourceAction;
 @Service
 public class CerbosService implements ICerbosService {
 
+    static final Logger logger = LoggerFactory.getLogger(CerbosService.class);
+
     private final CerbosBlockingClient cerbosBlockingClient;
     private final ObjectMapper objectMapper;
 
@@ -36,34 +40,35 @@ public class CerbosService implements ICerbosService {
 
     @Override
     public CheckResult checkResult(
-                Principal principal, 
-                Resource resource,
-                String[] actions
-        ) {
+            Principal principal,
+            Resource resource,
+            String[] actions) {
 
-            CheckResult result = cerbosBlockingClient.check(
+        CheckResult result = cerbosBlockingClient.check(
                 principal,
                 resource,
                 actions);
+
+        logger.info("Cerbos CheckResult: {}", result);
 
         return result;
     }
 
     public CheckResourcesResult checkResultByBatch(
-                Principal principal, 
-                ResourceAction[] resourceActions
-        ) {
+            Principal principal,
+            ResourceAction[] resourceActions) {
 
-            CheckResourcesResult result = cerbosBlockingClient.batch(principal).check();
+        CheckResourcesResult result = cerbosBlockingClient.batch(principal).check();
+        logger.info("Cerbos CheckResourcesResult: {}", result);
 
         return result;
     }
 
     public PlanResourcesResult planResources(
-                Principal principal, 
-                Resource resource, 
-                String action) {
-                    
+            Principal principal,
+            Resource resource,
+            String action) {
+
         PlanResourcesResult result = cerbosBlockingClient.plan(principal, resource, action);
         return result;
     }

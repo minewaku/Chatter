@@ -12,8 +12,8 @@ public @interface PdpCheck {
     String resourceType(); 
 
     // The unique identifier of the resource instance (e.g., database primary key)
-    // Required by Cerbos in every authorization request, even if the policy does not use it
-    // The official resource checking API only requires resource Id for batch calling
+    // Required by Cerbos in every authorization request, even if the policy doesn't use it
+    // The official resource checking API only requires resource Ids for batch calling
     String resourceIdParam() default "";
     String action();
     Attribute[] resourceAttrs() default {};

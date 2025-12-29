@@ -27,20 +27,20 @@ public abstract class BaseEntity {
 	@Column(name = "id")
 	private Long id;
 
-    @Column(name = "created_date", nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     @NotNull(message = "Created date cannot be null")
-    private Instant createdDate;
+    private Instant createdAt;
 
-    @Column(name = "modified_date")
-    private Instant modifiedDate;
+    @Column(name = "modified_at")
+    private Instant modifiedAt;
 
     @PrePersist
     protected void onCreate() {
-        createdDate = Instant.now();
+        createdAt = Instant.now();
     }
 
     @PreUpdate
     protected void onUpdate() {
-        modifiedDate = Instant.now();
+        modifiedAt = Instant.now();
     }
 }

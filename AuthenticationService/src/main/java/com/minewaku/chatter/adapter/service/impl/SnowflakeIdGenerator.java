@@ -3,7 +3,7 @@ package com.minewaku.chatter.adapter.service.impl;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import com.minewaku.chatter.adapter.db.mysql.VariableServerRepository;
+import com.minewaku.chatter.adapter.db.postgresql.VariableServerRepository;
 import com.minewaku.chatter.domain.port.out.service.IdGenerator;
 
 

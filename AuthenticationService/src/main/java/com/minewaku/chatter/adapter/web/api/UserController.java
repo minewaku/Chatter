@@ -1,7 +1,5 @@
 package com.minewaku.chatter.adapter.web.api;
 
-
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -12,14 +10,19 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+
+import com.minewaku.chatter.adapter.annotation.Attribute;
 import com.minewaku.chatter.adapter.annotation.PdpCheck;
-import com.minewaku.chatter.adapter.db.mysql.JpaUserRepository;
+import com.minewaku.chatter.adapter.db.postgresql.JpaUserRepository;
 import com.minewaku.chatter.adapter.entity.JpaUserEntity;
 import com.minewaku.chatter.adapter.mapper.UserMapper;
 import com.minewaku.chatter.adapter.web.request.AssignRoleRequest;
-import com.minewaku.chatter.adapter.web.response.UserDTO;
+import com.minewaku.chatter.adapter.web.response.UserDto;
 import com.minewaku.chatter.application.service.user.HardDeleteUserApplicationService;
 import com.minewaku.chatter.application.service.user.LockUserApplicationService;
 import com.minewaku.chatter.application.service.user.RestoreUserApplicationService;
@@ -34,17 +37,16 @@ import com.minewaku.chatter.domain.value.id.UserRoleId;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-
-@Tag(name = "Authentication", description = "Authentication API")
+@Tag(name = "Users", description = "User API")
 @RestController
-@RequestMapping("auth-service/api/v1/users/")
+@RequestMapping("/api/v1/users")
 public class UserController {
     private final LockUserApplicationService lockUserApplicationService;
     private final UnlockUserApplicationService unlockUserApplicationService;
     private final SoftDeleteUserApplicationService softDeleteUserApplicationService;
     private final RestoreUserApplicationService restoreUserApplicationService;
     private final HardDeleteUserApplicationService hardDeleteUserApplicationService;
-    
+
     private final AssignRoleApplicationService assignRoleApplicationService;
     private final UnassignRoleApplicationService unassignRoleApplicationService;
 
@@ -52,18 +54,17 @@ public class UserController {
     private final UserMapper userMapper;
 
     public UserController(
-        LockUserApplicationService lockUserApplicationService,
-        UnlockUserApplicationService unlockUserApplicationService,
-        SoftDeleteUserApplicationService softDeleteUserApplicationService,
-        RestoreUserApplicationService restoreUserApplicationService,
-        HardDeleteUserApplicationService hardDeleteUserApplicationService,
+            LockUserApplicationService lockUserApplicationService,
+            UnlockUserApplicationService unlockUserApplicationService,
+            SoftDeleteUserApplicationService softDeleteUserApplicationService,
+            RestoreUserApplicationService restoreUserApplicationService,
+            HardDeleteUserApplicationService hardDeleteUserApplicationService,
 
-        AssignRoleApplicationService assignRoleApplicationService,
-        UnassignRoleApplicationService unassignRoleApplicationService,
+            AssignRoleApplicationService assignRoleApplicationService,
+            UnassignRoleApplicationService unassignRoleApplicationService,
 
-        UserMapper userMapper,
-        JpaUserRepository jpaUserRepository
-    ) {
+            UserMapper userMapper,
+            JpaUserRepository jpaUserRepository) {
 
         this.lockUserApplicationService = lockUserApplicationService;
         this.unlockUserApplicationService = unlockUserApplicationService;
@@ -74,52 +75,66 @@ public class UserController {
         this.assignRoleApplicationService = assignRoleApplicationService;
         this.unassignRoleApplicationService = unassignRoleApplicationService;
 
-        this.userMapper = userMapper;        
+        this.userMapper = userMapper;
         this.jpaUserRepository = jpaUserRepository;
     }
 
+
     @PdpCheck(
-        resourceType = "user",
+        resourceType = "user", 
         action = "list"
     )
     @GetMapping("")
-    public ResponseEntity<Page<UserDTO>> findAll(Pageable pageable) {
+    public ResponseEntity<Page<UserDto>> findAll(Pageable pageable) {
         Page<JpaUserEntity> users = jpaUserRepository.findAll(pageable);
-        Page<UserDTO> userDtos = users.map(userMapper::entityToDto);
+        Page<UserDto> userDtos = users.map(userMapper::entityToDto);
         return ResponseEntity.ok(userDtos);
-	}
-    
+    }
+
 
     @PdpCheck(
-        resourceType = "user",
+        resourceType = "user", 
         action = "lock"
     )
-    @PutMapping("{ids}/locked")
+    @PutMapping("/{id}/lock")
     public ResponseEntity<Void> lock(@PathVariable Long id) {
-    	UserId userId = new UserId(id);
-		lockUserApplicationService.handle(userId);
-		return ResponseEntity.ok().build();
-	}
+        UserId userId = new UserId(id);
+        lockUserApplicationService.handle(userId);
+        return ResponseEntity.ok().build();
+    }
 
 
     @PdpCheck(
-        resourceType = "user",
+        resourceType = "user", 
         action = "unlock"
     )
-    @DeleteMapping("{ids}/locked")
+    @PutMapping("/{id}/unlock")
     public ResponseEntity<Void> unlock(@PathVariable Long id) {
-    	UserId userId = new UserId(id);
-		unlockUserApplicationService.handle(userId);
-		return ResponseEntity.ok().build();
-	}
+        UserId userId = new UserId(id);
+        unlockUserApplicationService.handle(userId);
+        return ResponseEntity.ok().build();
+    }
 
 
     @PdpCheck(
-        resourceType = "user",
-        action = "soft-delete"
+        resourceType = "user", 
+        resourceIdParam = "#id", 
+        action = "delete", 
+        resourceAttrs = 
+            @Attribute(key = "permanent", value = "#permanent"
+        )
     )
-    @PutMapping("{id}/deleted")
-    public ResponseEntity<Void> softDeleteUser(@PathVariable Long id) {
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> softDeleteUser(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "false") boolean permanent
+    ) {
+        if(permanent) {
+            UserId userId = new UserId(id);
+            hardDeleteUserApplicationService.handle(userId);
+            return ResponseEntity.ok().build();
+        }
+
         UserId userId = new UserId(id);
         softDeleteUserApplicationService.handle(userId);
         return ResponseEntity.ok().build();
@@ -127,10 +142,10 @@ public class UserController {
 
 
     @PdpCheck(
-        resourceType = "user",
+        resourceType = "user", 
         action = "restore"
     )
-    @DeleteMapping("{id}/deleted")
+    @PostMapping("/{id}/restore")
     public ResponseEntity<Void> restoreUser(@PathVariable Long id) {
         UserId userId = new UserId(id);
         restoreUserApplicationService.handle(userId);
@@ -139,45 +154,39 @@ public class UserController {
 
 
     @PdpCheck(
-        resourceType = "user",
-        resourceIdParam = "#id",
-        action = "delete"
+        resourceType = "user-role", 
+        resourceIdParam = "#request.roleId", 
+        action = "create"
     )
-    @DeleteMapping("{id}")
-    public ResponseEntity<Void> hardDeleteUser(@PathVariable Long id) {
-        UserId userId = new UserId(id);
-        hardDeleteUserApplicationService.handle(userId);
-        return ResponseEntity.ok().build();
-    }
+    @PostMapping("/{userId}/roles")
+    public void assignRoleToUser(
+        @PathVariable Long userId, 
+        @RequestBody AssignRoleRequest request,
+        @AuthenticationPrincipal Jwt jwt
+    ) {
+        String createdByIdString = jwt.getSubject(); 
+        Long createdById = Long.valueOf(createdByIdString);
 
-
-    @PdpCheck(
-        resourceType = "user",
-        resourceIdParam = "#userId",
-        action = "assign_role"
-    )
-    @PostMapping("{userId}/roles")
-    public void assignRoleToUser(@PathVariable Long userId, @RequestBody AssignRoleRequest request) {
         CreateUserRoleCommand command = new CreateUserRoleCommand(
-            new UserId(userId),
-            new RoleId(request.roleId()),
-            request.createdBy() != null ? new UserId(request.createdBy()) : null
-        );
+                new UserId(userId),
+                new RoleId(request.roleId()),
+                new UserId(createdById));
         assignRoleApplicationService.handle(command);
     }
 
 
     @PdpCheck(
-        resourceType = "user",
-        resourceIdParam = "#userId",
+        resourceType = "user-role", 
+        resourceIdParam = "#roleId", 
         action = "delete"
     )
-    @DeleteMapping("{userId}/roles/{roleId}")
-    public void unassignRoleFromUser(@PathVariable Long userId, @PathVariable Long roleId) {
+    @DeleteMapping("/{userId}/roles/{roleId}")
+    public void unassignRoleFromUser(
+            @PathVariable Long userId, 
+            @PathVariable Long roleId) {
         UserRoleId userRoleId = new UserRoleId(
-            new UserId(userId),
-            new RoleId(roleId)
-        );
+                new UserId(userId),
+                new RoleId(roleId));
         unassignRoleApplicationService.handle(userRoleId);
     }
 }

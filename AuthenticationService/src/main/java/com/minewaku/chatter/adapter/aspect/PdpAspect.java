@@ -14,9 +14,9 @@ import org.springframework.expression.Expression;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
 
 import com.minewaku.chatter.adapter.annotation.Attribute;
@@ -38,13 +38,19 @@ public class PdpAspect {
     public PdpAspect(
             IPdpService pdpService,
             SpelExpressionParser parser) {
-        
+
         this.pdpService = pdpService;
         this.parser = parser;
     }
 
-    @Around("@annotation(PdpCheck)")
-    public Object authorize(ProceedingJoinPoint joinPoint, PdpCheck PdpCheck) throws Throwable {
+@Around("@annotation(pdpCheck)")
+    public Object authorize(
+            ProceedingJoinPoint joinPoint, 
+            PdpCheck pdpCheck // Spring sẽ tự inject annotation vào đây
+            // SỬA 2: Đã XÓA tham số Jwt jwt ở đây vì AOP không hỗ trợ inject trực tiếp
+    ) throws Throwable {
+
+        // ... (Giữ nguyên đoạn xử lý context SpEL) ...
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         String[] paramNames = signature.getParameterNames();
         Object[] args = joinPoint.getArgs();
@@ -56,38 +62,47 @@ public class PdpAspect {
         }
 
         try {
-            String resourceId = evaluateSpel(PdpCheck.resourceIdParam(), context, "resourceIdParam");
-            Map<String, Object> resourceAttrs = evaluateAttributes(PdpCheck.resourceAttrs(), context);
-
-            JwtAuthenticationToken auth = (JwtAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
-            Jwt jwt = auth.getToken();
-            String principal = jwt.getSubject();
-
-            boolean isAuthorized = pdpService.isAccessAllowed(
-                PdpCheck.resourceType(),
-                resourceId,
-                PdpCheck.action(),
-                resourceAttrs
-            );
-
-
-            if (!isAuthorized) {
-                log.warn("Access denied for principal '{}' on action '{}' for resource '{}:{}'",
-                    principal, PdpCheck.action(), PdpCheck.resourceType(), resourceId);
-                throw new AccessDeniedException(
-                    String.format("Access denied for action '%s' on resource '%s'", PdpCheck.action(), PdpCheck.resourceType())
-                );
+            // SỬA 3: Lấy Jwt thủ công từ SecurityContextHolder
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String principal = "anonymous";
+            
+            if (authentication != null && authentication.getPrincipal() instanceof Jwt) {
+                 Jwt jwt = (Jwt) authentication.getPrincipal();
+                 principal = jwt.getSubject();
+            } else if (authentication != null) {
+                principal = authentication.getName();
             }
 
+            // ... (Logic cũ của bạn) ...
+            String resourceId = evaluateSpel(pdpCheck.resourceIdParam(), context, "resourceId");
+            Map<String, Object> resourceAttrs = evaluateAttributes(pdpCheck.resourceAttrs(), context);
 
-            return joinPoint.proceed();
+            boolean isAuthorized = pdpService.isAccessAllowed(
+                    pdpCheck.resourceType(),
+                    resourceId,
+                    pdpCheck.action(),
+                    resourceAttrs);
 
+            log.info("isAuthorized: {}", isAuthorized);
+            
+            if (!isAuthorized) {
+                // ... (Log warn giữ nguyên) ...
+                log.warn("Access denied for principal '{}' on action '{}' for resource '{}:{}'",
+                        principal, pdpCheck.action(), pdpCheck.resourceType(), resourceId);
+                
+                throw new AccessDeniedException(
+                        String.format("Access denied for action '%s' on resource '%s'", pdpCheck.action(),
+                                pdpCheck.resourceType()));
+            }
+        } catch (AccessDeniedException e) {
+            throw e;
         } catch (Exception e) {
-            log.error("Pdp authorization failed: {}", e.getMessage(), e);
-            throw new AccessDeniedException("Authorization failed due to configuration error");
+            log.error("Pdp authorization system error: {}", e.getMessage(), e);
+            throw new AccessDeniedException("Authorization failed due to configuration/system error");
         }
-    }
 
+        return joinPoint.proceed();
+    }
 
     private String evaluateSpel(String expression, EvaluationContext context, String fieldName) {
         if (expression == null || expression.isBlank()) {
@@ -99,11 +114,11 @@ public class PdpAspect {
             Object value = exp.getValue(context);
             return value != null ? value.toString() : null;
         } catch (Exception e) {
-            log.warn("Failed to evaluate SpEL expression for {}: '{}'. Error: {}", fieldName, expression, e.getMessage());
+            log.warn("Failed to evaluate SpEL expression for {}: '{}'. Error: {}", fieldName, expression,
+                    e.getMessage());
             throw new IllegalArgumentException("Invalid SpEL in " + fieldName + ": " + expression, e);
         }
     }
-
 
     private Map<String, Object> evaluateAttributes(Attribute[] attributes, EvaluationContext context) {
         Map<String, Object> result = new HashMap<>();

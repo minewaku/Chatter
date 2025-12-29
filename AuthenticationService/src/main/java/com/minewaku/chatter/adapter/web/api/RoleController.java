@@ -11,15 +11,16 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.minewaku.chatter.adapter.annotation.PdpCheck;
-import com.minewaku.chatter.adapter.db.mysql.JpaRoleRepository;
+import com.minewaku.chatter.adapter.db.postgresql.JpaRoleRepository;
 import com.minewaku.chatter.adapter.entity.JpaRoleEntity;
 import com.minewaku.chatter.adapter.mapper.RoleMapper;
 import com.minewaku.chatter.adapter.web.request.CreateRoleRequest;
 import com.minewaku.chatter.adapter.web.request.UpdateRoleRequest;
-import com.minewaku.chatter.adapter.web.response.RoleDTO;
+import com.minewaku.chatter.adapter.web.response.RoleDto;
 import com.minewaku.chatter.application.service.role.CreateRoleApplicationService;
 import com.minewaku.chatter.application.service.role.HardDeleteRoleApplicationService;
 import com.minewaku.chatter.application.service.role.RestoreRoleApplicationService;
@@ -32,9 +33,9 @@ import com.minewaku.chatter.domain.value.id.RoleId;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-@Tag(name = "Authentication", description = "Authentication API")
+@Tag(name = "Roles", description = "Role API")
 @RestController
-@RequestMapping("auth-service/api/v1/roles/")
+@RequestMapping("/api/v1/roles")
 public class RoleController {
     
     private final CreateRoleApplicationService createRoleApplicationService;
@@ -73,9 +74,9 @@ public class RoleController {
         action = "list"
     )
     @GetMapping("")
-    public ResponseEntity<Page<RoleDTO>> findAll(Pageable pageable) {
+    public ResponseEntity<Page<RoleDto>> findAll(Pageable pageable) {
         Page<JpaRoleEntity> Roles = jpaRoleRepository.findAll(pageable);
-        Page<RoleDTO> RoleDtos = Roles.map(RoleMapper::entityToDto);
+        Page<RoleDto> RoleDtos = Roles.map(RoleMapper::entityToDto);
         return ResponseEntity.ok(RoleDtos);
 	}
 
@@ -84,7 +85,7 @@ public class RoleController {
         action = "create"
     )
     @PostMapping("")
-    public ResponseEntity<RoleDTO> createRole(@RequestBody CreateRoleRequest request) {
+    public ResponseEntity<RoleDto> createRole(@RequestBody CreateRoleRequest request) {
         CreateRoleCommand command = new CreateRoleCommand(
             request.name(),
             new Code(request.code()),
@@ -100,8 +101,8 @@ public class RoleController {
         resourceIdParam = "#id",
         action = "update"
     )
-    @PutMapping("{id}")
-    public ResponseEntity<RoleDTO> updateRole(@PathVariable Long id, @RequestBody UpdateRoleRequest request) {
+    @PutMapping("/{id}")
+    public ResponseEntity<RoleDto> updateRole(@PathVariable Long id, @RequestBody UpdateRoleRequest request) {
         UpdateRoleCommand command = new UpdateRoleCommand(
             new RoleId(id),
             request.name(),
@@ -117,7 +118,7 @@ public class RoleController {
         resourceIdParam = "#id",
         action = "soft-delete"
     )
-    @PutMapping("{id}/deleted")
+    @PutMapping("/{id}/deleted")
     public ResponseEntity<Void> softDeleteRole(@PathVariable Long id) {
         RoleId RoleId = new RoleId(id);
         softDeleteRoleApplicationService.handle(RoleId);
@@ -130,8 +131,11 @@ public class RoleController {
         resourceIdParam = "#id",
         action = "restore"
     )
-    @DeleteMapping("{id}/deleted")
-    public ResponseEntity<Void> restoreRole(@PathVariable Long id) {
+    @PutMapping("/{id}/restored")
+    public ResponseEntity<Void> restoreRole(
+        @PathVariable Long id,
+        @RequestParam(defaultValue = "false") boolean permanent
+    ) {
         RoleId RoleId = new RoleId(id);
         restoreRoleApplicationService.handle(RoleId);
         return ResponseEntity.ok().build();
@@ -143,7 +147,7 @@ public class RoleController {
         resourceIdParam = "#id",
         action = "delete"
     )
-    @DeleteMapping("{id}")
+    @DeleteMapping("/{id}")
     public ResponseEntity<Void> hardDeleteRole(@PathVariable Long id) {
         RoleId RoleId = new RoleId(id);
         hardDeleteRoleApplicationService.handle(RoleId);

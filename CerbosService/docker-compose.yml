@@ -5,7 +5,7 @@ networks:
     name: chatter-net
 
 services:
-  cerbos:
+  cerbos-chatter:
     image: ghcr.io/cerbos/cerbos:latest
     container_name: cerbos-chatter
     restart: unless-stopped

@@ -8,7 +8,7 @@ import com.minewaku.chatter.application.service.confirmation_token.CreateConfirm
 import com.minewaku.chatter.application.service.confirmation_token.DeleteConfirmationTokenApplicationService;
 import com.minewaku.chatter.domain.port.out.repository.ConfirmationTokenRepository;
 import com.minewaku.chatter.domain.port.out.repository.UserRepository;
-import com.minewaku.chatter.domain.port.out.service.KeyGenerator;
+import com.minewaku.chatter.domain.port.out.service.ConfirmationTokenGenerator;
 
 @Configuration
 class ConfirmationTokenServiceConfig {
@@ -17,7 +17,7 @@ class ConfirmationTokenServiceConfig {
 	CreateConfirmationTokenApplicationService createConfirmationTokenApplicationService(
 			ConfirmationTokenRepository confirmationTokenRepository,
 			UserRepository userRepository,
-			KeyGenerator keyGenerator,
+			ConfirmationTokenGenerator keyGenerator,
 			MessageQueue messageQueue) {
 		return new CreateConfirmationTokenApplicationService(
 				confirmationTokenRepository,

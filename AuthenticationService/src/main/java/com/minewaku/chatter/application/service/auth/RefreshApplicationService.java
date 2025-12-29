@@ -2,6 +2,8 @@ package com.minewaku.chatter.application.service.auth;
 
 import java.util.Set;
 
+import org.springframework.transaction.annotation.Transactional;
+
 import com.minewaku.chatter.application.exception.EntityNotFoundException;
 import com.minewaku.chatter.domain.model.RefreshToken;
 import com.minewaku.chatter.domain.model.Role;
@@ -21,14 +23,13 @@ public class RefreshApplicationService implements RefreshUseCase {
 	private final UserRoleRepository userRoleRepository;
 	private final RefreshTokenGenerator refreshTokenGenerator;
 	private final AccessTokenGenerator accessTokenGenerator;
-	
-	
+
 	public RefreshApplicationService(RefreshTokenRepository refreshTokenRepository,
 			UserRepository userRepository,
 			UserRoleRepository userRoleRepository,
 			RefreshTokenGenerator refreshTokenGenerator,
 			AccessTokenGenerator accessTokenGenerator) {
-		
+
 		this.refreshTokenRepository = refreshTokenRepository;
 		this.userRepository = userRepository;
 		this.userRoleRepository = userRoleRepository;
@@ -36,25 +37,30 @@ public class RefreshApplicationService implements RefreshUseCase {
 		this.accessTokenGenerator = accessTokenGenerator;
 	}
 
-	
-    @Override
-    public TokenResponse handle(String refreshToken) {
+	@Override
+	@Transactional
+	public TokenResponse handle(String refreshToken) {
 		RefreshToken existToken = refreshTokenRepository.findByToken(refreshToken)
-			.orElseThrow(() -> new EntityNotFoundException("Refresh token does not exist"));
-		
-		User user = userRepository.findByIdAndIsDeletedFalse(existToken.getUserId())
-			.orElseThrow(() -> new EntityNotFoundException("User does not exist"));
-		
-		Set<Role> roles = userRoleRepository.findRolesByUserIdAndIsDeletedFalse(user.getId());
-		
+				.orElseThrow(() -> new EntityNotFoundException("Refresh token does not exist"));
+
+		User user = userRepository.findById(existToken.getUserId())
+				.orElseThrow(() -> new EntityNotFoundException("User does not exist"));
+
 		user.validateAccessible();
-		
+
+		Set<Role> roles = userRoleRepository.findRolesByUserIdAndIsDeletedFalse(user.getId());
+
+		user.validateAccessible();
+
 		existToken.revoke();
 		refreshTokenRepository.revoke(existToken);
-		
-		RefreshToken newRefreshToken = refreshTokenGenerator.generate(user);
+
+		String newRefreshTokenString = refreshTokenGenerator.generate();
+		RefreshToken newRefreshToken = RefreshToken.createNew(newRefreshTokenString, null, user.getId());
+		refreshTokenRepository.save(newRefreshToken);
+
 		String newAccessToken = accessTokenGenerator.generate(user, roles);
-		
+
 		TokenResponse tokenReponse = new TokenResponse(newAccessToken, newRefreshToken);
 		return tokenReponse;
 	}

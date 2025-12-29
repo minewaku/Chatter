@@ -1,5 +1,6 @@
 package com.minewaku.chatter.adapter.entity;
 
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -55,4 +56,7 @@ public class JpaRoleEntity extends BaseEntity {
 	@Column(name = "is_deleted", nullable = false)
 	@NotNull(message = "isDeleted is required")
 	private Boolean isDeleted;
+
+	@Column(name = "deleted_at", nullable = true)
+	private Instant deletedAt;
 }

@@ -1,5 +1,6 @@
 package com.minewaku.chatter.adapter.mapper;
 
+import java.time.Instant;
 import java.util.Optional;
 
 import org.springframework.stereotype.Component;
@@ -12,7 +13,8 @@ import com.minewaku.chatter.domain.value.id.UserId;
 @Component
 public class CredentialsMapper {
     public Credentials entityToDomain(JpaCredentialsEntity entity) {
-        if (entity == null) return null;
+        if (entity == null)
+            return null;
         UserId userId = entity.getUserId() != null ? new UserId(entity.getUserId().longValue()) : null;
         byte[] saltBytes = (entity.getSalt() != null && entity.getSalt().length > 0)
                 ? entity.getSalt()
@@ -20,21 +22,25 @@ public class CredentialsMapper {
         HashedPassword hashedPassword = new HashedPassword(
                 entity.getAlgorithm(),
                 entity.getHashedPassword(),
-                saltBytes
-        );
-        return Credentials.createNew(userId, hashedPassword);
+                saltBytes);
+
+        Instant modifiedAt = entity.getModifiedAt();
+        // Reconstitute existing credentials (do not emit creation events)
+        return Credentials.reconstitute(userId, hashedPassword, modifiedAt);
     }
 
     public JpaCredentialsEntity domainToEntity(Credentials domain) {
-        if (domain == null) return null;
+        if (domain == null)
+            return null;
         JpaCredentialsEntity entity = new JpaCredentialsEntity();
-        // set foreign key userId; the JpaUserEntity reference can be set by caller if needed
+
         if (domain.getUserId() != null) {
-            entity.setUserId(Math.toIntExact(domain.getUserId().getValue()));
+            entity.setUserId(domain.getUserId().getValue());
         }
         entity.setAlgorithm(domain.getHashedPassword().algorithm());
         entity.setHashedPassword(domain.getHashedPassword().hash());
         entity.setSalt(domain.getHashedPassword().salt());
+        entity.setModifiedAt(domain.getModifiedAt());
         return entity;
     }
 

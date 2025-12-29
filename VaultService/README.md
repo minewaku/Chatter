@@ -9,7 +9,7 @@ This document explains how to run the Vault server for this project, initialize 
 
 Start Vault using Docker Compose:
 
-```bash
+```powershell
 docker compose -p vault_service_chatter -f docker-compose.yml up -d
 ```
 
@@ -131,29 +131,19 @@ vault kv put secret/api-gateway - < ./vault/tmp/api-gateway-secrets.json
 <br>
 
 
-```bash
-vault kv put secret/authorization-service - < ./vault/tmp/authorization-sv-secrets.json
-vault kv put secret/apigateway-service - < ./vault/tmp/apigateway-sv-secrets.json
-vault kv put secret/profiles-service - < ./vault/tmp/profiles-sv-secrets.json
-```
 
-### For cerbos-bridge-service
+### 3. For cerbos-bridge-service
 ```bash
 vault kv put secret/cerbos-bridge-service - < ./vault/tmp/cerbos-bridge-sv-secrets.json
 ```
 
-### For apigateway-service
-```bash
-vault kv put secret/apigateway-service - < ./vault/tmp/apigateway-sv-secrets.json
-```
+<br>
 
-### For jwt keys
+
+
+### 4. For jwt keys
 ```bash
 vault kv put secret/common/jwt/rs256 private-key=@./vault/tmp/private-key.pem public-key=@./vault/tmp/public-key.pem
-```
-
-```bash
-vault kv put secret/api-gateway private-key=@./vault/tmp/private-key.pem public-key=@./vault/tmp/public-key.pem
 ```
 
 ## Verify secrets

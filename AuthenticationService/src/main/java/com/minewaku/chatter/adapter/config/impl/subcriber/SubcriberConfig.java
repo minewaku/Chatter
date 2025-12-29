@@ -10,19 +10,17 @@ import com.minewaku.chatter.application.subcriber.SendConfirmationTokenDomainEve
 import com.minewaku.chatter.domain.port.out.repository.ConfirmationTokenRepository;
 import com.minewaku.chatter.domain.port.out.repository.UserRepository;
 import com.minewaku.chatter.domain.port.out.service.EmailSender;
-import com.minewaku.chatter.domain.port.out.service.KeyGenerator;
-import com.minewaku.chatter.domain.port.out.service.LinkGenerator;
+import com.minewaku.chatter.domain.port.out.service.ConfirmationTokenGenerator;
 
 @Configuration
 public class SubcriberConfig {
 
 	@Bean
 	public CreateConfirmationTokenDomainEventSubcriber createConfirmationTokenDomainEventSubcriber(
-		ConfirmationTokenRepository confirmationTokenRepository,
-		UserRepository userRepository,
-		KeyGenerator keyGenerator,
-		MessageQueue messageQueue
-	) {
+			ConfirmationTokenRepository confirmationTokenRepository,
+			UserRepository userRepository,
+			ConfirmationTokenGenerator keyGenerator,
+			MessageQueue messageQueue) {
 		return new CreateConfirmationTokenDomainEventSubcriber(
 				confirmationTokenRepository,
 				userRepository,
@@ -32,17 +30,13 @@ public class SubcriberConfig {
 
 	@Bean
 	public SendConfirmationTokenDomainEventSubcriber sendConfirmationTokenDomainEventSubcriber(
-		LinkGenerator linkGenerator,
-		EmailSender emailSender
-	) {
-		return new SendConfirmationTokenDomainEventSubcriber(linkGenerator, emailSender);
+			EmailSender emailSender) {
+		return new SendConfirmationTokenDomainEventSubcriber(emailSender);
 	}
-	
+
 	@Bean
 	public AccountVerifiedDomainEventSubcriber accountVerifiedDomainEventSubcriber(
-		MessageQueue messageQueue
-	) {
+			MessageQueue messageQueue) {
 		return new AccountVerifiedDomainEventSubcriber(messageQueue);
 	}
 }
-

@@ -18,7 +18,7 @@ public class SendConfirmationTokenDomainEvent extends DomainEvent {
 	
 	private final String subject;
     
-    public SendConfirmationTokenDomainEvent(
+    public SendConfirmationTokenDomainEvent (
     		@NonNull ConfirmationToken confirmationToken,
     		@NonNull MailType mailType,
     		String subject) {

@@ -16,7 +16,7 @@ import com.minewaku.chatter.web.request.PipRequest;
 import reactor.core.publisher.Mono;
 
 @RestController
-@RequestMapping("pip/api/v1/")
+@RequestMapping("/api/v1/")
 public class PipController {
     private final AttributeResolverRegistry registry;
 

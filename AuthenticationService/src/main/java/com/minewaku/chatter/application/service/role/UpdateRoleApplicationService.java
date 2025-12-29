@@ -1,5 +1,8 @@
 package com.minewaku.chatter.application.service.role;
 
+import org.springframework.transaction.annotation.Transactional;
+
+import com.minewaku.chatter.application.exception.EntityNotFoundException;
 import com.minewaku.chatter.domain.command.role.UpdateRoleCommand;
 import com.minewaku.chatter.domain.model.Role;
 import com.minewaku.chatter.domain.port.in.role.UpdateRoleUseCase;
@@ -16,9 +19,10 @@ public class UpdateRoleApplicationService implements UpdateRoleUseCase {
 	}
 
     @Override
+	@Transactional
     public Void handle(UpdateRoleCommand command) {
 		Role role = roleRepository.findById(command.getId())
-				.orElseThrow(() -> new IllegalArgumentException("Role does not exist"));
+				.orElseThrow(() -> new EntityNotFoundException("Role does not exist"));
 				
 		role.setName(command.getName());
 		role.setDescription(command.getDescription());

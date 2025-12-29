@@ -1,5 +1,7 @@
 package com.minewaku.chatter.application.service.user_role;
 
+import org.springframework.transaction.annotation.Transactional;
+
 import com.minewaku.chatter.domain.command.user_role.CreateUserRoleCommand;
 import com.minewaku.chatter.domain.model.UserRole;
 import com.minewaku.chatter.domain.port.in.user_role.AssignRoleUseCase;
@@ -18,6 +20,7 @@ public class AssignRoleApplicationService implements AssignRoleUseCase {
 	
 	
     @Override
+	@Transactional
     public Void handle(CreateUserRoleCommand command) {
 		UserRoleId userRoleId = new UserRoleId(command.getUserId(), command.getRoleId());
 		UserRole userRole = UserRole.createNew(userRoleId, command.getCreatedBy());

@@ -1,7 +1,7 @@
 package com.minewaku.chatter.adapter.mapper;
 
 import com.minewaku.chatter.adapter.entity.JpaUserEntity;
-import com.minewaku.chatter.adapter.web.response.UserDTO;
+import com.minewaku.chatter.adapter.web.response.UserDto;
 import com.minewaku.chatter.domain.model.User;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -20,8 +20,8 @@ public class UserMapper {
     public User entityToDomain(JpaUserEntity entity) {
         if (entity == null) return null;
         AuditMetadata auditMetadata = new AuditMetadata(
-            entity.getCreatedDate(),
-            entity.getModifiedDate()
+            entity.getCreatedAt(),
+            entity.getModifiedAt()
         );
         UserId userId = entity.getId() != null ? new UserId(entity.getId().longValue()) : null;
         User domain = User.reconstitute(
@@ -45,7 +45,7 @@ public class UserMapper {
      * Map JPA entity directly to a scalar-only UserDTO. This avoids exposing
      * domain value objects to presentation layers.
      */
-    public UserDTO entityToDto(JpaUserEntity entity) {
+    public UserDto entityToDto(JpaUserEntity entity) {
         if (entity == null) return null;
 
         long id = entity.getId() != null ? entity.getId().longValue() : -1L;
@@ -59,10 +59,10 @@ public class UserMapper {
         boolean deleted = Boolean.TRUE.equals(entity.getIsDeleted());
 
         Instant deletedAt = entity.getDeletedAt();
-        Instant createdAt = entity.getCreatedDate();
-        Instant modifiedAt = entity.getModifiedDate();
+        Instant createdAt = entity.getCreatedAt();
+        Instant modifiedAt = entity.getModifiedAt();
 
-        return new UserDTO(
+        return new UserDto(
             id,
             email,
             username,
@@ -87,8 +87,8 @@ public class UserMapper {
         entity.setIsLocked(domain.isLocked());
         entity.setIsDeleted(domain.isDeleted());
         entity.setDeletedAt(domain.getDeletedAt());
-        entity.setCreatedDate(domain.getAuditMetadata().getCreatedAt());
-        entity.setModifiedDate(domain.getAuditMetadata().getModifiedAt());
+        entity.setCreatedAt(domain.getAuditMetadata().getCreatedAt());
+        entity.setModifiedAt(domain.getAuditMetadata().getModifiedAt());
         return entity;
     }
 

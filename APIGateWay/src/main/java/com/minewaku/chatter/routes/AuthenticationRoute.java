@@ -11,30 +11,22 @@ import com.minewaku.chatter.filters.RequestThrottlingFilter;
 @Configuration
 public class AuthenticationRoute {
 
-    String[] PUBLIC_PATHS = {
-        "/api/*/authentication/register",
-        "/api/*/authentication/authenticate",
-        "/api/*/authentication/refresh",
-        "/api/*/authentication/verify",
-        "/api/*/authentication/resend-verify-email",
-    };
-
-@Bean
-RouteLocator authenticationRouteLocator(
-    RouteLocatorBuilder builder, 
-    AuthenticationFilter authenticationFilter,
-    RequestThrottlingFilter requestThrottlingFilter) {
+    @Bean
+    RouteLocator authenticationRouteLocator(
+            RouteLocatorBuilder builder,
+            AuthenticationFilter authenticationFilter, 
+            RequestThrottlingFilter requestThrottlingFilter
+    ) {
 
     return builder.routes()
-        .route("authentication-auth-public", r -> r.path(PUBLIC_PATHS)
-            .filters(f -> f.filter(requestThrottlingFilter.apply(new RequestThrottlingFilter.Config())))
-            .uri("lb://AUTHENTICATION-SERVICE"))
-        .route("authentication-secured", r -> r.path("/**")
-            .filters(f -> f
-                .filter(requestThrottlingFilter.apply(new RequestThrottlingFilter.Config()))
-                .filter(authenticationFilter.apply(new AuthenticationFilter.Config())))
-            .uri("lb://AUTHENTICATION-SERVICE"))
-        .build();
-    }
+		.route("auth", r -> r
+			.path("/auth-service/api/**")
+			.filters(f -> f
+				.stripPrefix(1)
+			)
+			.uri("lb://AUTHENTICATION-SERVICE")
+		)
+		.build();
+	}
 
 }

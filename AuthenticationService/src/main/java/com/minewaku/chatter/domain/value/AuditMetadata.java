@@ -4,6 +4,7 @@ import java.time.Instant;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.minewaku.chatter.domain.exception.DomainValidationException;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -40,7 +41,7 @@ public class AuditMetadata {
     public void markUpdated() {
         Instant now = Instant.now();
         if (now.isBefore(this.createdAt)) {
-            throw new IllegalStateException("Modified date cannot be before the created date");
+            throw new DomainValidationException("Modified date cannot be before the created date");
         }
         this.modifiedAt = now;
     }

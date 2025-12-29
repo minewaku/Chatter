@@ -4,6 +4,7 @@ import java.util.regex.Pattern;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.minewaku.chatter.domain.exception.DomainValidationException;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -26,11 +27,11 @@ public class Email {
 	public Email(
 			@JsonProperty("value") @NonNull String value) {
 		
-        if(!value.isBlank()) {
-        	throw new IllegalArgumentException("email cannot be blank");
+        if(value.isBlank()) {
+        	throw new DomainValidationException("email cannot be blank");
         }
         if (!EMAIL_PATTERN.matcher(value).matches()) {
-            throw new IllegalArgumentException("invalid email format");
+            throw new DomainValidationException("invalid email format");
         }
 		
 		this.value = value;

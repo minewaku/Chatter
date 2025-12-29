@@ -12,7 +12,7 @@ import com.minewaku.chatter.service.IPipService;
 @Service
 public class PipService implements IPipService {
 
-    private final String PIP_URL = "http://localhost:5005/pip/api/v1/attributes";
+    private final static String PIP_URL = "http://PIP-SERVICE/api/v1/attributes";
 
     private final RestTemplate restTemplate;
 

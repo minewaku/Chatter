@@ -8,18 +8,16 @@ import com.minewaku.chatter.domain.event.core.DomainEventSubscriber;
 public class AccountVerifiedDomainEventSubcriber implements DomainEventSubscriber<AccountVerifiedDomainEvent> {
 
 	private final QueueEventPublisher queueEventPublisher;
-	
-	
+
 	public AccountVerifiedDomainEventSubcriber(
 			MessageQueue messageQueue) {
-		
+
 		this.queueEventPublisher = new QueueEventPublisher(messageQueue);
 	}
 
-	
 	@Override
 	public void handle(AccountVerifiedDomainEvent event) {
 		queueEventPublisher.publish(event);
-	} 
+	}
 
 }

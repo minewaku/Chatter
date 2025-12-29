@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -27,10 +29,9 @@ import dev.cerbos.sdk.builders.Principal;
 import dev.cerbos.sdk.builders.Resource;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-
 @Tag(name = "Pdp", description = "Policy Desicion Point API")
 @RestController
-@RequestMapping("pdp/api/v1/")
+@RequestMapping("/api/v1/resources")
 public class PdpController {
 
     private final JwtUtil jwtUtil;
@@ -38,11 +39,13 @@ public class PdpController {
     private final IPipService pipService;
     private final CerbosAttributeValueUtil attributeValueCerbosUtil;
 
+    private final static Logger logger = LoggerFactory.getLogger(PdpController.class);
+
     public PdpController(
-        ICerbosService cerbosService,
-        JwtUtil jwtUtil,
-        IPipService pipService,
-        CerbosAttributeValueUtil attributeValueCerbosUtil) {
+            ICerbosService cerbosService,
+            JwtUtil jwtUtil,
+            IPipService pipService,
+            CerbosAttributeValueUtil attributeValueCerbosUtil) {
 
         this.cerbosService = cerbosService;
         this.jwtUtil = jwtUtil;
@@ -50,19 +53,22 @@ public class PdpController {
         this.attributeValueCerbosUtil = attributeValueCerbosUtil;
     }
 
-    @PostMapping("/resources/check")
+    @PostMapping("/check")
     public ResponseEntity<PdpResponse> checkResource(@RequestBody PdpRequest request) {
+
         JwtAuthenticationToken auth = (JwtAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
         Jwt jwt = auth.getToken();
-        
+
         String id = jwt.getSubject();
         List<String> roles = jwt.getClaimAsStringList("roles");
         Map<String, Object> customClaims = jwtUtil.getCustomClaims(jwt);
 
-        Principal principal= Principal.newInstance(id, roles.toArray(new String[0]));
+        Principal principal = Principal.newInstance(id, roles.toArray(new String[0]));
         principal = attributeValueCerbosUtil.applyAttributes(principal, customClaims);
-        
-        Resource resource = Resource.newInstance(request.resourceType(), request.resourceId());
+
+        Resource resource = Resource.newInstance(
+                request.resourceType(),
+                request.resourceId() == null ? "_NEW_" : request.resourceId());
         resource = attributeValueCerbosUtil.applyAttributes(resource, request.resourceAttrs());
 
         PlanResourcesResult result = cerbosService.planResources(principal, resource, request.action());
@@ -71,21 +77,22 @@ public class PdpController {
 
         if (result.isAlwaysAllowed()) {
             response = new PdpResponse(true);
-        } else if(result.isAlwaysDenied()) {
+        } else if (result.isAlwaysDenied()) {
             response = new PdpResponse(false);
-        } else if(result.isConditional()) {
+        } else if (result.isConditional()) {
             Set<String> requiredAttrs = cerbosService.extractConditions(result);
             PipRequest pipRequest = new PipRequest(request.resourceId(), customClaims, requiredAttrs);
 
             PipResponse pipResponse = pipService.sendPipRequest(pipRequest);
 
-            if(pipResponse.success()) {
+            if (pipResponse.success()) {
                 resource = attributeValueCerbosUtil.applyAttributes(resource, pipResponse.conditions());
-                PlanResourcesResult resultAfterSuplementAttrs = cerbosService.planResources(principal, resource, request.action());
+                PlanResourcesResult resultAfterSuplementAttrs = cerbosService.planResources(principal, resource,
+                        request.action());
 
                 if (resultAfterSuplementAttrs.isAlwaysAllowed()) {
                     response = new PdpResponse(true);
-                } else if(resultAfterSuplementAttrs.isAlwaysDenied()) {
+                } else if (resultAfterSuplementAttrs.isAlwaysDenied()) {
                     response = new PdpResponse(false);
                 } else {
                     response = new PdpResponse(false);
@@ -96,6 +103,8 @@ public class PdpController {
         } else {
             response = new PdpResponse(false);
         }
+
+        logger.info("PDP response: {}", response);
 
         return ResponseEntity.ok().body(response);
     }

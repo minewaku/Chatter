@@ -27,6 +27,23 @@ END
 $$;
 
 -------------------------------
+-- Create debezium user
+-------------------------------
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'debezium') THEN
+    CREATE ROLE debezium WITH LOGIN REPLICATION PASSWORD 'Yu28OtptFv20rEkG';
+  ELSE
+    ALTER ROLE debezium WITH REPLICATION PASSWORD 'Yu28OtptFv20rEkG';
+  END IF;
+END
+$$;
+
+GRANT USAGE ON SCHEMA public TO debezium;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO debezium;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO debezium;
+
+-------------------------------
 -- System variables table
 -------------------------------
 CREATE TABLE IF NOT EXISTS system_variables (

@@ -3,7 +3,7 @@ package com.minewaku.chatter.adapter.web.response;
 import java.time.Instant;
 import java.time.LocalDate;
 
-public record UserDTO(
+public record UserDto(
 		long id,
 		String email,
 		String username,

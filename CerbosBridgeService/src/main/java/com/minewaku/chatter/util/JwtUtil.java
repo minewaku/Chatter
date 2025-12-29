@@ -1,5 +1,6 @@
 package com.minewaku.chatter.util;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -11,17 +12,16 @@ public class JwtUtil {
 
     // Các claim chuẩn JWT cần loại bỏ
     private static final Set<String> STANDARD_JWT_CLAIMS = Set.of(
-        "iss", "sub", "aud", "exp", "nbf", "iat", "jti"
-    );
+            "iss", "sub", "aud", "exp", "nbf", "iat", "jti");
 
     private static final String ROLES_CLAIM = "roles";
 
     public Map<String, Object> getCustomClaims(Jwt jwt) {
-        Map<String, Object> allClaims = jwt.getClaims();
+        Map<String, Object> customClaims = new HashMap<>(jwt.getClaims());
 
-        allClaims.keySet().removeAll(STANDARD_JWT_CLAIMS);
-        allClaims.remove(ROLES_CLAIM);
+        customClaims.keySet().removeAll(STANDARD_JWT_CLAIMS);
+        customClaims.remove(ROLES_CLAIM);
 
-        return allClaims;
+        return customClaims;
     }
 }

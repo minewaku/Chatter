@@ -31,21 +31,20 @@ import jakarta.servlet.http.HttpServletResponse;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
-    
+
     private final ObjectMapper objectMapper;
     private final IJwtService jwtService;
 
     public JwtAuthenticationFilter(
-        ObjectMapper objectMapper,
-        IJwtService jwtService
-    ) {
+            ObjectMapper objectMapper,
+            IJwtService jwtService) {
         this.objectMapper = objectMapper;
         this.jwtService = jwtService;
     }
 
     private void sendErrorResponse(HttpServletResponse response, ApiException errorDetail) throws IOException {
         HttpStatus status = HttpStatus.BAD_REQUEST;
-        
+
         ErrorResponse errorResponse = ErrorResponse.builder(errorDetail, status, "An error has occurred").build();
 
         response.setStatus(status.value());
@@ -58,26 +57,31 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
     }
 
-
     @Override
-    protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain) throws ServletException, IOException {
-        final String authHeader = request.getHeader("Authorization");
-        final String jwtString; 
+    protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response,
+            @NonNull FilterChain filterChain) throws ServletException, IOException {
 
-        if(authHeader == null || !authHeader.startsWith("Bearer")) {
-            ApiException apiException = new ApiException("Invalid JWT Token", "ERR01",HttpStatus.UNAUTHORIZED); 
-        	sendErrorResponse(response, apiException);
+        String path = request.getRequestURI();
+        log.info("Incoming request path PIP-SERVICE: " + path);
+
+        final String authHeader = request.getHeader("Authorization");
+        final String jwtString;
+
+        if (authHeader == null || !authHeader.startsWith("Bearer")) {
+            ApiException apiException = new ApiException("Invalid JWT Token", "ERR01", HttpStatus.UNAUTHORIZED);
+            sendErrorResponse(response, apiException);
             return;
         }
-        
+
         try {
-        	jwtString = authHeader.substring(7);
+            jwtString = authHeader.substring(7);
             Claims claims = jwtService.extractClaims(jwtString);
             String userId = claims.getSubject();
 
             if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-                //create and set the authentication object (this object will be able to use everywhere in the application during that thread request)
+                // create and set the authentication object (this object will be able to use
+                // everywhere in the application during that thread request)
                 JwtDecoder jwtDecoder = jwtService.getJwtDecoder();
                 Jwt jwt = jwtDecoder.decode(jwtString);
                 JwtAuthenticationToken authentication = new JwtAuthenticationToken(jwt);
@@ -87,9 +91,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             } else {
                 sendErrorResponse(response, new ApiException("Invalid JWT Token", "ERR01", HttpStatus.UNAUTHORIZED));
             }
-		} catch (Exception e) {
-			log.error("Error: ", e);
-			sendErrorResponse(response, new ApiException("Invalid JWT Token", "ERR01", HttpStatus.UNAUTHORIZED));
-		}
+        } catch (Exception e) {
+            log.error("Error: ", e);
+            sendErrorResponse(response, new ApiException("Invalid JWT Token", "ERR01", HttpStatus.UNAUTHORIZED));
+        }
     }
 }

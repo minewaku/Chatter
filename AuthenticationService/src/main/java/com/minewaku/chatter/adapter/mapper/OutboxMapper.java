@@ -10,6 +10,7 @@ import com.minewaku.chatter.domain.event.AccountVerifiedDomainEvent;
 import com.minewaku.chatter.domain.event.UserCreatedDomainEvent;
 import com.minewaku.chatter.domain.event.UserHardDeletedDomainEvent;
 import com.minewaku.chatter.domain.event.UserLockedDomainEvent;
+import com.minewaku.chatter.domain.event.UserRestoredDomainEvent;
 import com.minewaku.chatter.domain.event.UserSoftDeletedDomainEvent;
 import com.minewaku.chatter.domain.event.UserUnlockedDomainEvent;
 import com.minewaku.chatter.domain.event.core.DomainEvent;
@@ -19,12 +20,17 @@ import com.minewaku.chatter.domain.value.id.UserId;
 
 @Component
 public class OutboxMapper {
-	
-	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-	
+
+	private final ObjectMapper objectMapper;
+
+	public OutboxMapper(ObjectMapper objectMapper) {
+		this.objectMapper = objectMapper;
+	}
+
 	public JpaOutboxEntity eventToEntity(EnrichedDomainEvent<? extends DomainEvent> event) {
-		if (event == null) return null;
-		JsonNode payload = OBJECT_MAPPER.convertValue(event.getDomainEvent(), JsonNode.class);
+		if (event == null)
+			return null;
+		JsonNode payload = objectMapper.convertValue(event.getDomainEvent(), JsonNode.class);
 		return JpaOutboxEntity.builder()
 				.aggregateId(event.getAggregateId())
 				.aggregateType(event.getAggregateType())
@@ -34,24 +40,25 @@ public class OutboxMapper {
 	}
 
 	public JpaOutboxEntity messageToEntity(String message) {
-		if (message == null || message.isBlank()) return null;
+		if (message == null || message.isBlank())
+			return null;
 		try {
-			return OBJECT_MAPPER.readValue(message, JpaOutboxEntity.class);
+			return objectMapper.readValue(message, JpaOutboxEntity.class);
 		} catch (Exception e) {
 			throw new IllegalArgumentException("Invalid outbox JSON payload", e);
 		}
 	}
 
 	public EnrichedDomainEvent<UserCreatedDomainEvent> toUserCreatedDomainEvent(CreatedUserDto createdUserDto) {
-	        return EnrichedDomainEvent.<UserCreatedDomainEvent>builder()
-	                .aggregateType(User.class.getSimpleName())
-	                .aggregateId(createdUserDto.getId().getValue())
-	                .domainEvent(UserCreatedDomainEvent.builder()
-	                		.createdUserDto(createdUserDto)
-	                        .build())
-	                .build();
+		return EnrichedDomainEvent.<UserCreatedDomainEvent>builder()
+				.aggregateType(User.class.getSimpleName())
+				.aggregateId(createdUserDto.getId().getValue())
+				.domainEvent(UserCreatedDomainEvent.builder()
+						.createdUserDto(createdUserDto)
+						.build())
+				.build();
 	}
-	
+
 	public EnrichedDomainEvent<AccountVerifiedDomainEvent> toAccountVerifiedDomainEvent(UserId userId) {
 		return EnrichedDomainEvent.<AccountVerifiedDomainEvent>builder()
 				.aggregateType(User.class.getSimpleName())
@@ -61,7 +68,7 @@ public class OutboxMapper {
 						.build())
 				.build();
 	}
-	
+
 	public EnrichedDomainEvent<UserSoftDeletedDomainEvent> toUserSoftDeletedDomainEvent(UserId userId) {
 		return EnrichedDomainEvent.<com.minewaku.chatter.domain.event.UserSoftDeletedDomainEvent>builder()
 				.aggregateType(User.class.getSimpleName())
@@ -71,7 +78,17 @@ public class OutboxMapper {
 						.build())
 				.build();
 	}
-	
+
+	public EnrichedDomainEvent<UserRestoredDomainEvent> toUserRestoredDomainEvent(UserId userId) {
+		return EnrichedDomainEvent.<com.minewaku.chatter.domain.event.UserRestoredDomainEvent>builder()
+				.aggregateType(User.class.getSimpleName())
+				.aggregateId(userId.getValue())
+				.domainEvent(UserRestoredDomainEvent.builder()
+						.userId(userId)
+						.build())
+				.build();
+	}
+
 	public EnrichedDomainEvent<UserHardDeletedDomainEvent> toUserHardDeletedDomainEvent(UserId userId) {
 		return EnrichedDomainEvent.<com.minewaku.chatter.domain.event.UserHardDeletedDomainEvent>builder()
 				.aggregateType(User.class.getSimpleName())
@@ -81,7 +98,7 @@ public class OutboxMapper {
 						.build())
 				.build();
 	}
-	
+
 	public EnrichedDomainEvent<UserLockedDomainEvent> toUserLockedDomainEvent(UserId userId) {
 		return EnrichedDomainEvent.<com.minewaku.chatter.domain.event.UserLockedDomainEvent>builder()
 				.aggregateType(User.class.getSimpleName())
@@ -91,7 +108,7 @@ public class OutboxMapper {
 						.build())
 				.build();
 	}
-	
+
 	public EnrichedDomainEvent<UserUnlockedDomainEvent> toUserUnlockedDomainEvent(UserId userId) {
 		return EnrichedDomainEvent.<UserUnlockedDomainEvent>builder()
 				.aggregateType(User.class.getSimpleName())

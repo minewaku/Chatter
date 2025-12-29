@@ -12,7 +12,7 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.stereotype.Service;
 
-import com.minewaku.chatter.config.properties.JwtProperties;
+import com.minewaku.chatter.config.properties.VaultJwtProperties;
 import com.minewaku.chatter.service.IJwtService;
 
 import io.jsonwebtoken.Claims;
@@ -20,9 +20,9 @@ import io.jsonwebtoken.Jwts;
 
 @Service
 public class JwtService implements IJwtService {
-	private final JwtProperties jwtProperties;
+	private final VaultJwtProperties jwtProperties;
 
-	public JwtService(JwtProperties jwtProperties) {
+	public JwtService(VaultJwtProperties jwtProperties) {
 		this.jwtProperties = jwtProperties;
 	}
 
@@ -43,24 +43,10 @@ public class JwtService implements IJwtService {
 		}
 	}
 
-	// private PrivateKey getSignInKey() throws NoSuchAlgorithmException,
-	// InvalidKeySpecException {
-	// String pem = jwtProperties.getPrivateKey()
-	// .replace("-----BEGIN PRIVATE KEY-----", "")
-	// .replace("-----END PRIVATE KEY-----", "")
-	// .replaceAll("\\s", "");
-
-	// byte[] keyBytes = Base64.getDecoder().decode(pem);
-	// PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(keyBytes);
-	// PrivateKey privateKey = KeyFactory.getInstance("RSA").generatePrivate(spec);
-
-	// return privateKey;
-	// }
-
 	private PublicKey getVerifyKey() throws NoSuchAlgorithmException, InvalidKeySpecException {
 		String pem = jwtProperties.getPublicKey()
-				.replace("-----BEGIN PUBLIC KEY-----", "")
-				.replace("-----END PUBLIC KEY-----", "")
+				.replaceAll("-+BEGIN.*KEY-+", "")
+				.replaceAll("-+END.*KEY-+", "")
 				.replaceAll("\\s", "");
 
 		byte[] keyBytes = Base64.getDecoder().decode(pem);

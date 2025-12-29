@@ -41,7 +41,7 @@ public class LinkProvider implements LinkGenerator {
 
 	private String mailTypeToPath(MailType mailType) {
 	    return switch (mailType) {
-	        case EMAIL_CONFIRMATION -> "http://localhost:5004/email-confirmation";
+	        case EMAIL_CONFIRMATION -> "http://localhost:5001/auth-service/v1/auth/verify";
 	        default -> throw new IllegalArgumentException("Invalid email type: " + mailType);
 	    };
 	}

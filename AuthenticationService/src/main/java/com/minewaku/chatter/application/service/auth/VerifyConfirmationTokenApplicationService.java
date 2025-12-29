@@ -44,11 +44,8 @@ public class VerifyConfirmationTokenApplicationService implements VerifyConfirma
 		User user = userRepository.findByIdAndIsDeletedFalse(existConfirmationToken.getUserId())
 				.orElseThrow(() -> new EntityNotFoundException("User does not exist"));
 		
-		user.validateAccessible();
-		existConfirmationToken.verifyToken();
-		
 		confirmationTokenRepository.confirmEmail(existConfirmationToken);
-		userRepository.enable(existConfirmationToken.getUserId());
+		userRepository.enable(user);
 		
 		List<DomainEvent> filterEvents = filterEvents(user.getEvents());
         queueEventPublisher.publish(filterEvents);

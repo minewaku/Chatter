@@ -8,7 +8,7 @@ configuration lives, and a few troubleshooting tips.
 
 Start Cerbos using Docker Compose (detached):
 
-```bash
+```powershell
 docker compose -p cerbos_service_chatter -f docker-compose.yml up -d
 ```
 

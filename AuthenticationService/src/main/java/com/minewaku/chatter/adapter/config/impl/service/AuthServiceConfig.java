@@ -18,27 +18,28 @@ import com.minewaku.chatter.domain.port.out.repository.RefreshTokenRepository;
 import com.minewaku.chatter.domain.port.out.repository.UserRepository;
 import com.minewaku.chatter.domain.port.out.repository.UserRoleRepository;
 import com.minewaku.chatter.domain.port.out.service.AccessTokenGenerator;
+import com.minewaku.chatter.domain.port.out.service.ConfirmationTokenGenerator;
 import com.minewaku.chatter.domain.port.out.service.EmailSender;
 import com.minewaku.chatter.domain.port.out.service.IdGenerator;
-import com.minewaku.chatter.domain.port.out.service.KeyGenerator;
 import com.minewaku.chatter.domain.port.out.service.LinkGenerator;
 import com.minewaku.chatter.domain.port.out.service.PasswordHasher;
 import com.minewaku.chatter.domain.port.out.service.RefreshTokenGenerator;
+import com.minewaku.chatter.domain.service.auth.CheckRegisterUserDomainService;
 
 @Configuration
 class AuthServiceConfig {
-	
-    @Bean
+
+	@Bean
 	RegisterApplicationService registerApplicationService(
-		CredentialsRepository credentialsRepository,
-		UserRepository userRepository,
-		PasswordHasher passwordHasher,
-		IdGenerator idGenerator,
-		LinkGenerator linkGenerator,
-		EmailSender emailSender,
-		MessageQueue messageQueue,
-		StoreEvent storeEvent
-	) {
+			CredentialsRepository credentialsRepository,
+			UserRepository userRepository,
+			PasswordHasher passwordHasher,
+			IdGenerator idGenerator,
+			LinkGenerator linkGenerator,
+			EmailSender emailSender,
+			MessageQueue messageQueue,
+			StoreEvent storeEvent,
+			CheckRegisterUserDomainService checkRegisterUserDomainService) {
 		return new RegisterApplicationService(
 				credentialsRepository,
 				userRepository,
@@ -47,20 +48,22 @@ class AuthServiceConfig {
 				linkGenerator,
 				emailSender,
 				messageQueue,
-				storeEvent);
+				storeEvent,
+				checkRegisterUserDomainService);
 	}
 
 	@Bean
 	LoginApplicationService loginApplicationService(
 			CredentialsRepository credentialsRepository,
+			RefreshTokenRepository refreshTokenRepository,
 			UserRepository userRepository,
 			UserRoleRepository userRoleRepository,
 			PasswordHasher passwordHasher,
 			AccessTokenGenerator accessTokenGenerator,
-			RefreshTokenGenerator refreshTokenGenerator
-	) {
+			RefreshTokenGenerator refreshTokenGenerator) {
 		return new LoginApplicationService(
 				credentialsRepository,
+				refreshTokenRepository,
 				userRepository,
 				userRoleRepository,
 				passwordHasher,
@@ -72,8 +75,7 @@ class AuthServiceConfig {
 	ChangePasswordApplicationService changePasswordApplicationService(
 			CredentialsRepository credentialsRepository,
 			UserRepository userRepository,
-			PasswordHasher passwordHasher
-	) {
+			PasswordHasher passwordHasher) {
 		return new ChangePasswordApplicationService(
 				credentialsRepository,
 				userRepository,
@@ -82,8 +84,7 @@ class AuthServiceConfig {
 
 	@Bean
 	LogoutApplicationService logoutApplicationService(
-			RefreshTokenRepository refreshTokenRepository
-	) {
+			RefreshTokenRepository refreshTokenRepository) {
 		return new LogoutApplicationService(refreshTokenRepository);
 	}
 
@@ -93,8 +94,7 @@ class AuthServiceConfig {
 			UserRepository userRepository,
 			UserRoleRepository userRoleRepository,
 			RefreshTokenGenerator refreshTokenGenerator,
-			AccessTokenGenerator accessTokenGenerator
-	) {
+			AccessTokenGenerator accessTokenGenerator) {
 		return new RefreshApplicationService(
 				refreshTokenRepository,
 				userRepository,
@@ -107,8 +107,7 @@ class AuthServiceConfig {
 	VerifyConfirmationTokenApplicationService verifyConfirmationTokenApplicationService(
 			ConfirmationTokenRepository confirmationTokenRepository,
 			UserRepository userRepository,
-			MessageQueue messageQueue
-	) {
+			MessageQueue messageQueue) {
 		return new VerifyConfirmationTokenApplicationService(
 				confirmationTokenRepository,
 				userRepository,
@@ -117,15 +116,14 @@ class AuthServiceConfig {
 
 	@Bean
 	ResendConfirmationTokenApplicationService resendConfirmationTokenApplicationService(
-			ConfirmationTokenRepository confirmationTokenRepository, 
-			UserRepository userRepository, 
-			KeyGenerator keyGenerator, 
-			MessageQueue messageQueue
-	) {
+			ConfirmationTokenRepository confirmationTokenRepository,
+			UserRepository userRepository,
+			ConfirmationTokenGenerator keyGenerator,
+			MessageQueue messageQueue) {
 		return new ResendConfirmationTokenApplicationService(
-				confirmationTokenRepository, 
-				userRepository, 
-				keyGenerator, 
+				confirmationTokenRepository,
+				userRepository,
+				keyGenerator,
 				messageQueue);
 	}
 }

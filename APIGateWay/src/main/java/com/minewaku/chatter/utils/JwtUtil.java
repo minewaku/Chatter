@@ -10,7 +10,7 @@ import java.util.function.Function;
 
 import org.springframework.stereotype.Component;
 
-import com.minewaku.chatter.config.properties.JwtProperties;
+import com.minewaku.chatter.config.properties.VaultJwtProperties;
 import com.minewaku.chatter.exceptions.InvalidTokenException;
 
 import io.jsonwebtoken.Claims;
@@ -23,7 +23,7 @@ public class JwtUtil {
 
     private final PublicKey publicKey;
 
-    public JwtUtil(JwtProperties jwtProperties) {
+    public JwtUtil(VaultJwtProperties jwtProperties) {
         this.publicKey = loadPublicKey(jwtProperties.getPublicKey());
     }
 

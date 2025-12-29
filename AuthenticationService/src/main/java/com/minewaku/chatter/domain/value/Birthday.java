@@ -5,6 +5,7 @@ import java.time.Period;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.minewaku.chatter.domain.exception.DomainValidationException;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -24,10 +25,10 @@ public class Birthday {
     		@JsonProperty("value") @NonNull LocalDate value) {
 		
         if(value.isAfter(LocalDate.now())) {
-        	throw new IllegalArgumentException("Birthday cannot be in the future");
+        	throw new DomainValidationException("Birthday cannot be in the future");
         }
         if(Period.between(value, LocalDate.now()).getYears() > 150) {
-        	throw new IllegalArgumentException("Age seems invalid");
+        	throw new DomainValidationException("Age seems invalid");
         }
         
         this.value = value;

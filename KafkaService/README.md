@@ -1,5 +1,5 @@
 ## Pulling via Docker
-``` sh
+```powershell
 docker compose -p kafka_service_chatter -f docker-compose.yml up -d
 ```
 
@@ -12,7 +12,7 @@ sed -i 's/\r$//' ../../opt/kafka/scripts/create-topics.sh
 bash ../../opt/kafka/scripts/create-topics.sh
 ```
 
-```bash
+```do not run, just test
 kafka-console-consumer \
   --bootstrap-server kafka:5003 \
   --topic dev.shared.cdc.authorization.user-role.id \

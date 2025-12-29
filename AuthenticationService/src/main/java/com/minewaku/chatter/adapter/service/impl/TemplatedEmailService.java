@@ -60,7 +60,7 @@ public class TemplatedEmailService implements EmailSender {
 	
 	private String mailTypeToTemplateName(MailType mailType) {
 		return switch (mailType) {
-	        case EMAIL_CONFIRMATION -> "confirmation-email";
+	        case EMAIL_CONFIRMATION -> "verifyEmailTemplate";
 	        case LOGIN_NOTIFICATION -> "login-notification-email";
 	        default -> throw new IllegalArgumentException("Invalid email type: " + mailType);
 		};

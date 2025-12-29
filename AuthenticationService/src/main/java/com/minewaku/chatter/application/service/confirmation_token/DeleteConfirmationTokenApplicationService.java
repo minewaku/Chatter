@@ -1,5 +1,7 @@
 package com.minewaku.chatter.application.service.confirmation_token;
 
+import org.springframework.transaction.annotation.Transactional;
+
 import com.minewaku.chatter.domain.port.in.confirmation_token.DeleteConfirmationTokenUseCase;
 import com.minewaku.chatter.domain.port.out.repository.ConfirmationTokenRepository;
 
@@ -14,6 +16,7 @@ public class DeleteConfirmationTokenApplicationService implements DeleteConfirma
 	
 	
     @Override
+	@Transactional
     public Void handle(String token) {
         confirmationTokenRepository.deleteByToken(token);
         return null;

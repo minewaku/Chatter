@@ -10,46 +10,49 @@ import com.minewaku.chatter.domain.port.in.auth.ChangePasswordUseCase;
 import com.minewaku.chatter.domain.port.out.repository.CredentialsRepository;
 import com.minewaku.chatter.domain.port.out.repository.UserRepository;
 import com.minewaku.chatter.domain.port.out.service.PasswordHasher;
-import com.minewaku.chatter.domain.service.auth.LoginDomainService;
+import com.minewaku.chatter.domain.service.auth.PasswordSecurityDomainService;
 import com.minewaku.chatter.domain.value.HashedPassword;
 
 public class ChangePasswordApplicationService implements ChangePasswordUseCase {
-	
+
 	private final CredentialsRepository credentialsRepository;
 	private final UserRepository userRepository;
 	private final PasswordHasher passwordHasher;
-	
-	private final LoginDomainService loginDomainService;
 
-	
+	private final PasswordSecurityDomainService passwordSecurityDomainService;
+
 	public ChangePasswordApplicationService(
-		CredentialsRepository credentialsRepository,
-		UserRepository userRepository,
-		PasswordHasher passwordHasher) {
-		
+			CredentialsRepository credentialsRepository,
+			UserRepository userRepository,
+			PasswordHasher passwordHasher) {
+
 		this.credentialsRepository = credentialsRepository;
 		this.userRepository = userRepository;
 		this.passwordHasher = passwordHasher;
-		
-		loginDomainService = new LoginDomainService(passwordHasher);
+
+		passwordSecurityDomainService = new PasswordSecurityDomainService(passwordHasher);
 	}
-	
-	
-    @Override
-    @Transactional
-    public Void handle(ChangePasswordCommand command) {
-		User user = userRepository.findByEmailAndIsDeletedFalse(command.getEmail())
+
+	@Override
+	@Transactional
+	public Void handle(ChangePasswordCommand command) {
+		User user = userRepository.findByEmail(command.getEmail())
 				.orElseThrow(() -> new EntityNotFoundException("User does not exist"));
 		user.validateAccessible();
+
+		Credentials credentials = credentialsRepository.findById(user.getId()).orElseThrow(
+				() -> new EntityNotFoundException("This login method for this user does not exist"));
+
 		
-		Credentials credentials = credentialsRepository.findByUserId(user.getId());
-		loginDomainService.login(user, credentials, command.getPassword());
-	
-		HashedPassword currentHashedPassword = passwordHasher.hash(command.getNewPassword());
+		
+		passwordSecurityDomainService.validateCredentials(credentials, command.getPassword());
+
 		HashedPassword newHashedPassword = passwordHasher.hash(command.getNewPassword());
-		currentHashedPassword.ensureNotSameAs(newHashedPassword);
-		
-        credentialsRepository.changePassword(user.getId(), newHashedPassword);
-        return null;
+
+		passwordSecurityDomainService.validatePasswordReuse(credentials, command.getNewPassword());
+
+		credentials.changePassword(newHashedPassword);
+		credentialsRepository.save(credentials);
+		return null;
 	}
 }
