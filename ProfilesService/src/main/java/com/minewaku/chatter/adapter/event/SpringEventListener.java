@@ -42,12 +42,6 @@ public class SpringEventListener {
 		sendConfirmationTokenDomainEventSubcriber.handle(event);
 	}
 
-
-	// @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-	// public void onUserCreatedDomainEvent(UserCreatedDomainEvent event) {
-	// 	jpaOutboxRepository.save(outboxMapper.fromUserCreatedDomainEventToEntity(event));
-	// }
-	
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void onUserCreatedDomainEvent(UserCreatedDomainEvent event) {
 		EnrichedDomainEvent<UserCreatedDomainEvent> enrichedEvent = outboxMapper

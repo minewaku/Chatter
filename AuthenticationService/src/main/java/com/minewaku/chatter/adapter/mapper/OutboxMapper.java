@@ -49,6 +49,17 @@ public class OutboxMapper {
 		}
 	}
 
+	public JpaOutboxEntity fromUserCreatedDomainEventToEntity(UserCreatedDomainEvent event) {
+		JsonNode payload = objectMapper.convertValue(event.getCreatedUserDto(), JsonNode.class);
+
+		return JpaOutboxEntity.builder()
+				.aggregateId(event.getCreatedUserDto().getId().getValue())
+				.aggregateType(User.class.getSimpleName())
+				.eventType(UserCreatedDomainEvent.class.getSimpleName())
+				.payload(payload)
+				.build();
+	}
+
 	public EnrichedDomainEvent<UserCreatedDomainEvent> toUserCreatedDomainEvent(CreatedUserDto createdUserDto) {
 		return EnrichedDomainEvent.<UserCreatedDomainEvent>builder()
 				.aggregateType(User.class.getSimpleName())

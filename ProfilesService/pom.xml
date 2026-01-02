@@ -1,35 +1,35 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">	
+<project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>com.minewaku</groupId>
-	<artifactId>authentication-service</artifactId>
+	<artifactId>profiles-service</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>AuthService</name>
+	<name>ProfilesService</name>
 	<description>Chat App</description>
 	<url/>
-	
+
 	<licenses>
 		<license/>
 	</licenses>
-	
+
 	<developers>
 		<developer/>
 	</developers>
-	
+
 	<scm>
 		<connection/>
 		<developerConnection/>
 		<tag/>
 		<url/>
 	</scm>
-	
+
 	<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-parent -->
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
 		<version>3.5.4</version>
-		<relativePath/> <!-- lookup parent from repository -->
+		<relativePath/>	<!-- lookup parent from repository -->
 	</parent>
 
 	<properties>
@@ -37,8 +37,7 @@
 		<spring-cloud.version>2025.0.0</spring-cloud.version>
 		<lombok.version>1.18.38</lombok.version>
 	</properties>
-		
-	
+
 	<dependencies>
 		<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter -->
 		<!-- 3.5.4 -->
@@ -86,15 +85,15 @@
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
 		</dependency>
-
 		
+
 		<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-actuator -->
 		<!-- 3.5.4 -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
-		
+
 		<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-data-redis -->
 		<!-- 3.5.4 -->
 		<dependency>
@@ -108,14 +107,14 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-log4j2</artifactId>
 		</dependency>
-		
+
 		<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-validation -->
 		<!-- 3.5.4 -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-validation</artifactId>
 		</dependency>
-		
+
 		<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-security -->
 		<!-- 3.5.4 -->
 		<dependency>
@@ -129,21 +128,7 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
 		</dependency>
-		
-		<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-mail -->
-		<!-- 3.5.4 -->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-mail</artifactId>
-		</dependency>
-		
-		<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-thymeleaf -->
-		<!-- 3.5.4 -->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-thymeleaf</artifactId>
-		</dependency>
-		
+
 		<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-integration -->
 		<!-- 3.5.4 -->
 		<dependency>
@@ -164,6 +149,7 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-devtools</artifactId>
 		</dependency>
+
 
 
 		<!-- 
@@ -205,38 +191,6 @@
 	    </dependency>
 
 
-
-		<!-- 
-			*** FLYWAY PACKAGES ***
-		-->
-
-		<!--  https://mvnrepository.com/artifact/org.flywaydb/flyway-core  -->
-		<dependency>
-			<groupId>org.flywaydb</groupId>
-			<artifactId>flyway-core</artifactId>
-		</dependency>
-
-		<!-- https://mvnrepository.com/artifact/org.flywaydb/flyway-database-postgresql -->
-		<dependency>
-			<groupId>org.flywaydb</groupId>
-			<artifactId>flyway-database-postgresql</artifactId>
-			<scope>runtime</scope>
-		</dependency>
-	    
-	    
-	    
-	    <!-- 
-			*** PASSWORD HASHER PACKAGE ***
-		-->
-	    
-	    <!-- https://mvnrepository.com/artifact/com.password4j/password4j -->
-		<dependency>
-		    <groupId>com.password4j</groupId>
-		    <artifactId>password4j</artifactId>
-		    <version>1.8.4</version>
-		</dependency>
-		
-		
 
 		<!-- 
 			*** DEBEZIUM RELLATED PACKAGES ***
@@ -285,21 +239,7 @@
 		</dependency>
 
 
-		
-	    <!-- 
-			*** DOCS GENERATOR PACKAGES ***
-		-->
-		
-		<!-- https://mvnrepository.com/artifact/org.springdoc/springdoc-openapi-starter-webmvc-ui -->
-		<dependency>
-			<groupId>org.springdoc</groupId>
-			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-			<version>2.8.0</version>
-		</dependency>
-
-	    
-	    
-	    <!-- 
+			    <!-- 
 			*** TOKEN RELATED PACKAGES ***
 		-->
 	    
@@ -356,7 +296,7 @@
 		</dependency>
 
 
-		
+
 		<!--
 			MAPSTRUCT RELATED PACKAGES
 		-->
@@ -389,8 +329,7 @@
 			<optional>true</optional>
 		</dependency>
 	</dependencies>
-	
-	
+
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
