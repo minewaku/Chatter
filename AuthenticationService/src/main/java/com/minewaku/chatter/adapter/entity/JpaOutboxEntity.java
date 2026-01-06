@@ -30,6 +30,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class JpaOutboxEntity {
+    
 	@Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "outbox_seq")
     private Long id;
@@ -39,9 +40,10 @@ public class JpaOutboxEntity {
 	@NotNull(message = "aggregate_type cannot be null")
     private String aggregateType;
 
-	@Column(name = "aggregate_id", nullable = false, updatable = false)
+	@Column(name = "aggregate_id", length = 50 ,nullable = false, updatable = false)
+    @NotBlank(message = "aggregate_id is required")
 	@NotNull(message = "aggregate_id cannot be null")
-    private Long aggregateId;
+    private String aggregateId;
 
 	@Column(name = "event_type", length = 128, nullable = false, updatable = false)
 	@NotBlank(message = "event_type is required")
@@ -53,19 +55,12 @@ public class JpaOutboxEntity {
     @JdbcTypeCode(SqlTypes.JSON)
     private JsonNode payload;
     
-    @Column(name = "occurred_at", nullable = false, updatable = false)
-    @NotNull(message = "occurredAt cannot be null")
-    private Instant occurredAt;
-    
-    @Column(name = "is_processed", nullable = false)
-    private boolean isProcessed;
-    
-    @Column(name = "processed_at")
-    private Instant processedAt;
+    @Column(name = "created_at", nullable = false, updatable = false)
+    @NotNull(message = "createdAt cannot be null")
+    private Instant createdAt;
     
     @PrePersist
     protected void onCreate() {
-    	occurredAt = Objects.isNull(occurredAt) ? Instant.now() : occurredAt;
-    	isProcessed = false;
+    	createdAt = Objects.isNull(createdAt) ? Instant.now() : createdAt;
     }
 }

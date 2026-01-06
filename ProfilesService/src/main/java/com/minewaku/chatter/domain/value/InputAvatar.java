@@ -13,22 +13,28 @@ import lombok.ToString;
 @EqualsAndHashCode(callSuper = true)
 public class InputAvatar extends InputImage {
 
-    private final long maxSizeInBytes = 10 * 1024 * 1024; // 10 MB
-    private final double aspectRatio = 1.0; // square
-    private final int minWidthInPixels = 128;
-    private final int minHeightInPixels = 128; 
-    private final int maxWidthInPixels = 1024;
-    private final int maxHeightInPixels = 1024;
-    private final Set<String> validContentTypes = Set.of(
+    private final String key;
+    private static final StorageCategory STORAGE_CATEGORY = StorageCategory.USER_AVATAR;
+    private final long MAX_SIZE_IN_BYTES = 10 * 1024 * 1024; // 10 MB
+    private final double ASPECT_RATIO = 1.0;
+    private final int MIN_WIDTH_IN_PIXELS = 128;
+    private final int MIN_HEIGHT_IN_PIXELS = 128; 
+    private final int MAX_WIDTH_IN_PIXELS = 1024;
+    private final int MAX_HEIGHT_IN_PIXELS = 1024;
+    private final Set<String> VALID_CONTENT_TYPES = Set.of(
         "png",
         "jpg",
         "jpeg",
         "gif",
-        "webp",
-        "avif"
+        "webp"
     );
 
+    public StorageCategory getStorageCategory() {
+        return STORAGE_CATEGORY;
+    } 
+
     public InputAvatar(
+        @NonNull String key,
         @NonNull String originalFilename,
         @NonNull String contentType,
         long sizeInBytes,
@@ -41,29 +47,30 @@ public class InputAvatar extends InputImage {
             contentStream
         );
 
+        this.key = key;
         validate();
     }
 
     private void validate() {
-        if (this.sizeInBytes > this.maxSizeInBytes) {
-            throw new IllegalArgumentException("Avatar file size exceeds the maximum limit of " + this.maxSizeInBytes + " bytes.");
+        if (this.sizeInBytes > this.MAX_SIZE_IN_BYTES) {
+            throw new IllegalArgumentException("Avatar file size exceeds the maximum limit of " + this.MAX_SIZE_IN_BYTES + " bytes.");
         }
 
-        if (!this.validContentTypes.contains(this.contentType.toLowerCase())) {
+        if (!this.VALID_CONTENT_TYPES.contains(this.contentType.toLowerCase())) {
             throw new IllegalArgumentException("Invalid avatar content type: " + this.contentType);
         }
 
-        if (this.width < this.minWidthInPixels || this.height < this.minHeightInPixels) {
-            throw new IllegalArgumentException("Avatar dimensions are too small. Minimum size is " + this.minWidthInPixels + "x" + this.minHeightInPixels + " pixels.");
+        if (this.width < this.MIN_WIDTH_IN_PIXELS || this.height < this.MIN_HEIGHT_IN_PIXELS) {
+            throw new IllegalArgumentException("Avatar dimensions are too small. Minimum size is " + this.MIN_WIDTH_IN_PIXELS + "x" + this.MIN_HEIGHT_IN_PIXELS + " pixels.");
         }
 
-        if (this.width > this.maxWidthInPixels || this.height > this.maxHeightInPixels) {
-            throw new IllegalArgumentException("Avatar dimensions are too large. Maximum size is " + this.maxWidthInPixels + "x" + this.maxHeightInPixels + " pixels.");
+        if (this.width > this.MAX_WIDTH_IN_PIXELS || this.height > this.MAX_HEIGHT_IN_PIXELS) {
+            throw new IllegalArgumentException("Avatar dimensions are too large. Maximum size is " + this.MAX_WIDTH_IN_PIXELS + "x" + this.MAX_HEIGHT_IN_PIXELS + " pixels.");
         }
 
         double actualAspectRatio = (double) this.width / (double) this.height;
-        if (Math.abs(actualAspectRatio - this.aspectRatio) > 0.01) {
-            throw new IllegalArgumentException("Avatar must have an aspect ratio of " + this.aspectRatio + ":1 (square).");
+        if (Math.abs(actualAspectRatio - this.ASPECT_RATIO) > 0.01) {
+            throw new IllegalArgumentException("Avatar must have an aspect ratio of " + this.ASPECT_RATIO + ":1 (square).");
         }
     }
 }

@@ -3,10 +3,20 @@ package com.minewaku.chatter.domain.value;
 import java.io.InputStream;
 import java.util.Set;
 
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NonNull;
+import lombok.ToString;
 
+@Getter
+@ToString
+@EqualsAndHashCode(callSuper = true)
 public class InputBanner extends InputImage {
-private final long maxSizeInBytes = 10 * 1024 * 1024; // 10 MB
+
+    private static final StorageCategory STORAGE_CATEGORY = StorageCategory.USER_BANNER;
+    private final String key;
+
+    private final long maxSizeInBytes = 10 * 1024 * 1024; // 10 MB
     private final double aspectRatio = 2.5; // rectangle
     private final int minWidthInPixels = 320;
     private final int minHeightInPixels = 128; 
@@ -17,11 +27,15 @@ private final long maxSizeInBytes = 10 * 1024 * 1024; // 10 MB
         "jpg",
         "jpeg",
         "gif",
-        "webp",
-        "avif"
+        "webp"
     );
 
+    public StorageCategory getStorageCategory() {
+        return STORAGE_CATEGORY;
+    } 
+
     public InputBanner(
+        @NonNull String key,
         @NonNull String originalFilename,
         @NonNull String contentType,
         long sizeInBytes,
@@ -34,6 +48,7 @@ private final long maxSizeInBytes = 10 * 1024 * 1024; // 10 MB
             contentStream
         );
 
+        this.key = key;
         validate();
     }
 

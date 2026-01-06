@@ -46,7 +46,6 @@ public class OutboxEventConsumer {
 			RestoreRoleApplicationService restoreRoleApplicationService,
 			AssignRoleApplicationService assignRoleApplicationService,
 			UnassignRoleApplicationService unassignRoleApplicationService) {
-		
 		this.outboxMapper = outboxMapper;
 		this.objectMapper = objectMapper;
 		this.createRoleApplicationService = createRoleApplicationService;
@@ -58,63 +57,63 @@ public class OutboxEventConsumer {
 		this.unassignRoleApplicationService = unassignRoleApplicationService;
 	}
 
-	@KafkaListener(topics = "dev.shared.cdc.authorization.role.id", groupId =
-	"dev.com.minewaku.chatter.authorization.authorization-service.role")
-	public void handleCdcRole(String message) throws JsonProcessingException {
-	JpaOutboxEntity entity = outboxMapper.messageToEntity(message);
-	String eventType = entity.getEventType();
+	// @KafkaListener(topics = "dev.shared.cdc.authorization.role.id", groupId =
+	// "dev.com.minewaku.chatter.authorization.authorization-service.role")
+	// public void handleCdcRole(String message) throws JsonProcessingException {
+	// JpaOutboxEntity entity = outboxMapper.messageToEntity(message);
+	// String eventType = entity.getEventType();
 
-	switch (eventType) {
-		case "UserCreatedDomainEvent" -> {
-		CreateRoleCommand command = objectMapper.treeToValue(entity.getPayload(),
-		CreateRoleCommand.class);
-		createRoleApplicationService.handle(command);
-		}
-		case "ROLE_UPDATED" -> {
-		UpdateRoleCommand command = objectMapper.treeToValue(entity.getPayload(),
-		UpdateRoleCommand.class);
-		updateRoleApplicationService.handle(command);
-		}
-		case "ROLE_SOFT_DELETED" -> {
-		RoleId roleId = objectMapper.treeToValue(entity.getPayload(), RoleId.class);
-		softDeleteRoleApplicationService.handle(roleId);
-		}
-		case "ROLE_RESTORED" -> {
-		RoleId roleId = objectMapper.treeToValue(entity.getPayload(), RoleId.class);
-		restoreRoleApplicationService.handle(roleId);
-		}
-		case "ROLE_HARD_DELETED" -> {
-		RoleId roleId = objectMapper.treeToValue(entity.getPayload(), RoleId.class);
-		hardDeleteRoleApplicationService.handle(roleId);
-		}
+	// switch (eventType) {
+	// case "ROLE_CREATED" -> {
+	// CreateRoleCommand command = objectMapper.treeToValue(entity.getPayload(),
+	// CreateRoleCommand.class);
+	// createRoleApplicationService.handle(command);
+	// }
+	// case "ROLE_UPDATED" -> {
+	// UpdateRoleCommand command = objectMapper.treeToValue(entity.getPayload(),
+	// UpdateRoleCommand.class);
+	// updateRoleApplicationService.handle(command);
+	// }
+	// case "ROLE_SOFT_DELETED" -> {
+	// RoleId roleId = objectMapper.treeToValue(entity.getPayload(), RoleId.class);
+	// softDeleteRoleApplicationService.handle(roleId);
+	// }
+	// case "ROLE_RESTORED" -> {
+	// RoleId roleId = objectMapper.treeToValue(entity.getPayload(), RoleId.class);
+	// restoreRoleApplicationService.handle(roleId);
+	// }
+	// case "ROLE_HARD_DELETED" -> {
+	// RoleId roleId = objectMapper.treeToValue(entity.getPayload(), RoleId.class);
+	// hardDeleteRoleApplicationService.handle(roleId);
+	// }
 
-		default -> throw new IllegalArgumentException("Unknown event type: " +
-		eventType);
-		}
-		}
+	// default -> throw new IllegalArgumentException("Unknown event type: " +
+	// eventType);
+	// }
+	// }
 
-		@KafkaListener(topics = "dev.shared.cdc.authorization.user.role.id", groupId
-		= "dev.com.minewaku.chatter.authorization.authorization-service.user.role")
-		public void handleCdcUserRole(String message) throws JsonProcessingException
-		{
-		JpaOutboxEntity entity = outboxMapper.messageToEntity(message);
-		String eventType = entity.getEventType();
+	// @KafkaListener(topics = "dev.shared.cdc.authorization.user.role.id", groupId
+	// = "dev.com.minewaku.chatter.authorization.authorization-service.user.role")
+	// public void handleCdcUserRole(String message) throws JsonProcessingException
+	// {
+	// JpaOutboxEntity entity = outboxMapper.messageToEntity(message);
+	// String eventType = entity.getEventType();
 
-		switch (eventType) {
-		case "USER_ROLE_CREATED" -> {
-		CreateUserRoleCommand command = objectMapper.treeToValue(entity.getPayload(),
-		CreateUserRoleCommand.class);
-		assignRoleApplicationService.handle(command);
-		}
+	// switch (eventType) {
+	// case "USER_ROLE_CREATED" -> {
+	// CreateUserRoleCommand command = objectMapper.treeToValue(entity.getPayload(),
+	// CreateUserRoleCommand.class);
+	// assignRoleApplicationService.handle(command);
+	// }
 
-		case "USER_ROLE_DELETED" -> {
-		UserRoleId command = objectMapper.treeToValue(entity.getPayload(),
-		UserRoleId.class);
-		unassignRoleApplicationService.handle(command);
-		}
+	// case "USER_ROLE_DELETED" -> {
+	// UserRoleId command = objectMapper.treeToValue(entity.getPayload(),
+	// UserRoleId.class);
+	// unassignRoleApplicationService.handle(command);
+	// }
 
-		default -> throw new IllegalArgumentException("Unknown event type: " +
-		eventType);
-		}
-	}
+	// default -> throw new IllegalArgumentException("Unknown event type: " +
+	// eventType);
+	// }
+	// }
 }

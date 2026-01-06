@@ -7,7 +7,6 @@ import org.springframework.kafka.core.KafkaTemplate;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.minewaku.chatter.adapter.db.postgresql.JpaOutboxRepository;
 
 @Configuration
 public class OutboxIntegrationFlow {
@@ -16,41 +15,38 @@ public class OutboxIntegrationFlow {
 
 	@Bean
 	IntegrationFlow outboxFlow(
-		KafkaTemplate<String, String> kafkaTemplate,
-	    ObjectMapper objectMapper,
-	    JpaOutboxRepository outboxRepository) {
+			KafkaTemplate<String, String> kafkaTemplate,
+			ObjectMapper objectMapper
+	) {
 
-	    return IntegrationFlow.from("outboxChannel")
-	            .enrichHeaders(h -> {
-	            	h.headerFunction("event_type", m -> { 
-	            		try { 
-	            			JsonNode root = objectMapper.readTree((String) m.getPayload()); 
-	            			return root.path("after").path("eventType").asText(); 
-	            		} catch (Exception e) { 
-	            			throw new RuntimeException(e); 
-	            		} 
-	            	}); 
-	            	
-	            	h.headerFunction("kafka_topic", m -> mapEventToTopic((String) m.getHeaders().get("event_type"))); 
-	            	h.headerFunction("client_id", m -> mapEventToClientId((String) m.getHeaders().get("event_type")));
-	            })
-	            .handle((payload, headers) -> {
-	            	try { 
-		            	JsonNode root = objectMapper.readTree((String) payload);
-		            	Long outboxId = root.path("after").path("id").asLong();
-		            	String headerTopic = (String) headers.get("kafka_topic");
-		            	kafkaTemplate.send(headerTopic, (String) payload)
-		                            .thenRun(() -> outboxRepository.markProcessed(outboxId));
-	
-		                return null;
-	            	} catch (Exception e) { 
-            			throw new RuntimeException(e); 
-            		} 
-	            })
-	            .get();
+		return IntegrationFlow.from("outboxChannel")
+				.enrichHeaders(h -> {
+					h.headerFunction("event_type", m -> {
+						try {
+							JsonNode root = objectMapper.readTree((String) m.getPayload());
+							return root.path("after").path("eventType").asText();
+						} catch (Exception e) {
+							throw new RuntimeException("Failed to extract event_type", e);
+						}
+					});
+
+					h.headerFunction("kafka_topic", m -> mapEventToTopic((String) m.getHeaders().get("event_type")));
+					h.headerFunction("client_id", m -> mapEventToClientId((String) m.getHeaders().get("event_type")));
+				})
+				.handle((payload, headers) -> {
+					try {
+						String headerTopic = (String) headers.get("kafka_topic");
+						String payloadString = (String) payload;
+						kafkaTemplate.send(headerTopic, payloadString).get();
+						
+						return null;
+					} catch (Exception e) {
+						throw new RuntimeException("Failed to send to Kafka", e);
+					}
+				})
+				.get();
 	}
 
-    
     private String mapEventToTopic(String eventType) {
         if (eventType.contains("USER_CREATED")) {
             return "dev.shared.entity.authentication.user.id";

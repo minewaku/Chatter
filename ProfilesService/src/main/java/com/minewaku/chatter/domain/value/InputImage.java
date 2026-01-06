@@ -1,4 +1,5 @@
 package com.minewaku.chatter.domain.value;
+import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
@@ -20,73 +21,74 @@ public class InputImage extends InputFile {
     protected int height;
     protected String formatName;
 
-    private static final Set<String> ALLOWED_MIME_TYPES = Set.of(
-        "image/png",
-        "image/jpeg",
-        "image/jpg",
-        "image/gif",
-        "image/webp",
-        "image/avif"
-    );
-
     private static final Set<String> SUPPORTED_FORMATS = Set.of(
         "png",
         "jpeg",
         "jpg",
         "gif",
-        "webp", // Cần thư viện hỗ trợ (vd: TwelveMonkeys) mới đọc được
-        "avif"  // Cần thư viện hỗ trợ mới đọc được
+        "webp"
     );
 
-    public InputImage(
+    public InputImage (
         @NonNull String originalFilename,
         @NonNull String contentType,
         long sizeInBytes,
         @NonNull InputStream contentStream
     ) {
-        super(originalFilename, contentType, sizeInBytes, contentStream);
+        super(originalFilename, contentType, sizeInBytes, ensureMarkSupported(contentStream));
+        
         this.extractImageMetadata();
-        this.validateMimeType(contentType);
     }
 
+
+    // Explain about Stream and BufferedInputStream:
+    // 1. Memory Efficiency: Files are processed as Streams instead of byte[] to save memory. 
+    //    Loading an entire file (byte[]) into memory can cause OutOfMemory errors. 
+    //    Streams allow processing data chunk-by-chunk.
+    //
+    // 2. Why Buffered?: Standard Streams are "forward-only" (read-once). 
+    //    If you read data to check the header, that data is consumed and lost.
+    //    BufferedInputStream wraps the original stream and caches read data, 
+    //    enabling the mark/reset function to "rewind" to the beginning after validation.
+    private static InputStream ensureMarkSupported(InputStream stream) {
+        return stream.markSupported() ? stream : new BufferedInputStream(stream);
+    }
+
+
+    // Doesn't need to load the entire image into memory, just reads metadata.
     private void extractImageMetadata() {
         try {
-            if (!this.contentStream.markSupported()) {
-                throw new IllegalStateException("Stream does not support mark/reset");
-            }
-
             this.contentStream.mark((int) this.sizeInBytes + 1);
+            ImageIO.setUseCache(false); 
+
             try (ImageInputStream iis = ImageIO.createImageInputStream(this.contentStream)) {
                 Iterator<ImageReader> readers = ImageIO.getImageReaders(iis);
 
                 if (readers.hasNext()) {
                     ImageReader reader = readers.next();
                     try {
-                        reader.setInput(iis, true);
+                        reader.setInput(iis, true, true); // ignoreMetadata=true (tham số 3)
                         this.width = reader.getWidth(0);
                         this.height = reader.getHeight(0);
-                        String detectedFormat = reader.getFormatName().toLowerCase();
+                        this.formatName = reader.getFormatName().toLowerCase();
 
-                        if (!isFormatSupported(detectedFormat)) {
-                             throw new BusinessRuleViolationException("Unsupported image format: " + detectedFormat);
+                        if (!isFormatSupported(this.formatName)) {
+                             throw new BusinessRuleViolationException("Unsupported image format: " + this.formatName);
                         }
-                        
-                        this.formatName = detectedFormat;
-
                     } finally {
                         reader.dispose();
                     }
                 } else {
-                    throw new BusinessRuleViolationException("Unable to recognize image format. Please ensure the file is a valid image.");
+                    throw new BusinessRuleViolationException("Unable to recognize image format.");
                 }
             }
 
             this.contentStream.reset();
-
         } catch (IOException e) {
             throw new RuntimeException("Failed to read image info", e);
         }
     }
+
     
     private boolean isFormatSupported(String detectedFormat) {
         if (SUPPORTED_FORMATS.contains(detectedFormat)) {
@@ -96,13 +98,5 @@ public class InputImage extends InputFile {
         if ("jpg".equals(detectedFormat) && SUPPORTED_FORMATS.contains("jpeg")) return true;
         
         return false;
-    }
-
-    private void validateMimeType(String contentType) {
-        String normalizedType = contentType.toLowerCase().trim();
-        
-        if (!ALLOWED_MIME_TYPES.contains(normalizedType)) {
-            throw new IllegalArgumentException("Invalid content type: " + contentType + ". Only image files are allowed.");
-        }
     }
 }

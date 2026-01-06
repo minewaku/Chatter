@@ -11,7 +11,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.minewaku.chatter.adapter.service.impl.Rs256JwtTokenProvider;
+import com.minewaku.chatter.adapter.service.IAccessTokenVerifier;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.MalformedJwtException;
@@ -26,12 +26,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
-    private final Rs256JwtTokenProvider rs256JwtTokenProvider;
+    private final IAccessTokenVerifier accessTokenVerifier;
 
     public JwtAuthenticationFilter(
-            Rs256JwtTokenProvider rs256JwtTokenProvider) {
+            IAccessTokenVerifier accessTokenVerifier) {
 
-        this.rs256JwtTokenProvider = rs256JwtTokenProvider;
+        this.accessTokenVerifier = accessTokenVerifier;
     }
 
     @Override
@@ -54,11 +54,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try {
             jwtString = authHeader.substring(7);
-            Claims claims = rs256JwtTokenProvider.extractClaims(jwtString);
+            Claims claims = accessTokenVerifier.extractClaims(jwtString);
             String userId = claims.getSubject();
 
             if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                JwtDecoder jwtDecoder = rs256JwtTokenProvider.getJwtDecoder();
+                JwtDecoder jwtDecoder = accessTokenVerifier.getJwtDecoder();
                 Jwt jwt = jwtDecoder.decode(jwtString);
                 JwtAuthenticationToken authentication = new JwtAuthenticationToken(jwt);
                 authentication.setAuthenticated(true);

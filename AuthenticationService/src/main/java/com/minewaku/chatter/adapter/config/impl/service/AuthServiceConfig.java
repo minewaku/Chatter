@@ -21,7 +21,6 @@ import com.minewaku.chatter.domain.port.out.service.AccessTokenGenerator;
 import com.minewaku.chatter.domain.port.out.service.ConfirmationTokenGenerator;
 import com.minewaku.chatter.domain.port.out.service.EmailSender;
 import com.minewaku.chatter.domain.port.out.service.IdGenerator;
-import com.minewaku.chatter.domain.port.out.service.LinkGenerator;
 import com.minewaku.chatter.domain.port.out.service.PasswordHasher;
 import com.minewaku.chatter.domain.port.out.service.RefreshTokenGenerator;
 import com.minewaku.chatter.domain.service.auth.CheckRegisterUserDomainService;
@@ -35,7 +34,6 @@ class AuthServiceConfig {
 			UserRepository userRepository,
 			PasswordHasher passwordHasher,
 			IdGenerator idGenerator,
-			LinkGenerator linkGenerator,
 			EmailSender emailSender,
 			MessageQueue messageQueue,
 			StoreEvent storeEvent,
@@ -45,7 +43,6 @@ class AuthServiceConfig {
 				userRepository,
 				passwordHasher,
 				idGenerator,
-				linkGenerator,
 				emailSender,
 				messageQueue,
 				storeEvent,

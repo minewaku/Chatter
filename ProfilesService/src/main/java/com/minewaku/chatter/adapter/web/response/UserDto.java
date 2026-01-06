@@ -6,8 +6,12 @@ import java.time.LocalDate;
 public record UserDto(
 		long id,
 		String email,
+		String avatar,
+		String cover,
 		String username,
-		LocalDate birthDay,
+		String displayName,
+		String bio,
+		LocalDate birthday,
 		boolean enabled,
 		boolean locked,
 		boolean deleted,

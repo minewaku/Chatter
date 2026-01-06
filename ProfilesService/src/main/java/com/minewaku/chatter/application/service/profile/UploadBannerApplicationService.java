@@ -3,20 +3,20 @@ package com.minewaku.chatter.application.service.profile;
 import com.minewaku.chatter.application.exception.EntityNotFoundException;
 import com.minewaku.chatter.domain.command.profile.UploadFileCommand;
 import com.minewaku.chatter.domain.model.User;
-import com.minewaku.chatter.domain.port.in.profile.UploadAvatarUseCase;
+import com.minewaku.chatter.domain.port.in.profile.UploadBannerUseCase;
 import com.minewaku.chatter.domain.port.out.repository.ProfileRepository;
 import com.minewaku.chatter.domain.port.out.service.FileStorage;
 import com.minewaku.chatter.domain.port.out.service.FileStorageKeyGenerator;
 import com.minewaku.chatter.domain.response.FileStorageResponse;
-import com.minewaku.chatter.domain.value.InputAvatar;
+import com.minewaku.chatter.domain.value.InputBanner;
 
-public class UploadAvatarApplicationService implements UploadAvatarUseCase {
+public class UploadBannerApplicationService implements UploadBannerUseCase {
 
     private final FileStorage fileStorage;
     private final FileStorageKeyGenerator fileStorageKeyGenerator;
     private final ProfileRepository profileRepository;
 
-    public UploadAvatarApplicationService(
+    public UploadBannerApplicationService(
             FileStorage fileStorage,
             FileStorageKeyGenerator fileStorageKeyGenerator,
             ProfileRepository profileRepository) {
@@ -35,7 +35,7 @@ public class UploadAvatarApplicationService implements UploadAvatarUseCase {
 
         String key = fileStorageKeyGenerator.generate();
 
-        InputAvatar inputAvatar = new InputAvatar(
+        InputBanner inputBanner = new InputBanner(
             key,
             command.inputImage().getOriginalFilename(),
             command.inputImage().getContentType(),
@@ -43,10 +43,10 @@ public class UploadAvatarApplicationService implements UploadAvatarUseCase {
             command.inputImage().getContentStream()
         );
 
-        FileStorageResponse response = fileStorage.upload(inputAvatar);
-        user.setAvatar(response.fileUrl(), key);
+        FileStorageResponse response = fileStorage.upload(inputBanner);
+        user.setBanner(response.fileUrl(), key);
 
-        profileRepository.uploadAvatarUrl(user);
+        profileRepository.uploadBannerUrl(user);
         return null;
     }
 }

@@ -5,8 +5,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.springframework.context.annotation.Description;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.minewaku.chatter.domain.event.core.DomainEvent;
 import com.minewaku.chatter.domain.exception.StateAlreadySatisfiedException;
@@ -15,10 +13,12 @@ import com.minewaku.chatter.domain.exception.UserSoftDeletedException;
 import com.minewaku.chatter.domain.value.AuditMetadata;
 import com.minewaku.chatter.domain.value.Birthday;
 import com.minewaku.chatter.domain.value.DisplayName;
+import com.minewaku.chatter.domain.value.Bio;
 import com.minewaku.chatter.domain.value.Email;
 import com.minewaku.chatter.domain.value.Username;
 import com.minewaku.chatter.domain.value.id.UserId;
 
+import jakarta.annotation.Nonnull;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
@@ -34,21 +34,24 @@ public class User {
     @NonNull
     private final Email email;
 
-    @NonNull
     private URI avatar;
+    private String avatarKey;
 
-    @NonNull
-    private URI cover;
+    private URI banner;
+    private String bannerKey;
 
     @NonNull
     private Username username;
 
     private DisplayName displayName;
 
-    private Description description;
+    private Bio bio;
 
     @NonNull
     private final Birthday birthday;
+
+    @Setter
+    private boolean discoverable;
 
     @Setter
     private boolean enabled;
@@ -72,13 +75,16 @@ public class User {
     private User(
         @NonNull UserId id, 
         @NonNull Email email,
-        @NonNull URI avatar,
-        @NonNull URI cover,
+        URI avatar,
+        String avatarKey,
+        URI banner,
+        String bannerKey,
         @NonNull Username username,
         DisplayName displayName,
-        Description description,
+        Bio bio,
         @NonNull Birthday birthday, 
         @NonNull AuditMetadata auditMetadata,
+        boolean discoverable,
         boolean enabled, 
         boolean locked, 
         boolean deleted, 
@@ -87,11 +93,13 @@ public class User {
         this.id = id;
         this.email = email;
         this.avatar = avatar;
-        this.cover = cover;
+        this.avatarKey = avatarKey;
+        this.banner = banner;
+        this.bannerKey = bannerKey;
         this.username = username;
         this.birthday = birthday;
         this.displayName = displayName;
-        this.description = description;
+        this.bio = bio;
         this.enabled = enabled;
         this.locked = locked;
         this.deleted = deleted;
@@ -103,19 +111,22 @@ public class User {
     public static User reconstitute(
             @NonNull UserId id, 
             @NonNull Email email,
-            @NonNull URI avatar,
-            @NonNull URI cover,
+            URI avatar,
+            String avatarKey,
+            URI banner,
+            String bannerKey,
             @NonNull Username username, 
             DisplayName displayName, 
-            Description description,
+            Bio bio,
             @NonNull Birthday birthday,
             @NonNull AuditMetadata auditMetadata,
+            boolean discoverable,
             boolean enabled,
             boolean locked, 
             boolean deleted, 
             Instant deletedAt) {
 
-        return new User(id, email, avatar, cover, username, displayName, description, birthday, auditMetadata, enabled, locked, deleted, deletedAt);
+        return new User(id, email, avatar, avatarKey, banner, bannerKey, username, displayName, bio, birthday, auditMetadata, discoverable, enabled, locked, deleted, deletedAt);
     }
 
     // Static factory for creating new data
@@ -123,12 +134,54 @@ public class User {
             @NonNull UserId id, 
             @NonNull Email email, 
             @NonNull Username username,
-            @NonNull Birthday birthday) {
+            @NonNull Birthday birthday
+            ) {
                 
-        User user = new User(id, email, null, null, username, null, null, birthday, new AuditMetadata(), false, false, false, null);
+        User user = new User(id, email, null, null, null, null, username, null, null, birthday, new AuditMetadata(), false, false, false, null);
         return user;
     }
 
+
+    public void setDisplayName(@Nonnull DisplayName displayName) {
+        if(this.displayName.equals(displayName)) {
+            return;
+        }
+
+        this.displayName = displayName;
+        this.auditMetadata.markUpdated();
+    }
+
+    
+    public void setBio(@Nonnull Bio bio) {
+        if(this.bio.equals(bio)) {
+            return;
+        }
+
+        this.bio = bio;
+        this.auditMetadata.markUpdated();
+    }
+
+    public void setAvatar(URI avatar, String avatarKey) {
+        if((avatar == null) != (avatarKey == null)) {
+            throw new IllegalArgumentException("Both avatar and avatarKey must be null or non-null");
+        }
+        if (avatar == null) return;
+
+        this.avatar = avatar;
+        this.avatarKey = avatarKey;
+        this.auditMetadata.markUpdated();
+    }   
+
+    public void setBanner(URI banner, String bannerKey) {
+        if((banner == null) != (bannerKey == null)) {
+            throw new IllegalArgumentException("Both banner and bannerKey must be null or non-null");
+        }
+        if (banner == null) return;
+
+        this.banner = banner;
+        this.bannerKey = bannerKey;
+        this.auditMetadata.markUpdated();
+    }
 
     public void validateAccessible() {
         if (this.deleted) {
@@ -158,10 +211,6 @@ public class User {
         if (this.locked) {
             throw new UserNotAccessibleException("User is already locked");
         }
-    }
-
-    public void hardDeleted() {
-
     }
 
     public void softDelete() {

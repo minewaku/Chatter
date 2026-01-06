@@ -20,7 +20,6 @@ import com.minewaku.chatter.domain.port.out.repository.CredentialsRepository;
 import com.minewaku.chatter.domain.port.out.repository.UserRepository;
 import com.minewaku.chatter.domain.port.out.service.EmailSender;
 import com.minewaku.chatter.domain.port.out.service.IdGenerator;
-import com.minewaku.chatter.domain.port.out.service.LinkGenerator;
 import com.minewaku.chatter.domain.port.out.service.PasswordHasher;
 import com.minewaku.chatter.domain.service.auth.CheckRegisterUserDomainService;
 import com.minewaku.chatter.domain.value.HashedPassword;
@@ -43,7 +42,6 @@ public class RegisterApplicationService implements RegisterUseCase {
 			UserRepository userRepository,
 			PasswordHasher passwordHasher,
 			IdGenerator idGenerator,
-			LinkGenerator linkGenerator,
 			EmailSender emailSender,
 			MessageQueue messageQueue,
 			StoreEvent storeEvent,

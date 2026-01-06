@@ -6,7 +6,6 @@ import org.springframework.transaction.event.TransactionalEventListener;
 
 import com.minewaku.chatter.adapter.db.postgresql.JpaOutboxRepository;
 import com.minewaku.chatter.adapter.mapper.OutboxMapper;
-import com.minewaku.chatter.adapter.messaging.publisher.EnrichedDomainEvent;
 import com.minewaku.chatter.application.subcriber.CreateConfirmationTokenDomainEventSubcriber;
 import com.minewaku.chatter.application.subcriber.SendConfirmationTokenDomainEventSubcriber;
 import com.minewaku.chatter.domain.event.CreateConfirmationTokenDomainEvent;
@@ -43,58 +42,39 @@ public class SpringEventListener {
 	}
 
 
-	// @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-	// public void onUserCreatedDomainEvent(UserCreatedDomainEvent event) {
-	// 	jpaOutboxRepository.save(outboxMapper.fromUserCreatedDomainEventToEntity(event));
-	// }
-	
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void onUserCreatedDomainEvent(UserCreatedDomainEvent event) {
-		EnrichedDomainEvent<UserCreatedDomainEvent> enrichedEvent = outboxMapper
-				.toUserCreatedDomainEvent(event.getCreatedUserDto());
-		jpaOutboxRepository.save(outboxMapper.eventToEntity(enrichedEvent));
+		jpaOutboxRepository.save(outboxMapper.fromUserCreatedDomainEventToEntity(event));
 	}
 
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void onAccountVerifiedDomainEvent(com.minewaku.chatter.domain.event.AccountVerifiedDomainEvent event) {
-		EnrichedDomainEvent<com.minewaku.chatter.domain.event.AccountVerifiedDomainEvent> enrichedEvent = outboxMapper
-				.toAccountVerifiedDomainEvent(event.getUserId());
-		jpaOutboxRepository.save(outboxMapper.eventToEntity(enrichedEvent));
+		jpaOutboxRepository.save(outboxMapper.fromAccountVerifiedDomainEventToEntity(event));
 	}
 
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void onUserSoftDeletedDomainEvent(com.minewaku.chatter.domain.event.UserSoftDeletedDomainEvent event) {
-		EnrichedDomainEvent<com.minewaku.chatter.domain.event.UserSoftDeletedDomainEvent> enrichedEvent = outboxMapper
-				.toUserSoftDeletedDomainEvent(event.getUserId());
-		jpaOutboxRepository.save(outboxMapper.eventToEntity(enrichedEvent));
+		jpaOutboxRepository.save(outboxMapper.fromUserSoftDeletedDomainEventToEntity(event));
 	}
 
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void onUserRestoredDomainEvent(com.minewaku.chatter.domain.event.UserRestoredDomainEvent event) {
-		EnrichedDomainEvent<com.minewaku.chatter.domain.event.UserRestoredDomainEvent> enrichedEvent = outboxMapper
-				.toUserRestoredDomainEvent(event.getUserId());
-		jpaOutboxRepository.save(outboxMapper.eventToEntity(enrichedEvent));
+		jpaOutboxRepository.save(outboxMapper.fromUserRestoredDomainEventToEntity(event));
 	}
 
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void onUserHardDeletedDomainEvent(com.minewaku.chatter.domain.event.UserHardDeletedDomainEvent event) {
-		EnrichedDomainEvent<com.minewaku.chatter.domain.event.UserHardDeletedDomainEvent> enrichedEvent = outboxMapper
-				.toUserHardDeletedDomainEvent(event.getUserId());
-		jpaOutboxRepository.save(outboxMapper.eventToEntity(enrichedEvent));
+		jpaOutboxRepository.save(outboxMapper.fromUserHardDeletedDomainEventToEntity(event));
 	}
 
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void onUserLockedDomainEvent(com.minewaku.chatter.domain.event.UserLockedDomainEvent event) {
-		EnrichedDomainEvent<com.minewaku.chatter.domain.event.UserLockedDomainEvent> enrichedEvent = outboxMapper
-				.toUserLockedDomainEvent(event.getUserId());
-		jpaOutboxRepository.save(outboxMapper.eventToEntity(enrichedEvent));
+		jpaOutboxRepository.save(outboxMapper.fromUserLockedDomainEventToEntity(event));
 	}
 
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void onUserUnlockedDomainEvent(com.minewaku.chatter.domain.event.UserUnlockedDomainEvent event) {
-		EnrichedDomainEvent<com.minewaku.chatter.domain.event.UserUnlockedDomainEvent> enrichedEvent = outboxMapper
-				.toUserUnlockedDomainEvent(event.getUserId());
-		jpaOutboxRepository.save(outboxMapper.eventToEntity(enrichedEvent));
+		jpaOutboxRepository.save(outboxMapper.fromUserUnlockedDomainEventToEntity(event));
 	}
 
 }
