@@ -55,7 +55,7 @@ public class User {
     private boolean isDeleted;
 
     @NonNull
-    private final AuditMetadata auditMetadata;
+    private AuditMetadata auditMetadata;
 
     private Instant deletedAt;
 

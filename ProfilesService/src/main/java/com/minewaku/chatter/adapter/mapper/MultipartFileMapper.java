@@ -9,6 +9,8 @@ import com.minewaku.chatter.adapter.exception.FileUploadException;
 import com.minewaku.chatter.domain.value.InputImage;
 
 @Component
+
+// MARK: change to toInputFile
 public class MultipartFileMapper {
     public InputImage toInputImage(MultipartFile file) {
         try {

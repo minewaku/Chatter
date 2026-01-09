@@ -53,12 +53,12 @@ public class UserRepositoryAdapter implements UserRepository {
 
 	@Override
 	public void enable(User user) {
-		jpaUserRepository.enableUser(user.getId().getValue());
+		jpaUserRepository.enableUser(user.getId().value());
 	}
 
 	@Override
 	public void softDelete(User user) {
-		jpaUserRepository.softDeleteById(user.getId().getValue());
+		jpaUserRepository.softDeleteById(user.getId().value());
 	}
 
 	@Override

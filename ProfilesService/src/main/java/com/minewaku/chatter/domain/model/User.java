@@ -4,18 +4,19 @@ import java.net.URI;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.minewaku.chatter.domain.event.core.DomainEvent;
 import com.minewaku.chatter.domain.exception.StateAlreadySatisfiedException;
 import com.minewaku.chatter.domain.exception.UserNotAccessibleException;
 import com.minewaku.chatter.domain.exception.UserSoftDeletedException;
 import com.minewaku.chatter.domain.value.AuditMetadata;
+import com.minewaku.chatter.domain.value.Bio;
 import com.minewaku.chatter.domain.value.Birthday;
 import com.minewaku.chatter.domain.value.DisplayName;
-import com.minewaku.chatter.domain.value.Bio;
 import com.minewaku.chatter.domain.value.Email;
 import com.minewaku.chatter.domain.value.Username;
+import com.minewaku.chatter.domain.value.id.StorageKey;
 import com.minewaku.chatter.domain.value.id.UserId;
 
 import jakarta.annotation.Nonnull;
@@ -34,18 +35,16 @@ public class User {
     @NonNull
     private final Email email;
 
-    private URI avatar;
-    private String avatarKey;
+    private Optional<InputAvatar> avatar;
 
-    private URI banner;
-    private String bannerKey;
+    private Optional<InputBanner> banner;
 
     @NonNull
     private Username username;
 
-    private DisplayName displayName;
+    private Optional<DisplayName> displayName;
 
-    private Bio bio;
+    private Optional<Bio> bio;
 
     @NonNull
     private final Birthday birthday;
@@ -63,22 +62,19 @@ public class User {
     private boolean deleted;
 
     @NonNull
-    private final AuditMetadata auditMetadata;
+    private AuditMetadata auditMetadata;
 
     private Instant deletedAt;
 
     @NonNull
-    @JsonIgnore
     private final List<DomainEvent> events = new ArrayList<DomainEvent>();
 
     // Private constructor
     private User(
         @NonNull UserId id, 
         @NonNull Email email,
-        URI avatar,
-        String avatarKey,
-        URI banner,
-        String bannerKey,
+        InputAvatar avatar,
+        InputBanner banner,
         @NonNull Username username,
         DisplayName displayName,
         Bio bio,
@@ -90,6 +86,8 @@ public class User {
         boolean deleted, 
         Instant deletedAt) {
 
+
+        StorageKey key = this.banner.map(InputBanner::getKey).orElse(null);
         this.id = id;
         this.email = email;
         this.avatar = avatar;
@@ -134,10 +132,15 @@ public class User {
             @NonNull UserId id, 
             @NonNull Email email, 
             @NonNull Username username,
-            @NonNull Birthday birthday
-            ) {
+            @NonNull Birthday birthday,
+            @NonNull AuditMetadata auditMetadata,
+            @NonNull boolean locked,
+            @NonNull boolean enabled,
+            @NonNull boolean deleted,
+            @NonNull Instant deletedAt
+    ) {
                 
-        User user = new User(id, email, null, null, null, null, username, null, null, birthday, new AuditMetadata(), false, false, false, null);
+        User user = new User(id, email, null, null, null, null, username, null, null, birthday, auditMetadata, locked, enabled, deleted, deletedAt);
         return user;
     }
 

@@ -1,40 +1,28 @@
 package com.minewaku.chatter.domain.value;
 
 import java.time.LocalDate;
-import java.time.Period;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.minewaku.chatter.domain.exception.DomainValidationException;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
 import lombok.NonNull;
-import lombok.ToString;
 
-@Getter
-@ToString
-@EqualsAndHashCode
-public class Birthday {
-	
-	@NonNull
-	private final LocalDate value;
+public record Birthday(@NonNull LocalDate value) {
 
-	@JsonCreator
-    public Birthday(
-    		@JsonProperty("value") @NonNull LocalDate value) {
-		
-        if(value.isAfter(LocalDate.now())) {
-        	throw new DomainValidationException("Birthday cannot be in the future");
+    private static final int MAX_AGE = 150;
+
+    public Birthday {
+
+        LocalDate now = LocalDate.now();
+        if (value.isAfter(now)) {
+            throw new DomainValidationException("Birthday value cannot be in the future");
         }
-        if(Period.between(value, LocalDate.now()).getYears() > 150) {
-        	throw new DomainValidationException("Age seems invalid");
+
+        if (value.isBefore(now.minusYears(MAX_AGE))) {
+            throw new DomainValidationException("Age seems invalid (max " + MAX_AGE + " years)");
         }
-        
-        this.value = value;
     }
-	
-    public int getAge() {
-        return Period.between(value, LocalDate.now()).getYears();
+
+    public static Birthday of(LocalDate value) {
+        return value == null ? null : new Birthday(value);
     }
 }

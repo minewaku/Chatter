@@ -31,7 +31,7 @@ public class Role {
     private String description;
 
     @NonNull
-    private final AuditMetadata auditMetadata;
+    private AuditMetadata auditMetadata;
 
     @Setter
     private boolean isDeleted;

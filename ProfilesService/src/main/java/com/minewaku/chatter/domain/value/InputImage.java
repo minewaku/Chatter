@@ -73,7 +73,7 @@ public class InputImage extends InputFile {
                         this.formatName = reader.getFormatName().toLowerCase();
 
                         if (!isFormatSupported(this.formatName)) {
-                             throw new BusinessRuleViolationException("Unsupported image format: " + this.formatName);
+                            throw new BusinessRuleViolationException("Unsupported image format: " + this.formatName);
                         }
                     } finally {
                         reader.dispose();

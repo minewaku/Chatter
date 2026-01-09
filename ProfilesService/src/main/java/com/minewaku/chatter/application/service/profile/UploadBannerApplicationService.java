@@ -2,13 +2,13 @@ package com.minewaku.chatter.application.service.profile;
 
 import com.minewaku.chatter.application.exception.EntityNotFoundException;
 import com.minewaku.chatter.domain.command.profile.UploadFileCommand;
+import com.minewaku.chatter.domain.model.InputBanner;
 import com.minewaku.chatter.domain.model.User;
 import com.minewaku.chatter.domain.port.in.profile.UploadBannerUseCase;
 import com.minewaku.chatter.domain.port.out.repository.ProfileRepository;
 import com.minewaku.chatter.domain.port.out.service.FileStorage;
 import com.minewaku.chatter.domain.port.out.service.FileStorageKeyGenerator;
 import com.minewaku.chatter.domain.response.FileStorageResponse;
-import com.minewaku.chatter.domain.value.InputBanner;
 
 public class UploadBannerApplicationService implements UploadBannerUseCase {
 

@@ -1,7 +1,11 @@
-package com.minewaku.chatter.domain.value;
+package com.minewaku.chatter.domain.model;
 
 import java.io.InputStream;
 import java.util.Set;
+
+import com.minewaku.chatter.domain.value.InputImage;
+import com.minewaku.chatter.domain.value.StorageCategory;
+import com.minewaku.chatter.domain.value.id.StorageKey;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -13,7 +17,9 @@ import lombok.ToString;
 @EqualsAndHashCode(callSuper = true)
 public class InputAvatar extends InputImage {
 
-    private final String key;
+    @NonNull
+    private final StorageKey key;
+
     private static final StorageCategory STORAGE_CATEGORY = StorageCategory.USER_AVATAR;
     private final long MAX_SIZE_IN_BYTES = 10 * 1024 * 1024; // 10 MB
     private final double ASPECT_RATIO = 1.0;
@@ -21,7 +27,7 @@ public class InputAvatar extends InputImage {
     private final int MIN_HEIGHT_IN_PIXELS = 128; 
     private final int MAX_WIDTH_IN_PIXELS = 1024;
     private final int MAX_HEIGHT_IN_PIXELS = 1024;
-    private final Set<String> VALID_CONTENT_TYPES = Set.of(
+    private final Set<String> SUPPORTED_FORMATS = Set.of(
         "png",
         "jpg",
         "jpeg",
@@ -34,7 +40,7 @@ public class InputAvatar extends InputImage {
     } 
 
     public InputAvatar(
-        @NonNull String key,
+        @NonNull StorageKey key,
         @NonNull String originalFilename,
         @NonNull String contentType,
         long sizeInBytes,
@@ -56,7 +62,7 @@ public class InputAvatar extends InputImage {
             throw new IllegalArgumentException("Avatar file size exceeds the maximum limit of " + this.MAX_SIZE_IN_BYTES + " bytes.");
         }
 
-        if (!this.VALID_CONTENT_TYPES.contains(this.contentType.toLowerCase())) {
+        if (!this.SUPPORTED_FORMATS.contains(this.contentType.toLowerCase())) {
             throw new IllegalArgumentException("Invalid avatar content type: " + this.contentType);
         }
 
