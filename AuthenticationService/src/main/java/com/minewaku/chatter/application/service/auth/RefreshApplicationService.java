@@ -15,6 +15,7 @@ import com.minewaku.chatter.domain.port.out.repository.UserRoleRepository;
 import com.minewaku.chatter.domain.port.out.service.AccessTokenGenerator;
 import com.minewaku.chatter.domain.port.out.service.RefreshTokenGenerator;
 import com.minewaku.chatter.domain.response.TokenResponse;
+import com.minewaku.chatter.domain.value.id.OpaqueToken;
 
 public class RefreshApplicationService implements RefreshUseCase {
 
@@ -55,8 +56,8 @@ public class RefreshApplicationService implements RefreshUseCase {
 		existToken.revoke();
 		refreshTokenRepository.revoke(existToken);
 
-		String newRefreshTokenString = refreshTokenGenerator.generate();
-		RefreshToken newRefreshToken = RefreshToken.createNew(newRefreshTokenString, null, user.getId());
+		OpaqueToken opaqueToken = new OpaqueToken(refreshTokenGenerator.generate());
+		RefreshToken newRefreshToken = RefreshToken.createNew(opaqueToken, null, user.getId());
 		refreshTokenRepository.save(newRefreshToken);
 
 		String newAccessToken = accessTokenGenerator.generate(user, roles);

@@ -83,7 +83,7 @@ public class AuthController {
 				new Password(request.password()));
 		TokenResponse domainResponse = loginApplicationService.handle(command);
 		AuthTokenResponse response = new AuthTokenResponse(domainResponse.accessToken(),
-				domainResponse.refreshToken().getToken());
+				domainResponse.refreshToken().getToken().getValue());
 		return ResponseEntity.ok(response);
 	}
 
@@ -101,7 +101,7 @@ public class AuthController {
 			@CookieValue(name = "refresh_token", defaultValue = "") String refreshToken) {
 		TokenResponse domainResponse = refreshApplicationService.handle(refreshToken);
 		AuthTokenResponse response = new AuthTokenResponse(domainResponse.accessToken(),
-				domainResponse.refreshToken().getToken());
+				domainResponse.refreshToken().getToken().getValue());
 		return ResponseEntity.ok(response);
 	}
 

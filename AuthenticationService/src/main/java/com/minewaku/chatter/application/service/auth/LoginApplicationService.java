@@ -20,6 +20,7 @@ import com.minewaku.chatter.domain.port.out.service.PasswordHasher;
 import com.minewaku.chatter.domain.port.out.service.RefreshTokenGenerator;
 import com.minewaku.chatter.domain.response.TokenResponse;
 import com.minewaku.chatter.domain.service.auth.PasswordSecurityDomainService;
+import com.minewaku.chatter.domain.value.id.OpaqueToken;
 
 public class LoginApplicationService implements LoginUseCase {
 
@@ -67,8 +68,8 @@ public class LoginApplicationService implements LoginUseCase {
 		Set<Role> roles = userRoleRepository.findRolesByUserIdAndIsDeletedFalse(user.getId());
 		String accessToken = accessTokenGenerator.generate(user, roles);
 
-		String refreshTokenString = refreshTokenGenerator.generate();
-		RefreshToken refreshToken = RefreshToken.createNew(refreshTokenString, null, user.getId());
+		OpaqueToken opaqueToken = new OpaqueToken(refreshTokenGenerator.generate());
+		RefreshToken refreshToken = RefreshToken.createNew(opaqueToken, null, user.getId());
 		refreshTokenRepository.save(refreshToken);
 
 		TokenResponse response = new TokenResponse(accessToken, refreshToken);

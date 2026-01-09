@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 
 import com.minewaku.chatter.adapter.db.redis.dto.RefreshTokenDto;
 import com.minewaku.chatter.domain.model.RefreshToken;
+import com.minewaku.chatter.domain.value.id.OpaqueToken;
 import com.minewaku.chatter.domain.value.id.UserId;
 
 @Component
@@ -16,12 +17,12 @@ public class RefreshTokenMapper {
             return null;
 
         return new RefreshTokenDto(
-                domain.getToken(),
+                domain.getToken().getValue(),
                 domain.getDuration(),
                 domain.getIssuedAt(),
                 domain.getExpiresAt(),
                 domain.getUserId() != null ? domain.getUserId().getValue() : null,
-                domain.getReplacedBy(),
+                domain.getReplacedBy() != null ? domain.getReplacedBy().getValue() : null,
                 domain.isRevoked(),
                 domain.getRevokedAt());
     }
@@ -31,12 +32,12 @@ public class RefreshTokenMapper {
             return null;
 
         return RefreshToken.reconstitute(
-                dto.token(),
+                new OpaqueToken(dto.token()),
                 dto.duration(),
                 dto.issuedAt(),
                 dto.expiresAt(),
                 new UserId(dto.userId()),
-                dto.replacedBy(),
+                dto.replacedBy() != null ? new OpaqueToken(dto.replacedBy()) : null,
                 dto.revoked() != null ? dto.revoked() : false,
                 dto.revokedAt());
     }

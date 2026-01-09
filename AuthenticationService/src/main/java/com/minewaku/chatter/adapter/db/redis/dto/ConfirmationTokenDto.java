@@ -3,12 +3,14 @@ package com.minewaku.chatter.adapter.db.redis.dto;
 import java.time.Duration;
 import java.time.Instant;
 
+import lombok.NonNull;
+
 public record ConfirmationTokenDto(
-        String token,
-        Long userId,
-        String email,
-        Duration duration,
-        Instant createdAt,
-        Instant expiresAt,
+        @NonNull String token,
+        @NonNull Long userId,
+        @NonNull String email,
+        @NonNull Duration duration,
+        @NonNull Instant createdAt,
+        @NonNull Instant expiresAt,
         Instant confirmedAt) {
 }

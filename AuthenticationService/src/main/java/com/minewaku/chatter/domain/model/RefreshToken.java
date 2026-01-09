@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.Objects;
 
 import com.minewaku.chatter.domain.exception.BusinessRuleViolationException;
+import com.minewaku.chatter.domain.value.id.OpaqueToken;
 import com.minewaku.chatter.domain.value.id.UserId;
 
 import lombok.Getter;
@@ -16,7 +17,7 @@ import lombok.ToString;
 public class RefreshToken {
 
     @NonNull
-    private final String token;
+    private final OpaqueToken token;
 
     @NonNull
     private final Duration duration;
@@ -36,16 +37,16 @@ public class RefreshToken {
     private Instant revokedAt;
 
     @NonNull
-    private String replacedBy;
+    private OpaqueToken replacedBy;
 
     // Private constructor
     private RefreshToken(
-            @NonNull String token,
+            @NonNull OpaqueToken token,
             @NonNull Duration duration,
             @NonNull Instant issuedAt,
             @NonNull Instant expiresAt,
             @NonNull UserId userId,
-            String replacedBy,
+            OpaqueToken replacedBy,
             boolean revoked,
             Instant revokedAt) {
 
@@ -60,12 +61,12 @@ public class RefreshToken {
     }
 
     public static RefreshToken reconstitute(
-            @NonNull String token,
+            @NonNull OpaqueToken token,
             @NonNull Duration duration,
             @NonNull Instant issuedAt,
             @NonNull Instant expiresAt,
             @NonNull UserId userId,
-            String replacedBy,
+            OpaqueToken replacedBy,
             boolean revoked,
             Instant revokedAt) {
 
@@ -74,7 +75,7 @@ public class RefreshToken {
 
     // Static factory for loading existing data
     public static RefreshToken createNew(
-            @NonNull String token,
+            @NonNull OpaqueToken token,
             Duration duration,
             @NonNull UserId userId) {
 

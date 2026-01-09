@@ -27,5 +27,4 @@ public class LogoutApplicationService implements LogoutUseCase {
         refreshTokenRepository.revoke(existRefreshToken);
         return null;
 	}
-
 }
