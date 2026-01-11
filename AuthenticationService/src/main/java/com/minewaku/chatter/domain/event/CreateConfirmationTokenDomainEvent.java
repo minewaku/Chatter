@@ -20,7 +20,7 @@ public class CreateConfirmationTokenDomainEvent extends DomainEvent {
 	
 	public CreateConfirmationTokenDomainEvent(@NonNull UserId userId,
 			Duration duration) {
-		super();
+		super("Created");
 		this.userId = userId;
 		this.duration = duration;
 	}

@@ -24,8 +24,8 @@ import com.minewaku.chatter.domain.command.profile.UploadFileCommand;
 import com.minewaku.chatter.domain.model.User;
 import com.minewaku.chatter.domain.value.Bio;
 import com.minewaku.chatter.domain.value.DisplayName;
-import com.minewaku.chatter.domain.value.InputImage;
 import com.minewaku.chatter.domain.value.Username;
+import com.minewaku.chatter.domain.value.file.InputImage;
 import com.minewaku.chatter.domain.value.id.UserId;
 
 import io.swagger.v3.oas.annotations.parameters.RequestBody;

@@ -39,7 +39,7 @@ public class OutboxMapper {
 		return JpaOutboxEntity.builder()
 				.aggregateId(event.getCreatedUserDto().getId().getValue().toString())
 				.aggregateType(User.class.getSimpleName())
-				.eventType(UserCreatedDomainEvent.class.getSimpleName())
+				.eventType(event.getEventType())
 				.payload(payload)
 				.build();
 	}
@@ -50,7 +50,7 @@ public class OutboxMapper {
 		return JpaOutboxEntity.builder()
 				.aggregateId(event.getUserId().getValue().toString())
 				.aggregateType(User.class.getSimpleName())
-				.eventType(AccountVerifiedDomainEvent.class.getSimpleName())
+				.eventType(event.getEventType())
 				.payload(payload)
 				.build();
 	}
@@ -61,7 +61,7 @@ public class OutboxMapper {
 		return JpaOutboxEntity.builder()
 				.aggregateId(event.getUserId().getValue().toString())
 				.aggregateType(User.class.getSimpleName())
-				.eventType(UserSoftDeletedDomainEvent.class.getSimpleName())
+				.eventType(event.getEventType())
 				.payload(payload)
 				.build();
 	}
@@ -72,7 +72,7 @@ public class OutboxMapper {
 		return JpaOutboxEntity.builder()
 				.aggregateId(event.getUserId().getValue().toString())
 				.aggregateType(User.class.getSimpleName())
-				.eventType(UserRestoredDomainEvent.class.getSimpleName())
+				.eventType(event.getEventType())
 				.payload(payload)
 				.build();
 	}
@@ -83,7 +83,7 @@ public class OutboxMapper {
 		return JpaOutboxEntity.builder()
 				.aggregateId(event.getUserId().getValue().toString())
 				.aggregateType(User.class.getSimpleName())
-				.eventType(UserHardDeletedDomainEvent.class.getSimpleName())
+				.eventType(event.getEventType())
 				.payload(payload)
 				.build();
 	}
@@ -94,7 +94,7 @@ public class OutboxMapper {
 		return JpaOutboxEntity.builder()
 				.aggregateId(event.getUserId().getValue().toString())
 				.aggregateType(User.class.getSimpleName())
-				.eventType(UserLockedDomainEvent.class.getSimpleName())
+				.eventType(event.getEventType())
 				.payload(payload)
 				.build();
 	}
@@ -105,7 +105,7 @@ public class OutboxMapper {
 		return JpaOutboxEntity.builder()
 				.aggregateId(event.getUserId().getValue().toString())
 				.aggregateType(User.class.getSimpleName())
-				.eventType(UserUnlockedDomainEvent.class.getSimpleName())
+				.eventType(event.getEventType())
 				.payload(payload)
 				.build();
 	}

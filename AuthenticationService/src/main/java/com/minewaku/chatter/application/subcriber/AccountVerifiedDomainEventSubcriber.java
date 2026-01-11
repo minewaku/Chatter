@@ -1,23 +1,23 @@
 package com.minewaku.chatter.application.subcriber;
 
-import com.minewaku.chatter.application.publisher.MessageQueue;
-import com.minewaku.chatter.application.publisher.QueueEventPublisher;
+import com.minewaku.chatter.application.publisher.StoreEvent;
+import com.minewaku.chatter.application.publisher.StoreEventPublisher;
 import com.minewaku.chatter.domain.event.AccountVerifiedDomainEvent;
 import com.minewaku.chatter.domain.event.core.DomainEventSubscriber;
 
 public class AccountVerifiedDomainEventSubcriber implements DomainEventSubscriber<AccountVerifiedDomainEvent> {
 
-	private final QueueEventPublisher queueEventPublisher;
+	private final StoreEventPublisher storeEventPublisher;
 
 	public AccountVerifiedDomainEventSubcriber(
-			MessageQueue messageQueue) {
+			StoreEvent storeEvent) {
 
-		this.queueEventPublisher = new QueueEventPublisher(messageQueue);
+		this.storeEventPublisher = new StoreEventPublisher(storeEvent);
 	}
 
 	@Override
 	public void handle(AccountVerifiedDomainEvent event) {
-		queueEventPublisher.publish(event);
+		storeEventPublisher.publish(event);
 	}
 
 }

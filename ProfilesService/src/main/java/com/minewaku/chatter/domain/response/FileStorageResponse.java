@@ -5,8 +5,8 @@ import java.net.URI;
 import io.micrometer.common.lang.NonNull;
 
 public record FileStorageResponse(
-    @NonNull String fileKey,
-    @NonNull URI fileUrl,
+    @NonNull String key,
+    @NonNull URI uri,
     @NonNull String format,
     long sizeInBytes) {
 }

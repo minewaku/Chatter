@@ -32,6 +32,7 @@ public class SpringEventListener {
 		this.sendConfirmationTokenDomainEventSubcriber = sendConfirmationTokenDomainEventSubcriber;
 	}
 
+	
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void onCreateConfirmationTokenDomainEvent(CreateConfirmationTokenDomainEvent event) {
 		createConfirmationTokenDomainEventSubcriber.handle(event);
@@ -90,5 +91,4 @@ public class SpringEventListener {
 				.toUserUnlockedDomainEvent(event.getUserId());
 		jpaOutboxRepository.save(outboxMapper.eventToEntity(enrichedEvent));
 	}
-
 }

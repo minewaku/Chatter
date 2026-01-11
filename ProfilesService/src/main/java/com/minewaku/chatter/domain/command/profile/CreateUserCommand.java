@@ -1,4 +1,6 @@
-package com.minewaku.chatter.domain.event.dto;
+package com.minewaku.chatter.domain.command.profile;
+
+import java.time.Instant;
 
 import com.minewaku.chatter.domain.value.AuditMetadata;
 import com.minewaku.chatter.domain.value.Birthday;
@@ -8,10 +10,9 @@ import com.minewaku.chatter.domain.value.id.UserId;
 
 import lombok.Getter;
 import lombok.NonNull;
-import lombok.Setter;
 
 @Getter
-public class CreatedUserDto {
+public class CreateUserCommand {
 	
 	@NonNull
 	private final UserId id;
@@ -25,29 +26,30 @@ public class CreatedUserDto {
 	@NonNull
     private final Birthday birthday;
 	
-    @Setter
-    private boolean isEnabled;
+    private boolean enabled;
 	
-    @Setter
-    private boolean isLocked;
+    private boolean locked;
 	
-	@Setter
-    private boolean isDeleted;
+    private boolean deleted;
+
+    private Instant deletedAt;
 
     @NonNull
     private final AuditMetadata auditMetadata;
     
-    public CreatedUserDto(@NonNull UserId id, @NonNull Email email, 
+    public CreateUserCommand(@NonNull UserId id, @NonNull Email email, 
             @NonNull Username username, @NonNull Birthday birthday, 
+            boolean enabled, boolean locked, boolean deleted, Instant deletedAt,
             @NonNull AuditMetadata auditMetadata) {
     	
         this.id = id;
         this.email = email;
         this.username = username;
         this.birthday = birthday;
-        this.isEnabled = false;
-        this.isLocked = false;
-        this.isDeleted = false;
+        this.enabled = enabled;
+        this.locked = locked;
+        this.deleted = deleted;
+        this.deletedAt = deletedAt;
         this.auditMetadata = auditMetadata;
     }
 }

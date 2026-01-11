@@ -1,19 +1,21 @@
 package com.minewaku.chatter.adapter.mapper;
 
-import com.minewaku.chatter.adapter.entity.JpaUserEntity;
-import com.minewaku.chatter.adapter.web.response.UserDto;
-import com.minewaku.chatter.domain.model.User;
 import java.time.Instant;
 import java.time.LocalDate;
-import com.minewaku.chatter.domain.value.Birthday;
-import com.minewaku.chatter.domain.value.Email;
-import com.minewaku.chatter.domain.value.Username;
-import com.minewaku.chatter.domain.value.AuditMetadata;
-import com.minewaku.chatter.domain.value.id.UserId;
-
 import java.util.Optional;
 
 import org.springframework.stereotype.Component;
+
+import com.minewaku.chatter.adapter.entity.JpaUserEntity;
+import com.minewaku.chatter.adapter.messaging.message.CreateUserMessage;
+import com.minewaku.chatter.adapter.web.response.UserDto;
+import com.minewaku.chatter.domain.event.dto.CreateUserDto;
+import com.minewaku.chatter.domain.model.User;
+import com.minewaku.chatter.domain.value.AuditMetadata;
+import com.minewaku.chatter.domain.value.Birthday;
+import com.minewaku.chatter.domain.value.Email;
+import com.minewaku.chatter.domain.value.Username;
+import com.minewaku.chatter.domain.value.id.UserId;
 
 @Component
 public class UserMapper {
@@ -94,5 +96,21 @@ public class UserMapper {
 
     public Optional<User> entityToDomain(Optional<JpaUserEntity> entity) {
         return entity.map(this::entityToDomain);
+    }
+
+
+    public CreateUserMessage CreateUserDtoToMessage(CreateUserDto dto) {
+        return new CreateUserMessage(
+                dto.getId().getValue(),
+                dto.getEmail().getValue(),
+                dto.getUsername().getValue(),
+                dto.getBirthday().getValue().toString(),
+                dto.isEnabled(),
+                dto.isLocked(),
+                dto.isDeleted(),
+                dto.getDeletedAt() != null ? dto.getDeletedAt().toString() : null,
+                dto.getAuditMetadata().getCreatedAt().toString(),
+                dto.getAuditMetadata().getModifiedAt().toString()
+        );
     }
 }

@@ -48,13 +48,14 @@ public class OutboxIntegrationFlow {
 	}
 
     private String mapEventToTopic(String eventType) {
-        if (eventType.contains("USER_CREATED")) {
+        if (eventType.contains("UserCreated")) {
             return "dev.shared.entity.authentication.user.id";
-        } else if(eventType.contains("USER_LOCKED") || 
-        		eventType.contains("USER_UNLOCKED") ||
-        		eventType.contains("USER_SOFT_DELETED") ||
-        		eventType.contains("USER_RESTORED") ||
-        		eventType.contains("USER_HARD_DELETED")) {
+        } else if(eventType.contains("UserLocked") || 
+        		eventType.contains("UserUnlocked") ||
+        		eventType.contains("UserSoftDeleted") ||
+        		eventType.contains("UserRestored") ||
+        		eventType.contains("UserHardDeleted") ||
+        		eventType.contains("AccountVerified")) {
 			return "dev.shared.command.authentication.accessibility.id";
 		}
         
@@ -62,13 +63,14 @@ public class OutboxIntegrationFlow {
     }
     
     private String mapEventToClientId(String eventType) {
-		if (eventType.contains("USER_CREATED")) {
+		if (eventType.contains("UserCreated")) {
 			return "dev.com.minewaku.chatter.authentication.authentication-service.user";
-		} else if(eventType.contains("USER_LOCKED") ||
-				eventType.contains("USER_UNLOCKED") ||
-				eventType.contains("USER_SOFT_DELETED") ||
-				eventType.contains("USER_RESTORED") ||
-				eventType.contains("USER_HARD_DELETED")) {
+		} else if(eventType.contains("UserLocked") ||
+				eventType.contains("UserUnlocked") ||
+				eventType.contains("UserSoftDeleted") ||
+				eventType.contains("UserRestored") ||
+				eventType.contains("UserHardDeleted") ||
+				eventType.contains("AccountVerified")) {
 			return "dev.com.minewaku.chatter.authentication.authentication-service.accessibility";
 		}
 		

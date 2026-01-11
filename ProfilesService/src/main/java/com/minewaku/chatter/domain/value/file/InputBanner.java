@@ -1,7 +1,9 @@
-package com.minewaku.chatter.domain.value;
+package com.minewaku.chatter.domain.value.file;
 
 import java.io.InputStream;
 import java.util.Set;
+
+import com.minewaku.chatter.domain.value.id.StorageKey;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -13,8 +15,9 @@ import lombok.ToString;
 @EqualsAndHashCode(callSuper = true)
 public class InputBanner extends InputImage {
 
+    private final StorageKey key;
+
     private static final StorageCategory STORAGE_CATEGORY = StorageCategory.USER_BANNER;
-    private final String key;
 
     private final long maxSizeInBytes = 10 * 1024 * 1024; // 10 MB
     private final double aspectRatio = 2.5; // rectangle
@@ -35,7 +38,7 @@ public class InputBanner extends InputImage {
     } 
 
     public InputBanner(
-        @NonNull String key,
+        @NonNull StorageKey key,
         @NonNull String originalFilename,
         @NonNull String contentType,
         long sizeInBytes,

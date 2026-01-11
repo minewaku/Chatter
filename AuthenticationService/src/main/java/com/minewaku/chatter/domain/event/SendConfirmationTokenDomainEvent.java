@@ -23,7 +23,7 @@ public class SendConfirmationTokenDomainEvent extends DomainEvent {
     		@NonNull MailType mailType,
     		String subject) {
     	
-    	super();
+    	super("SendConfirmationToken");
     	this.confirmationToken = confirmationToken;
     	this.mailType = mailType;
     	this.subject = subject;

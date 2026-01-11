@@ -14,7 +14,7 @@ import com.minewaku.chatter.domain.event.UserRestoredDomainEvent;
 import com.minewaku.chatter.domain.event.UserSoftDeletedDomainEvent;
 import com.minewaku.chatter.domain.event.UserUnlockedDomainEvent;
 import com.minewaku.chatter.domain.event.core.DomainEvent;
-import com.minewaku.chatter.domain.event.dto.CreatedUserDto;
+import com.minewaku.chatter.domain.event.dto.CreateUserDto;
 import com.minewaku.chatter.domain.exception.StateAlreadySatisfiedException;
 import com.minewaku.chatter.domain.exception.UserNotAccessibleException;
 import com.minewaku.chatter.domain.exception.UserSoftDeletedException;
@@ -92,7 +92,7 @@ public class User {
     public static User createNew(@NonNull UserId id, @NonNull Email email, @NonNull Username username,
             @NonNull Birthday birthday) {
         User user = new User(id, email, username, birthday, new AuditMetadata(), false, false, false, null);
-        CreatedUserDto createdUserDto = new CreatedUserDto(id, email, username, birthday, user.getAuditMetadata());
+        CreateUserDto createdUserDto = new CreateUserDto(id, email, username, birthday, user.getAuditMetadata());
 
         UserCreatedDomainEvent userCreatedDomainEvent = new UserCreatedDomainEvent(createdUserDto);
         user.getEvents().add(userCreatedDomainEvent);

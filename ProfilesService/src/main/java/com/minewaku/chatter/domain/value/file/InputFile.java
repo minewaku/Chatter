@@ -1,4 +1,4 @@
-package com.minewaku.chatter.domain.value;
+package com.minewaku.chatter.domain.value.file;
 
 import java.io.InputStream;
 

@@ -1,4 +1,4 @@
-package com.minewaku.chatter.domain.value;
+package com.minewaku.chatter.domain.value.file;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -67,7 +67,7 @@ public class InputImage extends InputFile {
                 if (readers.hasNext()) {
                     ImageReader reader = readers.next();
                     try {
-                        reader.setInput(iis, true, true); // ignoreMetadata=true (tham số 3)
+                        reader.setInput(iis, true, true);
                         this.width = reader.getWidth(0);
                         this.height = reader.getHeight(0);
                         this.formatName = reader.getFormatName().toLowerCase();

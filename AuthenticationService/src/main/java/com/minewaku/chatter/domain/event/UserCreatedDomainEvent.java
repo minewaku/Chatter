@@ -1,7 +1,7 @@
 package com.minewaku.chatter.domain.event;
 
 import com.minewaku.chatter.domain.event.core.DomainEvent;
-import com.minewaku.chatter.domain.event.dto.CreatedUserDto;
+import com.minewaku.chatter.domain.event.dto.CreateUserDto;
 
 import lombok.Builder;
 import lombok.Getter;
@@ -12,10 +12,10 @@ import lombok.NonNull;
 public class UserCreatedDomainEvent extends DomainEvent {
 	
 	@NonNull
-	private final CreatedUserDto createdUserDto;
+	private final CreateUserDto createdUserDto;
 	
-	public UserCreatedDomainEvent(@NonNull CreatedUserDto createdUserDto) {
-		super();
+	public UserCreatedDomainEvent(@NonNull CreateUserDto createdUserDto) {
+		super("");
 		this.createdUserDto = createdUserDto;
 	}
 }

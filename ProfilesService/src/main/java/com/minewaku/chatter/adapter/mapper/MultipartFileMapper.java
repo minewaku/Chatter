@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.minewaku.chatter.adapter.exception.FileUploadException;
-import com.minewaku.chatter.domain.value.InputImage;
+import com.minewaku.chatter.domain.value.file.InputImage;
 
 @Component
 public class MultipartFileMapper {

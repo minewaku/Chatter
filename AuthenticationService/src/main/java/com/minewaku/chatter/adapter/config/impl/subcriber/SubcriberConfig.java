@@ -4,13 +4,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import com.minewaku.chatter.application.publisher.MessageQueue;
+import com.minewaku.chatter.application.publisher.StoreEvent;
 import com.minewaku.chatter.application.subcriber.AccountVerifiedDomainEventSubcriber;
 import com.minewaku.chatter.application.subcriber.CreateConfirmationTokenDomainEventSubcriber;
 import com.minewaku.chatter.application.subcriber.SendConfirmationTokenDomainEventSubcriber;
 import com.minewaku.chatter.domain.port.out.repository.ConfirmationTokenRepository;
 import com.minewaku.chatter.domain.port.out.repository.UserRepository;
-import com.minewaku.chatter.domain.port.out.service.EmailSender;
 import com.minewaku.chatter.domain.port.out.service.ConfirmationTokenGenerator;
+import com.minewaku.chatter.domain.port.out.service.EmailSender;
 
 @Configuration
 public class SubcriberConfig {
@@ -36,7 +37,7 @@ public class SubcriberConfig {
 
 	@Bean
 	public AccountVerifiedDomainEventSubcriber accountVerifiedDomainEventSubcriber(
-			MessageQueue messageQueue) {
-		return new AccountVerifiedDomainEventSubcriber(messageQueue);
+			StoreEvent storeEvent) {
+		return new AccountVerifiedDomainEventSubcriber(storeEvent);
 	}
 }
