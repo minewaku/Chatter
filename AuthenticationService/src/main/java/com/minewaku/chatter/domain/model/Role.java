@@ -11,7 +11,6 @@ import com.minewaku.chatter.domain.value.id.RoleId;
 import jakarta.annotation.Nonnull;
 import lombok.Getter;
 import lombok.NonNull;
-import lombok.Setter;
 import lombok.ToString;
 
 @Getter
@@ -33,20 +32,18 @@ public class Role {
     @NonNull
     private final AuditMetadata auditMetadata;
 
-    @Setter
     private boolean isDeleted;
-
     private Instant deletedAt;
 
     // Private constructor
     private Role(
-            @NonNull RoleId id,
-            @NonNull String name,
-            @NonNull Code code,
-            @NonNull String description,
-            @NonNull AuditMetadata auditMetadata,
-            boolean isDeleted,
-            Instant deletedAt
+                @NonNull RoleId id,
+                @NonNull String name,
+                @NonNull Code code,
+                @NonNull String description,
+                @NonNull AuditMetadata auditMetadata,
+                boolean isDeleted,
+                Instant deletedAt
         ) {
 
         if (name.isBlank()) {
@@ -64,7 +61,10 @@ public class Role {
         this.deletedAt = deletedAt;
     }
 
-    // Static factory for creating new data
+
+    /*
+    * STATIC FACTORIES
+    */
     public static Role createNew(
             @NonNull RoleId id,
             @NonNull String name,
@@ -74,7 +74,6 @@ public class Role {
         return new Role(id, name, code, description, new AuditMetadata(), false, null);
     }
 
-    // Static factory for loading existing data
     public static Role reconstitute(
             @NonNull RoleId id,
             @NonNull String name,
@@ -87,7 +86,7 @@ public class Role {
         return new Role(id, name, code, description, auditMetadata, isDeleted, deletedAt);
     }
 
-    public void setName(@Nonnull String name) {
+    public void updateName(@Nonnull String name) {
         if (name.isBlank()) {
             throw new IllegalArgumentException("Name cannot be blank");
         }
@@ -98,7 +97,7 @@ public class Role {
         this.auditMetadata.markUpdated();
     }
 
-    public void setDescription(@Nonnull String description) {
+    public void updateDescription(@Nonnull String description) {
         if (description.isBlank()) {
             throw new IllegalArgumentException("Description cannot be blank");
         }
@@ -124,6 +123,7 @@ public class Role {
         this.isDeleted = false;
         this.deletedAt = null;
     }
+
 
     @Override
     public boolean equals(Object o) {

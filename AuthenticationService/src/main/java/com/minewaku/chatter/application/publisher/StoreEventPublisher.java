@@ -11,11 +11,13 @@ public class StoreEventPublisher implements EventPublisher {
 	public StoreEventPublisher(StoreEvent storeEvent) {
 		this.storeEvent = storeEvent;
 	}
- 
+
+	@Override
 	public void publish(DomainEvent event) {
 		storeEvent.push(event);
 	}
 	
+	@Override
 	public void publish(List<DomainEvent> events) {
 		storeEvent.push(events);
 	}

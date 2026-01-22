@@ -11,11 +11,13 @@ public class QueueEventPublisher implements EventPublisher {
 	public QueueEventPublisher(MessageQueue messageQueue) {
 		this.messageQueue = messageQueue;
 	}
- 
+
+	@Override
 	public void publish(DomainEvent event) {
 		messageQueue.push(event);
 	}
 	
+	@Override
 	public void publish(List<DomainEvent> events) {
 		messageQueue.push(events);
 	}

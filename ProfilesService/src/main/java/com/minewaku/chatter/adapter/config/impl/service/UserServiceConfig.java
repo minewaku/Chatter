@@ -3,7 +3,7 @@ package com.minewaku.chatter.adapter.config.impl.service;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import com.minewaku.chatter.application.publisher.StoreEvent;
+import com.minewaku.chatter.application.service.user.CreateUserApplicationService;
 import com.minewaku.chatter.application.service.user.HardDeleteUserApplicationService;
 import com.minewaku.chatter.application.service.user.LockUserApplicationService;
 import com.minewaku.chatter.application.service.user.RestoreUserApplicationService;
@@ -12,31 +12,36 @@ import com.minewaku.chatter.application.service.user.UnlockUserApplicationServic
 import com.minewaku.chatter.domain.port.out.repository.UserRepository;
 
 @Configuration
-class UserServiceConfig {
+public class UserServiceConfig {
+
+	@Bean
+	CreateUserApplicationService createUserApplicationService(UserRepository userRepository) {
+		return new CreateUserApplicationService(userRepository);
+	}
 	
 	@Bean
-	SoftDeleteUserApplicationService softDeleteApplicationService(UserRepository userRepository, StoreEvent storeEvent) {
-		return new SoftDeleteUserApplicationService(userRepository, storeEvent);
+	SoftDeleteUserApplicationService softDeleteApplicationService(UserRepository userRepository) {
+		return new SoftDeleteUserApplicationService(userRepository);
 	}
 
 	@Bean
-	LockUserApplicationService lockApplicationService(UserRepository userRepository, StoreEvent storeEvent) {
-		return new LockUserApplicationService(userRepository, storeEvent);
+	LockUserApplicationService lockApplicationService(UserRepository userRepository) {
+		return new LockUserApplicationService(userRepository);
 	}
 
 	@Bean
-	UnlockUserApplicationService unlockUserApplicationService(UserRepository userRepository, StoreEvent storeEvent) {
-		return new UnlockUserApplicationService(userRepository, storeEvent);
+	UnlockUserApplicationService unlockUserApplicationService(UserRepository userRepository) {
+		return new UnlockUserApplicationService(userRepository);
 	}
 
 	@Bean
-	RestoreUserApplicationService restoreUserApplicationService(UserRepository userRepository, StoreEvent storeEvent) {
-		return new RestoreUserApplicationService(userRepository, storeEvent);
+	RestoreUserApplicationService restoreUserApplicationService(UserRepository userRepository) {
+		return new RestoreUserApplicationService(userRepository);
 	}
 
 	@Bean
-	HardDeleteUserApplicationService hardDeleteUserApplicationService(UserRepository userRepository, StoreEvent storeEvent) {
-		return new HardDeleteUserApplicationService(userRepository, storeEvent);
+	HardDeleteUserApplicationService hardDeleteUserApplicationService(UserRepository userRepository) {
+		return new HardDeleteUserApplicationService(userRepository);
 	}
 }
 

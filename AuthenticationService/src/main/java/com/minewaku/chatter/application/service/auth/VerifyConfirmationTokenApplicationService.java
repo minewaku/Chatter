@@ -5,6 +5,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.transaction.annotation.Transactional;
 
+import com.minewaku.chatter.application.exception.DataInconsistencyException;
 import com.minewaku.chatter.application.exception.EntityNotFoundException;
 import com.minewaku.chatter.application.publisher.MessageQueue;
 import com.minewaku.chatter.application.publisher.QueueEventPublisher;
@@ -41,8 +42,18 @@ public class VerifyConfirmationTokenApplicationService implements VerifyConfirma
 		ConfirmationToken existConfirmationToken = confirmationTokenRepository.findByToken(confirmationToken)
 				.orElseThrow(() -> new EntityNotFoundException("Token does not exist"));
 		
-		User user = userRepository.findByIdAndIsDeletedFalse(existConfirmationToken.getUserId())
-				.orElseThrow(() -> new EntityNotFoundException("User does not exist"));
+		User user = userRepository.findById(existConfirmationToken.getUserId())
+			.orElseThrow(() -> new DataInconsistencyException(
+				String.format(
+					"Data Integrity Violation: ConfirmationToken '%s' exists, but associated User '%s' is missing from database.",
+					existConfirmationToken.getToken(),
+					existConfirmationToken.getUserId()
+				)
+        ));
+
+		user.checkForEnable();
+		user.checkForSoftDeleted();
+		user.checkForLocked();
 		
 		confirmationTokenRepository.confirmEmail(existConfirmationToken);
 		userRepository.enable(user);
@@ -57,5 +68,4 @@ public class VerifyConfirmationTokenApplicationService implements VerifyConfirma
 	            .filter(event -> event.getClass().equals(AccountVerifiedDomainEvent.class))
 	            .collect(Collectors.toList());
 	}
-
 }

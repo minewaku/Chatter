@@ -19,23 +19,23 @@ public interface JpaRoleRepository extends JpaRepository<JpaRoleEntity, Long> {
     Optional<JpaRoleEntity> findByCode(String code);
     Optional<JpaRoleEntity> findById(long id);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE JpaRoleEntity u SET u.name = :#{#jpaRoleEntity.name}, u.description = :#{#jpaRoleEntity.description}, u.modifiedAt = :#{#jpaRoleEntity.modifiedAt} WHERE u.id = :#{#jpaRoleEntity.id}")
     void update(JpaRoleEntity jpaRoleEntity);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE JpaRoleEntity u SET u.isDeleted = :#{#jpaRoleEntity.isDeleted}, u.deletedAt = :#{#jpaRoleEntity.deletedAt} WHERE u.id = :#{#jpaRoleEntity.id}")
     void softDelete(JpaRoleEntity jpaRoleEntity);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE JpaRoleEntity u SET u.isDeleted = :#{#jpaRoleEntity.isDeleted}, u.deletedAt = :#{#jpaRoleEntity.deletedAt} WHERE u.id = :#{#jpaRoleEntity.id}")
     void restore(JpaRoleEntity jpaRoleEntity);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM JpaRoleEntity u WHERE u.id = :id")
     void hardDeleteById(@Param("id") Long id);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM JpaRoleEntity u WHERE u.id IN :ids")
     void bulkHardDeleteByIds(@Param("ids") Iterable<Long> ids);
 }

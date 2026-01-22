@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.Objects;
 
 import com.minewaku.chatter.domain.exception.BusinessRuleViolationException;
+import com.minewaku.chatter.domain.exception.InvalidTokenException;
 import com.minewaku.chatter.domain.value.id.OpaqueToken;
 import com.minewaku.chatter.domain.value.id.UserId;
 
@@ -31,7 +32,7 @@ public class RefreshToken {
     @NonNull
     private final UserId userId;
 
-    private boolean revoked = false;
+    private boolean revoked;
 
     @NonNull
     private Instant revokedAt;
@@ -73,18 +74,31 @@ public class RefreshToken {
         return new RefreshToken(token, duration, issuedAt, expiresAt, userId, replacedBy, revoked, revokedAt);
     }
 
-    // Static factory for loading existing data
+
+    /*
+    * STATIC FACTORIES
+    */
     public static RefreshToken createNew(
-            @NonNull OpaqueToken token,
-            Duration duration,
-            @NonNull UserId userId) {
+                @NonNull OpaqueToken token,
+                Duration duration,
+                @NonNull UserId userId) {
 
         Instant now = Instant.now();
-        Duration dur = Objects.isNull(duration) ? Duration.ofMinutes(15L) : duration;
+        Duration dur = Objects.requireNonNullElse(duration, Duration.ofMinutes(15L));
 
         RefreshToken refreshToken = new RefreshToken(token, dur, now, now.plus(dur), userId, null, false, null);
         return refreshToken;
     }
+
+    public void checkRevokedOrExpired() {
+        if (revoked) {
+            throw new InvalidTokenException("Token is revoked at " + revokedAt);
+        }
+        if (Instant.now().isAfter(expiresAt)) {
+            throw new InvalidTokenException("Token is expired at " + expiresAt);
+        }
+    }
+
 
     public void replace(RefreshToken replacedBy) {
         revoke();
@@ -93,6 +107,7 @@ public class RefreshToken {
         }
         this.replacedBy = replacedBy.getToken();
     }
+
 
     public void revoke() {
         if (revoked) {
@@ -104,6 +119,7 @@ public class RefreshToken {
         this.revoked = true;
         this.revokedAt = Instant.now();
     }
+
 
     @Override
     public boolean equals(Object o) {

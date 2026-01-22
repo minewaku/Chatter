@@ -7,9 +7,7 @@ import java.util.Optional;
 import org.springframework.stereotype.Component;
 
 import com.minewaku.chatter.adapter.entity.JpaUserEntity;
-import com.minewaku.chatter.adapter.messaging.message.CreateUserMessage;
 import com.minewaku.chatter.adapter.web.response.UserDto;
-import com.minewaku.chatter.domain.event.dto.CreateUserDto;
 import com.minewaku.chatter.domain.model.User;
 import com.minewaku.chatter.domain.value.AuditMetadata;
 import com.minewaku.chatter.domain.value.Birthday;
@@ -26,27 +24,22 @@ public class UserMapper {
             entity.getModifiedAt()
         );
         UserId userId = entity.getId() != null ? new UserId(entity.getId().longValue()) : null;
+
         User domain = User.reconstitute(
             userId,
             new Email(entity.getEmail()),
             new Username(entity.getUsername()),
             new Birthday(entity.getBirthday()),
             auditMetadata,
-            entity.getIsEnabled(),
-            entity.getIsLocked(),
-            entity.getIsDeleted(),
+            entity.getEnabled(),
+            entity.getLocked(),
+            entity.getDeleted(),
             entity.getDeletedAt()
         );
-        domain.setEnabled(Boolean.TRUE.equals(entity.getIsEnabled()));
-        domain.setLocked(Boolean.TRUE.equals(entity.getIsLocked()));
-        domain.setDeleted(Boolean.TRUE.equals(entity.getIsDeleted()));
+
         return domain;
     }
 
-    /**
-     * Map JPA entity directly to a scalar-only UserDTO. This avoids exposing
-     * domain value objects to presentation layers.
-     */
     public UserDto entityToDto(JpaUserEntity entity) {
         if (entity == null) return null;
 
@@ -56,9 +49,9 @@ public class UserMapper {
 
         LocalDate birthday = entity.getBirthday();
 
-        boolean enabled = Boolean.TRUE.equals(entity.getIsEnabled());
-        boolean locked = Boolean.TRUE.equals(entity.getIsLocked());
-        boolean deleted = Boolean.TRUE.equals(entity.getIsDeleted());
+        boolean enabled = Boolean.TRUE.equals(entity.getEnabled());
+        boolean locked = Boolean.TRUE.equals(entity.getLocked());
+        boolean deleted = Boolean.TRUE.equals(entity.getDeleted());
 
         Instant deletedAt = entity.getDeletedAt();
         Instant createdAt = entity.getCreatedAt();
@@ -85,10 +78,10 @@ public class UserMapper {
         entity.setEmail(domain.getEmail() != null ? domain.getEmail().getValue() : null);
         entity.setUsername(domain.getUsername() != null ? domain.getUsername().getValue() : null);
         entity.setBirthday(domain.getBirthday() != null ? domain.getBirthday().getValue() : null);
-        entity.setIsEnabled(domain.isEnabled());
-        entity.setIsLocked(domain.isLocked());
-        entity.setIsDeleted(domain.isDeleted());
-        entity.setDeletedAt(domain.getDeletedAt());
+        entity.setEnabled(domain.isEnabled());
+        entity.setLocked(domain.isLocked());
+        entity.setDeleted(domain.isDeleted());
+        entity.setDeletedAt(domain.getDeletedAt() != null ? domain.getDeletedAt() : null);
         entity.setCreatedAt(domain.getAuditMetadata().getCreatedAt());
         entity.setModifiedAt(domain.getAuditMetadata().getModifiedAt());
         return entity;
@@ -96,21 +89,5 @@ public class UserMapper {
 
     public Optional<User> entityToDomain(Optional<JpaUserEntity> entity) {
         return entity.map(this::entityToDomain);
-    }
-
-
-    public CreateUserMessage CreateUserDtoToMessage(CreateUserDto dto) {
-        return new CreateUserMessage(
-                dto.getId().getValue(),
-                dto.getEmail().getValue(),
-                dto.getUsername().getValue(),
-                dto.getBirthday().getValue().toString(),
-                dto.isEnabled(),
-                dto.isLocked(),
-                dto.isDeleted(),
-                dto.getDeletedAt() != null ? dto.getDeletedAt().toString() : null,
-                dto.getAuditMetadata().getCreatedAt().toString(),
-                dto.getAuditMetadata().getModifiedAt().toString()
-        );
     }
 }

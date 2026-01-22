@@ -49,10 +49,10 @@ public class JpaUserEntity extends BaseEntity implements UserDetails, Credential
 	@Column(name = "avatar", unique = true)
 	private String avatar;
 
-	@Column(name = "cover_key", unique = true)
-	private String coverKey;
-	@Column(name = "cover", unique = true)
-	private String cover;
+	@Column(name = "banner_key", unique = true)
+	private String bannerKey;
+	@Column(name = "banner", unique = true)
+	private String banner;
 
 	@Column(name = "username", length = 255, nullable = false, unique = true, updatable = false)
 	@NotBlank(message = "Username is required")
@@ -69,10 +69,6 @@ public class JpaUserEntity extends BaseEntity implements UserDetails, Credential
 	@Past(message = "Birthday must be in the past")
 	@NotNull(message = "Birthday cannot be null")
 	private LocalDate birthday;
-
-	@Column(name = "discoverable", nullable = false)
-	@NotNull(message = "Discoverable is required")
-	private Boolean discoverable;
 
 	@Column(name = "is_enabled", nullable = false)
 	@NotNull(message = "isEnabled is required")
@@ -92,11 +88,7 @@ public class JpaUserEntity extends BaseEntity implements UserDetails, Credential
 	@PrePersist
 	protected void onCreate() {
 		super.onCreate();
-
-		if(discoverable == null) {
-			discoverable = true;
-		}
-
+		
 		if (enabled == null) {
 			enabled = false;
 		}

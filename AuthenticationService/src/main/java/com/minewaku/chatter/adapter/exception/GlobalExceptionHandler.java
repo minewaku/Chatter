@@ -3,8 +3,6 @@ package com.minewaku.chatter.adapter.exception;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -22,10 +20,11 @@ import com.minewaku.chatter.domain.exception.StateAlreadySatisfiedException;
 import com.minewaku.chatter.domain.exception.UserNotAccessibleException;
 import com.minewaku.chatter.domain.exception.UserSoftDeletedException;
 
+import lombok.extern.log4j.Log4j2;
+
+@Log4j2
 @ControllerAdvice
 public class GlobalExceptionHandler {
-
-    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(BusinessRuleViolationException.class)
     public ResponseEntity<ErrorResponse> handleValidation(BusinessRuleViolationException ex) {
@@ -65,7 +64,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(UserSoftDeletedException.class)
     public ResponseEntity<ErrorResponse> handleValidation(UserSoftDeletedException ex) {
         log.error("Validation error: {}", ex);
-        ErrorResponse errorResponse = new ErrorResponse(ex.getErrorCode(), ex.getMessage());
+        ErrorResponse errorResponse = new ErrorResponse("INVALID_CREDENTIALS", "Invalid credentials");
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
     }
 

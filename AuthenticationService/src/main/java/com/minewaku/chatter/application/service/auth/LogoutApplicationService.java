@@ -6,6 +6,7 @@ import com.minewaku.chatter.application.exception.EntityNotFoundException;
 import com.minewaku.chatter.domain.model.RefreshToken;
 import com.minewaku.chatter.domain.port.in.auth.LogoutUseCase;
 import com.minewaku.chatter.domain.port.out.repository.RefreshTokenRepository;
+import com.minewaku.chatter.domain.value.id.OpaqueToken;
 
 public class LogoutApplicationService implements LogoutUseCase {
 	
@@ -19,8 +20,8 @@ public class LogoutApplicationService implements LogoutUseCase {
 	
     @Override
 	@Transactional
-    public Void handle(String refreshToken) {
-		RefreshToken existRefreshToken = refreshTokenRepository.findByToken(refreshToken)
+    public Void handle(OpaqueToken opaqueToken) {
+		RefreshToken existRefreshToken = refreshTokenRepository.findByToken(opaqueToken)
 			.orElseThrow(() -> new EntityNotFoundException("Refresh token does not exist"));
 		
 		existRefreshToken.revoke();

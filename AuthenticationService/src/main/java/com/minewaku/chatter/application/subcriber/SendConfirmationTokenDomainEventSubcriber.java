@@ -7,33 +7,34 @@ import org.springframework.transaction.annotation.Transactional;
 import com.minewaku.chatter.domain.event.SendConfirmationTokenDomainEvent;
 import com.minewaku.chatter.domain.event.core.DomainEventSubscriber;
 import com.minewaku.chatter.domain.port.out.service.EmailSender;
+import com.minewaku.chatter.domain.port.out.service.UrlGenerator;
 
 public class SendConfirmationTokenDomainEventSubcriber
 		implements DomainEventSubscriber<SendConfirmationTokenDomainEvent> {
 
 	private final EmailSender emailSender;
+	private final UrlGenerator.ConfirmTokenUrlGenerator urlGenerator;
 
 	public SendConfirmationTokenDomainEventSubcriber(
-			EmailSender emailSender) {
-
+			EmailSender emailSender,
+			UrlGenerator.ConfirmTokenUrlGenerator urlGenerator) {
 		this.emailSender = emailSender;
+		this.urlGenerator = urlGenerator;
 	}
 
 	@Override
 	@Transactional
 	public void handle(SendConfirmationTokenDomainEvent event) {
-		SendConfirmationTokenDomainEvent castedEvent = (SendConfirmationTokenDomainEvent) event;
-
-		String verifyUrl = "http://localhost:5001/auth-service/api/v1/auth/verification/confirm?token="
-				+ castedEvent.getConfirmationToken().getToken();
+		String verifyUrl = urlGenerator
+				.generate(event.getConfirmationToken().getToken());
 
 		Map<String, String> templateParameters = Map.of(
 				"verifyUrl", verifyUrl,
-				"expirationMinutes", String.valueOf(castedEvent.getConfirmationToken().getDuration().toMinutes()));
-
-		String content = emailSender.buildContent(templateParameters, castedEvent.getMailType());
-		emailSender.send(castedEvent.getConfirmationToken().getEmail(),
-				castedEvent.getSubject(),
+				"expirationMinutes", String.valueOf(event.getConfirmationToken().getDuration().toMinutes()));
+				
+		String content = emailSender.buildContent(templateParameters, event.getMailType());
+		emailSender.send(event.getConfirmationToken().getEmail(),
+				event.getSubject(),
 				content);
 	}
 }

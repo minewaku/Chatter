@@ -12,7 +12,6 @@ public record UserDto(
 		String displayName,
 		String bio,
 		LocalDate birthday,
-		boolean discoverable,
 		boolean enabled,
 		boolean locked,
 		boolean deleted,

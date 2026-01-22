@@ -3,8 +3,6 @@ package com.minewaku.chatter.domain.value;
 import java.time.LocalDate;
 import java.time.Period;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.minewaku.chatter.domain.exception.DomainValidationException;
 
 import lombok.EqualsAndHashCode;
@@ -20,9 +18,7 @@ public class Birthday {
 	@NonNull
 	private final LocalDate value;
 
-	@JsonCreator
-    public Birthday(
-    		@JsonProperty("value") @NonNull LocalDate value) {
+    public Birthday(@NonNull LocalDate value) {
 		
         if(value.isAfter(LocalDate.now())) {
         	throw new DomainValidationException("Birthday cannot be in the future");

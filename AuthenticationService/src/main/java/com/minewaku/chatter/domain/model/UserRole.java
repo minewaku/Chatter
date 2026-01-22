@@ -16,25 +16,34 @@ public class UserRole {
 	
 	private UserId createdBy;
 	
-	
-	private UserRole(@NonNull UserRoleId userRoleId, 
+	// Private constructor
+	private UserRole(
+			@NonNull UserRoleId userRoleId, 
 			UserId createdBy) {
 		
 		this.userRoleId = userRoleId;
 		this.createdBy = createdBy;
 	}
 	
-	public static UserRole reconstitute(@NonNull UserRoleId userRoleId,
-			UserId createdBy) {
+
+	 /*
+    * STATIC FACTORIES
+    */
+	public static UserRole reconstitute(
+				@NonNull UserRoleId userRoleId,
+				UserId createdBy) {
+
         return new UserRole(userRoleId, createdBy);
     }
 
-    // Static factory for creating new data
-	public static UserRole createNew(@NonNull UserRoleId userRoleId,
-			UserId createdBy) {
+
+	public static UserRole createNew(
+				@NonNull UserRoleId userRoleId,
+				UserId createdBy) {
 		
         return new UserRole(userRoleId, createdBy);
     }
+
 	
 	@Override
 	public boolean equals(Object o) {

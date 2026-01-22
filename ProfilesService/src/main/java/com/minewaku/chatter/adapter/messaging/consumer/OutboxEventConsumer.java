@@ -55,7 +55,7 @@ public class OutboxEventConsumer {
 
 	@KafkaListener(topics = "dev.shared.entity.authentication.user.id", groupId =
 	"dev.com.minewaku.chatter.profile.profile-service.user")
-	public void handleCdcRole(String message) throws JsonProcessingException {
+	public void handleUserCdc(String message) throws JsonProcessingException {
 		JpaOutboxEntity entity = outboxMapper.messageToEntity(message);
 		String eventType = entity.getEventType();
 

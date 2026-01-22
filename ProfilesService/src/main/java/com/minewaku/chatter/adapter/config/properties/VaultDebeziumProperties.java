@@ -1,5 +1,7 @@
 package com.minewaku.chatter.adapter.config.properties;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.core.env.Environment;
@@ -16,6 +18,9 @@ import lombok.Setter;
 @Component
 @ConfigurationProperties(prefix = "debezium")
 public class VaultDebeziumProperties {
+    
+    private static final Logger logger = LoggerFactory.getLogger(VaultDebeziumProperties.class);
+
     private String username = "dummy";
     private String password = "123456";
 
@@ -24,7 +29,7 @@ public class VaultDebeziumProperties {
 
     @PostConstruct
     private void test() {
-        System.out.println("debezium.username from env: " + environment.getProperty("debezium.username"));
-        System.out.println("debezium.password from env: " + environment.getProperty("debezium.password"));
+        logger.info("debezium.username from env: " + environment.getProperty("debezium.username"));
+        logger.info("debezium.password from env: " + environment.getProperty("debezium.password"));
     }
 }

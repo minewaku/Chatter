@@ -39,6 +39,7 @@ public class UploadBannerApplicationService implements UploadBannerUseCase {
 
         InputBanner inputBanner = new InputBanner(
             key,
+            user.getId(),
             command.inputImage().getOriginalFilename(),
             command.inputImage().getContentType(),
             command.inputImage().getSizeInBytes(),
@@ -47,12 +48,14 @@ public class UploadBannerApplicationService implements UploadBannerUseCase {
 
         FileStorageResponse response = fileStorage.upload(inputBanner);
         StorageFile banner = new StorageFile(
-            new StorageKey(response.key()),
+            response.key(),
             response.uri()
         );
         user.setBanner(banner);
 
         profileRepository.uploadBannerUrl(user);
+        
+        fileStorage.deleteByKey(user.getBanner().getKey());
         return null;
     }
 }

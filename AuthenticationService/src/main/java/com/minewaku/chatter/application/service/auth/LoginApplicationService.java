@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.minewaku.chatter.application.exception.EntityNotFoundException;
 import com.minewaku.chatter.domain.command.auth.LoginCommand;
+import com.minewaku.chatter.domain.exception.InvalidCredentialsException;
 import com.minewaku.chatter.domain.model.Credentials;
 import com.minewaku.chatter.domain.model.RefreshToken;
 import com.minewaku.chatter.domain.model.Role;
@@ -56,14 +57,14 @@ public class LoginApplicationService implements LoginUseCase {
 	@Override
 	@Transactional
 	public TokenResponse handle(LoginCommand command) {
-		User user = userRepository.findByEmail(command.getEmail())
+		User user = userRepository.findByEmail(command.email())
 			.orElseThrow(() -> new EntityNotFoundException("User does not exist"));
 		user.validateAccessible();
 
 		Credentials credentials = credentialsRepository.findById(user.getId())
-			.orElseThrow(() -> new EntityNotFoundException("Credentials for user does not exist"));
+			.orElseThrow(() -> new InvalidCredentialsException("This login method for this user does not exist"));
 
-		passwordSecurityDomainService.validateCredentials(credentials, command.getPassword());
+		passwordSecurityDomainService.validateCredentials(credentials, command.password());
 
 		Set<Role> roles = userRoleRepository.findRolesByUserIdAndIsDeletedFalse(user.getId());
 		String accessToken = accessTokenGenerator.generate(user, roles);

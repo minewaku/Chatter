@@ -48,9 +48,6 @@ public class User {
     private final Birthday birthday;
 
     @Setter
-    private boolean discoverable;
-
-    @Setter
     private boolean enabled;
 
     @Setter
@@ -79,7 +76,6 @@ public class User {
         Bio bio,
         @NonNull Birthday birthday, 
         @NonNull AuditMetadata auditMetadata,
-        boolean discoverable,
         boolean enabled, 
         boolean locked, 
         boolean deleted, 
@@ -93,7 +89,6 @@ public class User {
         this.birthday = birthday;
         this.displayName = displayName;
         this.bio = bio;
-        this.discoverable = discoverable;
         this.enabled = enabled;
         this.locked = locked;
         this.deleted = deleted;
@@ -112,13 +107,12 @@ public class User {
             Bio bio,
             @NonNull Birthday birthday,
             @NonNull AuditMetadata auditMetadata,
-            boolean discoverable,
             boolean enabled,
             boolean locked, 
             boolean deleted, 
             Instant deletedAt) {
 
-        return new User(id, email, avatar, banner, username, displayName, bio, birthday, auditMetadata, discoverable, enabled, locked, deleted, deletedAt);
+        return new User(id, email, avatar, banner, username, displayName, bio, birthday, auditMetadata, enabled, locked, deleted, deletedAt);
     }
 
     // Static factory for creating new data
@@ -134,7 +128,7 @@ public class User {
             @NonNull AuditMetadata auditMetadata
             ) {
                 
-        User user = new User(id, email, null, null, username, null, null, birthday, auditMetadata, false, enabled, locked, deleted, deletedAt);
+        User user = new User(id, email, null, null, username, null, null, birthday, auditMetadata, enabled, locked, deleted, deletedAt);
         return user;
     }
 

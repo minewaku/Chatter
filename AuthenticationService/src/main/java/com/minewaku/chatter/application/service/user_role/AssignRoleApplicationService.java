@@ -22,8 +22,8 @@ public class AssignRoleApplicationService implements AssignRoleUseCase {
     @Override
 	@Transactional
     public Void handle(CreateUserRoleCommand command) {
-		UserRoleId userRoleId = new UserRoleId(command.getUserId(), command.getRoleId());
-		UserRole userRole = UserRole.createNew(userRoleId, command.getCreatedBy());
+		UserRoleId userRoleId = new UserRoleId(command.userId(), command.roleId());
+		UserRole userRole = UserRole.createNew(userRoleId, command.createdBy());
         userRoleRepository.save(userRole);
         return null;
 	}

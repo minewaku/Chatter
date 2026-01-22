@@ -12,6 +12,7 @@ import com.minewaku.chatter.domain.port.out.repository.ConfirmationTokenReposito
 import com.minewaku.chatter.domain.port.out.repository.UserRepository;
 import com.minewaku.chatter.domain.port.out.service.ConfirmationTokenGenerator;
 import com.minewaku.chatter.domain.port.out.service.EmailSender;
+import com.minewaku.chatter.domain.port.out.service.UrlGenerator;
 
 @Configuration
 public class SubcriberConfig {
@@ -31,8 +32,8 @@ public class SubcriberConfig {
 
 	@Bean
 	public SendConfirmationTokenDomainEventSubcriber sendConfirmationTokenDomainEventSubcriber(
-			EmailSender emailSender) {
-		return new SendConfirmationTokenDomainEventSubcriber(emailSender);
+			EmailSender emailSender, UrlGenerator.ConfirmTokenUrlGenerator urlGenerator) {
+		return new SendConfirmationTokenDomainEventSubcriber(emailSender, urlGenerator);
 	}
 
 	@Bean

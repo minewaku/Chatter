@@ -29,7 +29,7 @@ public class RoleMapper {
             new Code(entity.getCode()),
             entity.getDescription(),
             auditMetadata,
-            entity.getIsDeleted() != null && entity.getIsDeleted(),
+            entity.getDeleted() != null && entity.getDeleted(),
             entity.getDeletedAt()
         );
     }
@@ -41,7 +41,7 @@ public class RoleMapper {
         entity.setName(domain.getName());
         entity.setCode(domain.getCode() != null ? domain.getCode().getValue() : null);
         entity.setDescription(domain.getDescription());
-        entity.setIsDeleted(domain.isDeleted());
+        entity.setDeleted(domain.isDeleted());
         entity.setDeletedAt(domain.getDeletedAt());
         entity.setCreatedAt(domain.getAuditMetadata().getCreatedAt());
         entity.setModifiedAt(domain.getAuditMetadata().getModifiedAt());
@@ -66,7 +66,7 @@ public class RoleMapper {
         Instant createdAt = entity.getCreatedAt();
         Instant modifiedAt = entity.getModifiedAt();
 
-        Boolean isDeleted = entity.getIsDeleted() != null && entity.getIsDeleted();
+        Boolean isDeleted = entity.getDeleted() != null && entity.getDeleted();
         Instant deletedAt = entity.getDeletedAt();
 
         return new RoleDto(id, name, code, description, createdAt, modifiedAt, isDeleted, deletedAt);

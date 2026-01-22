@@ -28,11 +28,4 @@ public class SpringEventStoreEvent implements StoreEvent {
 			eventPublisher.publishEvent(event);
 		}
 	}
-
-	@Override
-	public DomainEvent pop() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
 }

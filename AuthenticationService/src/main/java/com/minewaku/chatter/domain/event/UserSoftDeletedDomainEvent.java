@@ -11,11 +11,13 @@ import lombok.NonNull;
 @Builder
 public class UserSoftDeletedDomainEvent extends DomainEvent {
 	
+	private static final String EVENT_TYPE = "UserSoftDeleted";
+
 	@NonNull
 	private final UserId userId;
 	
 	public UserSoftDeletedDomainEvent(@NonNull UserId userId) {
-		super("UserSoftDeleted");
+		super(EVENT_TYPE);
 		this.userId = userId;
 	}
 }

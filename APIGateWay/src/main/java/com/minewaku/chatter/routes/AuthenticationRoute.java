@@ -20,11 +20,20 @@ public class AuthenticationRoute {
 
     return builder.routes()
 		.route("auth", r -> r
-			.path("/auth-service/api/**")
-			.filters(f -> f
-				.stripPrefix(1)
-			)
+			.path("/api/v*/auth/**")
 			.uri("lb://AUTHENTICATION-SERVICE")
+		)
+		.route("users", r -> r
+			.path("/api/v*/users/**")
+			.uri("lb://AUTHENTICATION-SERVICE")
+		)
+		.route("roles", r -> r
+			.path("/api/v*/roles/**")
+			.uri("lb://AUTHENTICATION-SERVICE")
+		)
+		.route("profiles", r -> r
+			.path("/api/v*/profiles/**")
+			.uri("lb://PROFILES-SERVICE")
 		)
 		.build();
 	}

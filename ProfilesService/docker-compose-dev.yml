@@ -1,0 +1,36 @@
+version: '3.8'
+
+networks:
+  chatter-net:
+    name: chatter-net
+    driver: bridge
+
+services:
+
+  profiles-postgresql-chatter:
+    image: postgres:15
+    container_name: profiles-postgresql-chatter
+    restart: always
+    environment:
+      POSTGRES_DB: chatter
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "5441:5441"
+    command:
+      - "postgres"
+      - "-c"
+      - "listen_addresses=*"
+      - "-c"
+      - "port=5441"
+      - "-c"
+      - "wal_level=logical"
+      - "-c"
+      - "max_wal_senders=10"
+      - "-c"
+      - "max_replication_slots=10"
+    volumes:
+      - ./docker/postgresql/data:/var/lib/postgresql/data
+      - ./docker/postgresql/init:/docker-entrypoint-initdb.d
+    networks:
+      - chatter-net

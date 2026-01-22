@@ -68,16 +68,16 @@ public class JpaUserEntity extends BaseEntity implements UserDetails, Credential
 	private LocalDate birthday;
 
 	@Column(name = "is_enabled", nullable = false)
-	@NotNull(message = "isEnabled is required")
-	private Boolean isEnabled;
+	@NotNull(message = "enabled is required")
+	private Boolean enabled;
 
 	@Column(name = "is_locked", nullable = false)
-	@NotNull(message = "isLocked is required")
-	private Boolean isLocked;
+	@NotNull(message = "locked is required")
+	private Boolean locked;
 
 	@Column(name = "is_deleted", nullable = false)
-	@NotNull(message = "isDeleted is required")
-	private Boolean isDeleted;
+	@NotNull(message = "deleted is required")
+	private Boolean deleted;
 
 	@Column(name = "deleted_at", nullable = true)
 	private Instant deletedAt;
@@ -86,16 +86,16 @@ public class JpaUserEntity extends BaseEntity implements UserDetails, Credential
 	protected void onCreate() {
 		super.onCreate();
 
-		if (isEnabled == null) {
-			isEnabled = false;
+		if (enabled == null) {
+			enabled = false;
 		}
 
-		if (isLocked == null) {
-			isLocked = false;
+		if (locked == null) {
+			locked = false;
 		}
 
-		if (isDeleted == null) {
-			isDeleted = false;
+		if (deleted == null) {
+			deleted = false;
 		}
 	}
 
@@ -111,7 +111,7 @@ public class JpaUserEntity extends BaseEntity implements UserDetails, Credential
 
 	@Override
 	public boolean isAccountNonLocked() {
-		return !isLocked;
+		return !locked;
 	}
 
 	@Override
@@ -121,12 +121,12 @@ public class JpaUserEntity extends BaseEntity implements UserDetails, Credential
 
 	@Override
 	public boolean isEnabled() {
-		return isEnabled;
+		return enabled;
 	}
 
 	@Override
 	public void eraseCredentials() {
-		this.isDeleted = true;
+		this.deleted = true;
 	}
 
 	@Override
@@ -136,7 +136,6 @@ public class JpaUserEntity extends BaseEntity implements UserDetails, Credential
 
 	@Override
 	public String getPassword() {
-		// TODO Auto-generated method stub
 		return null;
 	}
 }

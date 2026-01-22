@@ -4,6 +4,7 @@ import java.util.Set;
 
 import org.springframework.transaction.annotation.Transactional;
 
+import com.minewaku.chatter.application.exception.DataInconsistencyException;
 import com.minewaku.chatter.application.exception.EntityNotFoundException;
 import com.minewaku.chatter.domain.model.RefreshToken;
 import com.minewaku.chatter.domain.model.Role;
@@ -40,30 +41,35 @@ public class RefreshApplicationService implements RefreshUseCase {
 
 	@Override
 	@Transactional
-	public TokenResponse handle(String refreshToken) {
-		RefreshToken existToken = refreshTokenRepository.findByToken(refreshToken)
+	public TokenResponse handle(OpaqueToken opaqueToken) {
+		RefreshToken existToken = refreshTokenRepository.findByToken(opaqueToken)
 				.orElseThrow(() -> new EntityNotFoundException("Refresh token does not exist"));
 
+		existToken.checkRevokedOrExpired();
+
 		User user = userRepository.findById(existToken.getUserId())
-				.orElseThrow(() -> new EntityNotFoundException("User does not exist"));
+			.orElseThrow(() -> new DataInconsistencyException(
+				String.format(
+					"Data Integrity Violation: RefreshToken '%s' exists, but associated User '%s' is missing from database.",
+					existToken.getToken(),
+					existToken.getUserId()
+				)
+        ));
 
 		user.validateAccessible();
 
 		Set<Role> roles = userRoleRepository.findRolesByUserIdAndIsDeletedFalse(user.getId());
 
-		user.validateAccessible();
-
-		existToken.revoke();
-		refreshTokenRepository.revoke(existToken);
-
-		OpaqueToken opaqueToken = new OpaqueToken(refreshTokenGenerator.generate());
-		RefreshToken newRefreshToken = RefreshToken.createNew(opaqueToken, null, user.getId());
+		OpaqueToken newOpaqueToken = new OpaqueToken(refreshTokenGenerator.generate());
+		RefreshToken newRefreshToken = RefreshToken.createNew(newOpaqueToken, null, user.getId());
 		refreshTokenRepository.save(newRefreshToken);
+
+		existToken.replace(newRefreshToken);
+		refreshTokenRepository.revoke(existToken);
 
 		String newAccessToken = accessTokenGenerator.generate(user, roles);
 
 		TokenResponse tokenReponse = new TokenResponse(newAccessToken, newRefreshToken);
 		return tokenReponse;
 	}
-
 }

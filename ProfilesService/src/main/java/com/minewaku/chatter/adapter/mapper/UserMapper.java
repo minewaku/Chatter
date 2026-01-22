@@ -36,19 +36,18 @@ public class UserMapper {
         User domain;
         try {
             URI avatarUri = new URI(entity.getAvatar());
-            URI coverUri = new URI(entity.getCover());
+            URI bannerUri = new URI(entity.getBanner());
 
             domain = User.reconstitute(
                 userId,
                 new Email(entity.getEmail()),
                 new StorageFile(new StorageKey(entity.getAvatarKey()), avatarUri),
-                new StorageFile(new StorageKey(entity.getCoverKey()), coverUri),
+                new StorageFile(new StorageKey(entity.getBannerKey()), bannerUri),
                 new Username(entity.getUsername()),
                 new DisplayName(entity.getDisplayName()),
                 new Bio(entity.getBio()),
                 new Birthday(entity.getBirthday()),
                 auditMetadata,
-                entity.getDiscoverable(),
                 entity.getEnabled(),
                 entity.getLocked(),
                 entity.getDeleted(),
@@ -71,7 +70,6 @@ public class UserMapper {
 
         LocalDate birthday = entity.getBirthday();
 
-        boolean discoverable = Boolean.TRUE.equals(entity.getDiscoverable());
         boolean enabled = Boolean.TRUE.equals(entity.getEnabled());
         boolean locked = Boolean.TRUE.equals(entity.getLocked());
         boolean deleted = Boolean.TRUE.equals(entity.getDeleted());
@@ -84,12 +82,11 @@ public class UserMapper {
             id,
             email,
             entity.getAvatar(),
-            entity.getCover(),
+            entity.getBanner(),
             username,
             entity.getDisplayName(),
             entity.getBio(),
             birthday,
-            discoverable,
             enabled,
             locked,
             deleted,
@@ -122,8 +119,8 @@ public class UserMapper {
         entity.setEmail(domain.getEmail() != null ? domain.getEmail().getValue() : null);
         entity.setAvatarKey(domain.getAvatar().getKey() != null ? domain.getAvatar().getKey().getValue() : null);
         entity.setAvatar(domain.getAvatar().getUri() != null ? domain.getAvatar().toString() : null);
-        entity.setCoverKey(domain.getBanner().getKey() != null ? domain.getBanner().getKey().getValue() : null);
-        entity.setCover(domain.getBanner().getUri() != null ? domain.getBanner().getUri().getPath() : null);
+        entity.setBannerKey(domain.getBanner().getKey() != null ? domain.getBanner().getKey().getValue() : null);
+        entity.setBanner(domain.getBanner().getUri() != null ? domain.getBanner().getUri().getPath() : null);
         entity.setUsername(domain.getUsername() != null ? domain.getUsername().getValue() : null);
         entity.setDisplayName(domain.getDisplayName() != null ? domain.getDisplayName().getValue() : null);
         entity.setBio(domain.getBio() != null ? domain.getBio().getValue() : null);

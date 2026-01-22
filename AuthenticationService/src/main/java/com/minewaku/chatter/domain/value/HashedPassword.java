@@ -3,7 +3,6 @@ package com.minewaku.chatter.domain.value;
 import java.util.Arrays;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -26,9 +25,9 @@ public class HashedPassword {
 
 	@JsonCreator
     public HashedPassword(
-    		@JsonProperty("algorithm") @NonNull String algorithm, 
-    		@JsonProperty("hash") @NonNull String hash, 
-    		@JsonProperty("salt") @NonNull byte[] salt) {
+                @NonNull String algorithm, 
+                @NonNull String hash, 
+                @NonNull byte[] salt) {
         
         if (algorithm.isBlank()) {
             throw new IllegalArgumentException("Algorithm cannot be blank");

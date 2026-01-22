@@ -6,8 +6,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.minewaku.chatter.domain.event.SendConfirmationTokenDomainEvent;
 import com.minewaku.chatter.domain.event.core.DomainEvent;
 import com.minewaku.chatter.domain.exception.BusinessRuleViolationException;
@@ -44,7 +42,6 @@ public class ConfirmationToken {
     private Instant confirmedAt;
 
     @NonNull
-    @JsonIgnore
     private final List<DomainEvent> events = new ArrayList<DomainEvent>();
 
     // Private constructor
@@ -66,21 +63,22 @@ public class ConfirmationToken {
         this.confirmedAt = confirmedAt;
     }
 
-    // Static factory for loading existing data
-    @JsonCreator
+
+    /*
+    * STATIC FACTORIES
+    */
     public static ConfirmationToken reconstitute(
-            @NonNull String token,
-            @NonNull UserId userId,
-            @NonNull Email email,
-            Duration duration,
-            Instant createdAt,
-            Instant expiresAt,
-            Instant confirmedAt) {
+                @NonNull String token,
+                @NonNull UserId userId,
+                @NonNull Email email,
+                Duration duration,
+                Instant createdAt,
+                Instant expiresAt,
+                Instant confirmedAt) {
 
         return new ConfirmationToken(token, userId, email, duration, createdAt, expiresAt, confirmedAt);
     }
 
-    // Static factory for creating new data
     public static ConfirmationToken createNew(
             @NonNull String token,
             @NonNull UserId userId,
@@ -88,10 +86,12 @@ public class ConfirmationToken {
             Duration duration) {
 
         Instant now = Instant.now();
-        Duration dur = Objects.isNull(duration) ? Duration.ofMinutes(15L) : duration;
+        Duration dur = Objects.requireNonNullElse(duration, Duration.ofMinutes(15L));
 
-        ConfirmationToken confirmationToken = new ConfirmationToken(token, userId, email, dur, now, now.plus(dur),
-                null);
+        ConfirmationToken confirmationToken = 
+            new ConfirmationToken(
+                token, userId, email, dur, now, now.plus(dur),null
+            );
 
         SendConfirmationTokenDomainEvent sendConfirmationTokenDomainEvent = new SendConfirmationTokenDomainEvent(
                 confirmationToken, MailType.EMAIL_CONFIRMATION, "Chatter Email Confirmation");
@@ -110,6 +110,7 @@ public class ConfirmationToken {
         this.confirmedAt = Instant.now();
     }
 
+    
     @Override
     public boolean equals(Object o) {
         if (this == o)

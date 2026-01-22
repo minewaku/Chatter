@@ -30,6 +30,7 @@ import com.minewaku.chatter.domain.value.Birthday;
 import com.minewaku.chatter.domain.value.Email;
 import com.minewaku.chatter.domain.value.Password;
 import com.minewaku.chatter.domain.value.Username;
+import com.minewaku.chatter.domain.value.id.OpaqueToken;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 
@@ -99,7 +100,8 @@ public class AuthController {
 	@PostMapping("/refresh")
 	public ResponseEntity<AuthTokenResponse> refreshToken(
 			@CookieValue(name = "refresh_token", defaultValue = "") String refreshToken) {
-		TokenResponse domainResponse = refreshApplicationService.handle(refreshToken);
+		OpaqueToken token = new OpaqueToken(refreshToken);
+		TokenResponse domainResponse = refreshApplicationService.handle(token);
 		AuthTokenResponse response = new AuthTokenResponse(domainResponse.accessToken(),
 				domainResponse.refreshToken().getToken().getValue());
 		return ResponseEntity.ok(response);
@@ -107,7 +109,8 @@ public class AuthController {
 
 	@PostMapping("/logout")
 	public ResponseEntity<Void> logout(@CookieValue(name = "refresh_token", defaultValue = "") String refreshToken) {
-		logoutApplicationService.handle(refreshToken);
+		OpaqueToken token = new OpaqueToken(refreshToken);
+		logoutApplicationService.handle(token);
 		return ResponseEntity.ok().build();
 	}
 

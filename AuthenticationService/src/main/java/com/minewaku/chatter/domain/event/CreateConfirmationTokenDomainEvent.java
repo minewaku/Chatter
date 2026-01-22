@@ -13,6 +13,8 @@ import lombok.NonNull;
 @Builder
 public class CreateConfirmationTokenDomainEvent extends DomainEvent {
 	
+	private static final String EVENT_TYPE = "ConfirmationTokenCreated";
+
 	@NonNull
 	private final UserId userId;
 	
@@ -20,7 +22,8 @@ public class CreateConfirmationTokenDomainEvent extends DomainEvent {
 	
 	public CreateConfirmationTokenDomainEvent(@NonNull UserId userId,
 			Duration duration) {
-		super("Created");
+
+		super(EVENT_TYPE);
 		this.userId = userId;
 		this.duration = duration;
 	}

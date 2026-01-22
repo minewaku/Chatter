@@ -21,11 +21,11 @@ public class UpdateRoleApplicationService implements UpdateRoleUseCase {
     @Override
 	@Transactional
     public Void handle(UpdateRoleCommand command) {
-		Role role = roleRepository.findById(command.getId())
+		Role role = roleRepository.findById(command.id())
 				.orElseThrow(() -> new EntityNotFoundException("Role does not exist"));
 				
-		role.setName(command.getName());
-		role.setDescription(command.getDescription());
+		role.updateName(command.name());
+		role.updateDescription(command.description());
 		
         roleRepository.update(role);
         return null;

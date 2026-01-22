@@ -1,5 +1,8 @@
 package com.minewaku.chatter.adapter.messaging.message;
 
+import lombok.Builder;
+
+@Builder
 public record CreateUserMessage(
         long id,
         String email,

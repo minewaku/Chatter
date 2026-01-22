@@ -17,9 +17,9 @@ public class OutboxCleanupScheduler {
         this.outboxRepository = outboxRepository;
     }
 
-    @Scheduled(fixedRateString = "PT1H")
+    @Scheduled(fixedRateString = "P1D")
     @Transactional
     public void cleanupOldEvents() {
-        outboxRepository.deleteByCreatedAtBefore(LocalDateTime.now().minusHours(1));
+        // outboxRepository.deleteByCreatedAtBefore(LocalDateTime.now().minusHours(1));
     }
 }

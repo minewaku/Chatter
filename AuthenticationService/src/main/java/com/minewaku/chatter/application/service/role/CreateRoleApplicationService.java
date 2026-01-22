@@ -27,8 +27,8 @@ public class CreateRoleApplicationService implements CreateRoleUseCase {
 	public Role handle(CreateRoleCommand command) {
 		RoleId roleId = new RoleId(idGenerator.generate());
 
-		Role role = Role.createNew(roleId, command.getName(),
-				command.getCode(), command.getDescription());
+		Role role = Role.createNew(roleId, command.name(),
+				command.code(), command.description());
 
 		return roleRepository.save(role);
 	}

@@ -2,7 +2,6 @@ package com.minewaku.chatter.adapter.service.impl;
 
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -19,11 +18,13 @@ import jakarta.mail.internet.MimeMessage;
 @Service
 public class TemplatedEmailService implements EmailSender {
 	
-	@Autowired
-	private JavaMailSender mailSender;
-	
-	@Autowired
-	private TemplateEngine templateEngine;
+	private final JavaMailSender mailSender;
+	private final TemplateEngine templateEngine;
+
+	public TemplatedEmailService(JavaMailSender mailSender, TemplateEngine templateEngine) {
+		this.mailSender = mailSender;
+		this.templateEngine = templateEngine;
+	}
 	
 	@Override
 	public String buildContent(Map<String, String> parameters, MailType mailType) {

@@ -39,6 +39,7 @@ public class UploadAvatarApplicationService implements UploadAvatarUseCase {
 
         InputAvatar inputAvatar = new InputAvatar(
             key,
+            user.getId(),
             command.inputImage().getOriginalFilename(),
             command.inputImage().getContentType(),
             command.inputImage().getSizeInBytes(),
@@ -46,13 +47,17 @@ public class UploadAvatarApplicationService implements UploadAvatarUseCase {
         );
 
         FileStorageResponse response = fileStorage.upload(inputAvatar);
+        
+
         StorageFile avatar = new StorageFile(
-            new StorageKey(response.key()),
+            response.key(),
             response.uri()
         );
         user.setAvatar(avatar);
 
         profileRepository.uploadAvatarUrl(user);
+
+        fileStorage.deleteByKey(user.getAvatar().getKey());
         return null;
     }
 }

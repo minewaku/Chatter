@@ -14,45 +14,61 @@ import lombok.Setter;
 @Setter
 public class DebeziumProperties {
 
-	private Properties props = new Properties();
+    private Properties props = new Properties();
 
-	public DebeziumProperties(
-			VaultDebeziumProperties vaultDebeziumProperties,
-			VariableServerRepository variableServerRepository) {
+    public DebeziumProperties(
+            VaultDebeziumProperties vaultDebeziumProperties,
+            VariableServerRepository variableServerRepository) {
 
-		props.setProperty("name", "engine");
-		// Common settings
-		props.setProperty("offset.storage", "org.apache.kafka.connect.storage.FileOffsetBackingStore");
-		props.setProperty("offset.storage.file.filename", "/path/to/storage/offsets.dat");
-		props.setProperty("offset.flush.interval.ms", "60000");
+        // offset storage config
+        props.setProperty("name", "engine");
+        props.setProperty("offset.storage", "org.apache.kafka.connect.storage.KafkaOffsetBackingStore");
+		props.setProperty("offset.storage.group.id", "debezium-offset-reader-group.profiles");
+		props.setProperty("offset.storage.bootstrap.servers", "localhost:5003");
+		props.setProperty("offset.storage.client.id", "debezium-offset-client-" + variableServerRepository.getServerId());
+        props.setProperty("offset.storage.topic", "debezium-offsets.profiles");
+        props.setProperty("offset.storage.partitions", "3");
+        props.setProperty("offset.storage.replication.factor", "1");
+        
+        // kafka bootstrap servers
+        props.setProperty("bootstrap.servers", "localhost:5003"); 
+        props.setProperty("offset.flush.interval.ms", "60000");
 
-		// PostgreSQL connector (active)
-		props.setProperty("connector.class", "io.debezium.connector.postgresql.PostgresConnector");
-		props.setProperty("database.port", "5440");
-		props.setProperty("database.dbname", "chatter");
-		props.setProperty("database.server.name", "authentication-postgresql-chatter");
 
-		// logical decoding plugin (pgoutput is preferred for modern Postgres)
-		props.setProperty("plugin.name", "pgoutput");
+        // db config
+        props.setProperty("connector.class", "io.debezium.connector.postgresql.PostgresConnector");
+        props.setProperty("database.hostname", "localhost");
+        props.setProperty("database.port", "5441");
+        props.setProperty("database.user", vaultDebeziumProperties.getUsername());
+        props.setProperty("database.password", vaultDebeziumProperties.getPassword());
+        props.setProperty("database.dbname", "chatter");
+        props.setProperty("database.server.name", "profiles-postgresql-chatter");
+        props.setProperty("database.server.id", String.valueOf(variableServerRepository.getServerId()));
+        
+        // Plugin 
+        props.setProperty("plugin.name", "pgoutput");
+        
+        // Prefix topic (doesn't need but required)
+        props.setProperty("topic.prefix", "dummy-topic-prefix");
 
-		/* begin connector properties */
-		props.setProperty("database.hostname", "localhost");
-		props.setProperty("database.user", vaultDebeziumProperties.getUsername());
-		props.setProperty("database.password", vaultDebeziumProperties.getPassword());
-		props.setProperty("database.server.id", String.valueOf(variableServerRepository.getServerId()));
-		props.setProperty("topic.prefix", "dummy-topic-goes-brrr-hehe"); // not used but required
-		props.setProperty("schema.history.internal", "io.debezium.storage.file.history.FileSchemaHistory");
-		props.setProperty("schema.history.internal.file.filename", "/path/to/storage/schemahistory.dat");
+        // schema history config
+        props.setProperty("schema.history.internal", "io.debezium.storage.kafka.history.KafkaSchemaHistory");
+        props.setProperty("schema.history.internal.kafka.topic", "debezium-schema-history.profiles");
+        props.setProperty("schema.history.internal.kafka.bootstrap.servers", "localhost:5003");
 
-		// Add transforms to filter only create events (op == 'c')
-		props.setProperty("transforms.filter.type", "io.debezium.transforms.Filter");
-		props.setProperty("transforms.filter.language", "jsr223.groovy");
-		props.setProperty("transforms.filter.condition", "value.op == 'c'");
+        // filter config (only detect from insert queries)
+        props.setProperty("transforms", "filter");       
+        props.setProperty("transforms.filter.type", "io.debezium.transforms.Filter");
+        props.setProperty("transforms.filter.language", "jsr223.groovy");
+        props.setProperty("transforms.filter.condition", "value.op == 'c'");
 
-		props.setProperty("table.include.list", "chatter.outbox");
-		props.setProperty("include.schema.changes", "false");
+        // Only capture outbox table
+        props.setProperty("table.include.list", "public.outbox");
+        props.setProperty("include.schema.changes", "false");
 
-		props.setProperty("max.queue.size", "4096"); // giới hạn hàng đợi nội bộ
-		props.setProperty("max.batch.size", "1024"); // giới hạn batch
-	}
+        // performance tuning
+        props.setProperty("max.queue.size", "4096"); 
+        props.setProperty("max.batch.size", "1024"); 
+    }
 }
+

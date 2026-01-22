@@ -10,7 +10,7 @@ import com.minewaku.chatter.adapter.entity.JpaOutboxEntity;
 @Repository
 public interface JpaOutboxRepository extends JpaRepository<JpaOutboxEntity, Long> {
 	
-	@Modifying
-	@Query("UPDATE JpaOutboxEntity o SET o.isProcessed = true WHERE o.id = :id")
-	void markProcessed(Long id);
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("DELETE FROM JpaOutboxEntity o WHERE o.createdAt < :cutoffDateTime")
+	void deleteByCreatedAtBefore(java.time.LocalDateTime cutoffDateTime);
 }
