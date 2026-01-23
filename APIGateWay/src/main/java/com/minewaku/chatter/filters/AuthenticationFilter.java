@@ -2,8 +2,6 @@ package com.minewaku.chatter.filters;
 
 import java.util.List;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.http.HttpHeaders;
@@ -16,10 +14,11 @@ import com.minewaku.chatter.constants.ExchangeAttr;
 import com.minewaku.chatter.exceptions.InvalidTokenException;
 import com.minewaku.chatter.utils.JwtUtil;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Component
 public class AuthenticationFilter extends AbstractGatewayFilterFactory<AuthenticationFilter.Config> {
-
-    private static final Logger log = LoggerFactory.getLogger(AuthenticationFilter.class);
 
     private final JwtUtil jwtUtils;
     private final ObjectMapper objectMapper;

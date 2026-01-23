@@ -11,10 +11,12 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import com.minewaku.chatter.adapter.web.response.ErrorResponse;
+import com.minewaku.chatter.application.exception.DataInconsistencyException;
 import com.minewaku.chatter.application.exception.EntityNotFoundException;
 import com.minewaku.chatter.domain.exception.BusinessRuleViolationException;
 import com.minewaku.chatter.domain.exception.DomainValidationException;
 import com.minewaku.chatter.domain.exception.InvalidCredentialsException;
+import com.minewaku.chatter.domain.exception.InvalidTokenException;
 import com.minewaku.chatter.domain.exception.RegisterExistDisableUserException;
 import com.minewaku.chatter.domain.exception.StateAlreadySatisfiedException;
 import com.minewaku.chatter.domain.exception.UserNotAccessibleException;
@@ -30,7 +32,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleValidation(BusinessRuleViolationException ex) {
         log.error("Validation error: {}", ex);
         ErrorResponse errorResponse = new ErrorResponse(ex.getErrorCode(), ex.getMessage());
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(errorResponse);
     }
 
     @ExceptionHandler(DomainValidationException.class)
@@ -47,11 +49,24 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
     }
 
+    @ExceptionHandler(InvalidTokenException.class)
+    public ResponseEntity<ErrorResponse> handleValidation(InvalidTokenException ex) {
+        log.error("Validation error: {}", ex);
+        ErrorResponse errorResponse = new ErrorResponse(ex.getErrorCode(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+    }
+
     @ExceptionHandler(RegisterExistDisableUserException.class)
     public ResponseEntity<ErrorResponse> handleValidation(RegisterExistDisableUserException ex) {
         log.error("Validation error: {}", ex);
         ErrorResponse errorResponse = new ErrorResponse(ex.getErrorCode(), ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    @ExceptionHandler(StateAlreadySatisfiedException.class)
+    public ResponseEntity<ErrorResponse> handleValidation(StateAlreadySatisfiedException ex) {
+        log.error("Validation error: {}", ex);
+        return ResponseEntity.ok().build();
     }
 
     @ExceptionHandler(UserNotAccessibleException.class)
@@ -68,13 +83,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
     }
 
-    @ExceptionHandler(ApiException.class)
-    public ResponseEntity<ErrorResponse> handleValidation(ApiException ex) {
+
+    
+    @ExceptionHandler(DataInconsistencyException.class)
+    public ResponseEntity<ErrorResponse> handleValidation(DataInconsistencyException ex) {
         log.error("Validation error: {}", ex);
         ErrorResponse errorResponse = new ErrorResponse(ex.getErrorCode(), ex.getMessage());
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
     }
-
+    
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleValidation(EntityNotFoundException ex) {
         log.error("Validation error: {}", ex);
@@ -82,10 +99,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
     }
 
-    @ExceptionHandler(StateAlreadySatisfiedException.class)
-    public ResponseEntity<ErrorResponse> handleValidation(StateAlreadySatisfiedException ex) {
-        return ResponseEntity.ok().build();
-    }
+
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {
@@ -98,6 +112,15 @@ public class GlobalExceptionHandler {
         log.error("Access denied error: {}", ex);
         ErrorResponse errorResponse = new ErrorResponse("ACCESS_DENIED", "Access denied");
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+    }
+
+
+
+    @ExceptionHandler(ApiException.class)
+    public ResponseEntity<ErrorResponse> handleValidation(ApiException ex) {
+        log.error("Validation error: {}", ex);
+        ErrorResponse errorResponse = new ErrorResponse(ex.getErrorCode(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
     }
 
     @ExceptionHandler(Exception.class)

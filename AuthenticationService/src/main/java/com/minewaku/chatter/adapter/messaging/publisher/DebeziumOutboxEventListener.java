@@ -5,8 +5,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.stereotype.Component;
 
@@ -15,12 +13,11 @@ import com.minewaku.chatter.adapter.config.properties.DebeziumProperties;
 import io.debezium.engine.ChangeEvent;
 import io.debezium.engine.DebeziumEngine;
 import io.debezium.engine.format.Json;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Component
 public class DebeziumOutboxEventListener implements SmartLifecycle {
-
-    //MARK
-    private static final Logger logger = LoggerFactory.getLogger(DebeziumOutboxEventListener.class);
 
     private final OutboxEventPublisher publisher;
     private final DebeziumProperties debeziumProperties;
@@ -52,12 +49,12 @@ public class DebeziumOutboxEventListener implements SmartLifecycle {
                     try {
                         publisher.publish(record.value());
                     } catch (Exception e) {
-                        logger.error("Error processing Debezium event: ", e);
+                        log.error("Error processing Debezium event: ", e);
                     }
                 })
                 .using((success, message, error) -> {
                     if (error != null) {
-                        logger.error("Debezium Engine Error: " + message);
+                        log.error("Debezium Engine Error: " + message);
                     }
                 })
                 .build();
@@ -66,7 +63,7 @@ public class DebeziumOutboxEventListener implements SmartLifecycle {
         this.executor.submit(this.engine);
         
         this.running = true;
-        logger.info("Debezium Engine Started Successfully via SmartLifecycle");
+        log.info("Debezium Engine Started Successfully via SmartLifecycle");
     }
 
     @Override

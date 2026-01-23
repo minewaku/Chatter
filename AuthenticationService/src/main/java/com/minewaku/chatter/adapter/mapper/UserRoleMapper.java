@@ -1,6 +1,7 @@
 package com.minewaku.chatter.adapter.mapper;
 
 import java.util.Optional;
+import java.util.function.Function;
 
 import org.springframework.stereotype.Component;
 
@@ -13,47 +14,66 @@ import com.minewaku.chatter.domain.value.id.UserRoleId;
 
 @Component
 public class UserRoleMapper {
+
     public UserRole entityToDomain(JpaUserRoleEntity entity) {
         if (entity == null || entity.getId() == null) return null;
 
-        Long userIdInt = entity.getId().getUserId() != null ? entity.getId().getUserId() : null;
-        Long roleIdInt = entity.getId().getRoleId() != null ? entity.getId().getRoleId() : null;
-
-        UserId userId = userIdInt != null ? new UserId(userIdInt.longValue()) : null;
-        RoleId roleId = roleIdInt != null ? new RoleId(roleIdInt.longValue()) : null;
-
-        UserRoleId userRoleId = (userId != null && roleId != null)
-            ? new UserRoleId(userId, roleId)
-            : null;
-
-        UserId createdBy = entity.getCreatedBy() != null ? new UserId(entity.getCreatedBy()) : null;
-        return UserRole.reconstitute(userRoleId, createdBy);
+        return UserRole.reconstitute(
+            mapToDomainId(entity.getId()),
+            mapToUserId(entity.getCreatedBy())
+        );
     }
+
 
     public JpaUserRoleEntity domainToEntity(UserRole domain) {
         if (domain == null) return null;
 
-        JpaUserRoleEntity entity = new JpaUserRoleEntity();
-
-        // ID (composite key)
-        if (domain.getUserRoleId() != null
-                && domain.getUserRoleId().getUserId() != null
-                && domain.getUserRoleId().getRoleId() != null) {
-            long userId = domain.getUserRoleId().getUserId().getValue();
-            long roleId = domain.getUserRoleId().getRoleId().getValue();
-            entity.setId(new JpaUserRoleId(userId, roleId));
-        }
-
-        if (domain.getCreatedBy() != null) {
-            entity.setCreatedBy(domain.getCreatedBy().getValue());
-        }
-        // propagate deletion flag from domain model when available
-        // default false to avoid nulls
-        return entity;
+        return JpaUserRoleEntity.builder()
+            .id(mapToJpaId(domain.getUserRoleId()))
+            .createdBy(unwrapValue(domain.getCreatedBy(), UserId::getValue))
+            .build();
     }
+
 
     public Optional<UserRole> entityToDomain(Optional<JpaUserRoleEntity> entity) {
         return entity.map(this::entityToDomain);
     }
-}
 
+
+
+    private UserRoleId mapToDomainId(JpaUserRoleId jpaId) {
+        if (jpaId == null) return null;
+        
+        UserId userId = mapToUserId(jpaId.getUserId());
+        RoleId roleId = mapToRoleId(jpaId.getRoleId());
+
+        if (userId != null && roleId != null) {
+            return new UserRoleId(userId, roleId);
+        }
+        return null;
+    }
+
+    private JpaUserRoleId mapToJpaId(UserRoleId domainId) {
+        if (domainId == null) return null;
+        
+        Long userId = unwrapValue(domainId.getUserId(), UserId::getValue);
+        Long roleId = unwrapValue(domainId.getRoleId(), RoleId::getValue);
+
+        if (userId != null && roleId != null) {
+            return new JpaUserRoleId(userId, roleId);
+        }
+        return null;
+    }
+
+    private UserId mapToUserId(Long id) {
+        return id != null ? new UserId(id) : null;
+    }
+
+    private RoleId mapToRoleId(Long id) {
+        return id != null ? new RoleId(id) : null;
+    }
+
+    private <T, R> R unwrapValue(T valueObject, Function<T, R> extractor) {
+        return valueObject != null ? extractor.apply(valueObject) : null;
+    }
+}

@@ -1,7 +1,7 @@
 package com.minewaku.chatter.adapter.mapper;
 
-import java.time.Instant;
 import java.util.Optional;
+import java.util.function.Function;
 
 import org.springframework.stereotype.Component;
 
@@ -12,39 +12,56 @@ import com.minewaku.chatter.domain.value.id.UserId;
 
 @Component
 public class CredentialsMapper {
+
     public Credentials entityToDomain(JpaCredentialsEntity entity) {
-        if (entity == null)
-            return null;
-        UserId userId = entity.getUserId() != null ? new UserId(entity.getUserId().longValue()) : null;
-        byte[] saltBytes = (entity.getSalt() != null && entity.getSalt().length > 0)
-                ? entity.getSalt()
-                : new byte[] { 0x00 }; // minimal non-empty placeholder to satisfy domain constraint
-        HashedPassword hashedPassword = new HashedPassword(
-                entity.getAlgorithm(),
-                entity.getHashedPassword(),
-                saltBytes);
+        if (entity == null) return null;
 
-        Instant modifiedAt = entity.getModifiedAt();
-        // Reconstitute existing credentials (do not emit creation events)
-        return Credentials.reconstitute(userId, hashedPassword, modifiedAt);
+        return Credentials.reconstitute(
+            mapToUserId(entity.getUserId()),
+            mapToHashedPassword(entity),
+            entity.getModifiedAt()
+        );
     }
 
+    
     public JpaCredentialsEntity domainToEntity(Credentials domain) {
-        if (domain == null)
-            return null;
-        JpaCredentialsEntity entity = new JpaCredentialsEntity();
+        if (domain == null) return null;
 
-        if (domain.getUserId() != null) {
-            entity.setUserId(domain.getUserId().getValue());
-        }
-        entity.setAlgorithm(domain.getHashedPassword().algorithm());
-        entity.setHashedPassword(domain.getHashedPassword().hash());
-        entity.setSalt(domain.getHashedPassword().salt());
-        entity.setModifiedAt(domain.getModifiedAt());
-        return entity;
+        HashedPassword hp = domain.getHashedPassword();
+
+        return JpaCredentialsEntity.builder()
+            .userId(unwrapValue(domain.getUserId(), UserId::getValue))
+            .algorithm(hp != null ? hp.algorithm() : null)
+            .hashedPassword(hp != null ? hp.hash() : null)
+            .salt(hp != null ? hp.salt() : null)
+            .modifiedAt(domain.getModifiedAt())
+            .build();
     }
 
+    
     public Optional<Credentials> entityToDomain(Optional<JpaCredentialsEntity> entity) {
         return entity.map(this::entityToDomain);
+    }
+
+
+
+    private UserId mapToUserId(Long id) {
+        return id != null ? new UserId(id) : null;
+    }
+
+    private HashedPassword mapToHashedPassword(JpaCredentialsEntity entity) {
+        byte[] saltBytes = (entity.getSalt() != null && entity.getSalt().length > 0)
+                ? entity.getSalt()
+                : new byte[] { 0x00 };
+
+        return new HashedPassword(
+            entity.getAlgorithm(),
+            entity.getHashedPassword(),
+            saltBytes
+        );
+    }
+
+    private <T, R> R unwrapValue(T valueObject, Function<T, R> extractor) {
+        return valueObject != null ? extractor.apply(valueObject) : null;
     }
 }
