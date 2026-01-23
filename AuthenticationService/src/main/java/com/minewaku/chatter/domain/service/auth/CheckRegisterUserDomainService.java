@@ -7,10 +7,13 @@ import com.minewaku.chatter.domain.model.User;
 public class CheckRegisterUserDomainService {
 
     public CheckRegisterUserDomainService() {
+
     }
 
     public void handle(User user) {
         user.checkForSoftDeleted();
+        user.checkForLocked();
+        
         if (user.isEnabled()) {
             throw new BusinessRuleViolationException("User with this email already exists");
         } else {

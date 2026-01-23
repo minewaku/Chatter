@@ -62,7 +62,7 @@ public class RegisterApplicationService implements RegisterUseCase {
 	@Transactional
 	public Void handle(RegisterCommand command) {
 
-		userRepository.findByEmail(command.getEmail()).ifPresent(u -> {
+		userRepository.findByEmail(command.email()).ifPresent(u -> {
 			checkRegisterUserDomainService.handle(u);
 		});
 
@@ -70,26 +70,26 @@ public class RegisterApplicationService implements RegisterUseCase {
 
 		User user = User.createNew(
 				userId,
-				command.getEmail(),
-				command.getUsername(),
-				command.getBirthday());
+				command.email(),
+				command.username(),
+				command.birthday());
 
 		User savedUser = userRepository.save(user);
 
 		List<DomainEvent> filterEventsCreateUser = filterEventsCreateUser(user.getEvents());
 		storeEventPublisher.publish(filterEventsCreateUser);
 
-		HashedPassword hashedPassword = passwordHasher.hash(command.getPassword());
+		HashedPassword hashedPassword = passwordHasher.hash(command.password());
 		Credentials credentials = Credentials.createNew(savedUser.getId(), hashedPassword);
 
 		credentialsRepository.save(credentials);
 
-		List<DomainEvent> filterEventsSendToken = filterEventsSendToken(credentials.getEvents());
-		queueEventPublisher.publish(filterEventsSendToken);
+		List<DomainEvent> filterEventsCreateToken = filterEventsCreateToken(credentials.getEvents());
+		queueEventPublisher.publish(filterEventsCreateToken);
 		return null;
 	}
 
-	private List<DomainEvent> filterEventsSendToken(List<DomainEvent> events) {
+	private List<DomainEvent> filterEventsCreateToken(List<DomainEvent> events) {
 		return events.stream()
 				.filter(event -> event.getClass().equals(CreateConfirmationTokenDomainEvent.class))
 				.collect(Collectors.toList());

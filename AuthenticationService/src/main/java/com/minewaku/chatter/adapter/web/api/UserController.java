@@ -125,7 +125,7 @@ public class UserController {
         )
     )
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> softDeleteUser(
+    public ResponseEntity<Void> deleteUser(
             @PathVariable Long id,
             @RequestParam(defaultValue = "false") boolean permanent
     ) {

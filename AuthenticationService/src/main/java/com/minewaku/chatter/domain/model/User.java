@@ -4,7 +4,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.minewaku.chatter.domain.event.AccountVerifiedDomainEvent;
 import com.minewaku.chatter.domain.event.CreateConfirmationTokenDomainEvent;
 import com.minewaku.chatter.domain.event.UserCreatedDomainEvent;
@@ -14,7 +13,6 @@ import com.minewaku.chatter.domain.event.UserRestoredDomainEvent;
 import com.minewaku.chatter.domain.event.UserSoftDeletedDomainEvent;
 import com.minewaku.chatter.domain.event.UserUnlockedDomainEvent;
 import com.minewaku.chatter.domain.event.core.DomainEvent;
-import com.minewaku.chatter.domain.event.dto.CreatedUserDto;
 import com.minewaku.chatter.domain.exception.StateAlreadySatisfiedException;
 import com.minewaku.chatter.domain.exception.UserNotAccessibleException;
 import com.minewaku.chatter.domain.exception.UserSoftDeletedException;
@@ -46,93 +44,123 @@ public class User {
     private final Birthday birthday;
 
     @Setter
-    private boolean isEnabled;
+    private boolean enabled;
 
     @Setter
-    private boolean isLocked;
+    private boolean locked;
 
     @Setter
-    private boolean isDeleted;
+    private boolean deleted;
 
     @NonNull
     private AuditMetadata auditMetadata;
 
     private Instant deletedAt;
 
+    private Instant lastLoginAt;
+
     @NonNull
-    @JsonIgnore
     private final List<DomainEvent> events = new ArrayList<DomainEvent>();
 
     // Private constructor
-    private User(@NonNull UserId id, @NonNull Email email,
-            @NonNull Username username, @NonNull Birthday birthday, @NonNull AuditMetadata auditMetadata,
-            boolean isEnabled, boolean isLocked, boolean isDeleted, Instant deletedAt) {
+    private User(
+                @NonNull UserId id, 
+                @NonNull Email email,
+                @NonNull Username username, 
+                @NonNull Birthday birthday, 
+                @NonNull AuditMetadata auditMetadata,
+                boolean enabled, 
+                boolean locked, 
+                boolean deleted, 
+                Instant deletedAt) {
 
         this.id = id;
         this.email = email;
         this.username = username;
         this.birthday = birthday;
-        this.isEnabled = isEnabled;
-        this.isLocked = isLocked;
-        this.isDeleted = isDeleted;
+        this.enabled = enabled;
+        this.locked = locked;
+        this.deleted = deleted;
         this.deletedAt = deletedAt;
         this.auditMetadata = auditMetadata;
     }
 
-    // Static factory for loading existing data
-    public static User reconstitute(@NonNull UserId id, @NonNull Email email,
-            @NonNull Username username, @NonNull Birthday birthday,
-            @NonNull AuditMetadata auditMetadata,
-            boolean isEnabled, boolean isLocked, boolean isDeleted, Instant deletedAt) {
 
-        return new User(id, email, username, birthday, auditMetadata, isEnabled, isLocked, isDeleted, deletedAt);
+    /*
+    * STATIC FACTORIES
+    */
+    public static User reconstitute(
+                @NonNull UserId id, 
+                @NonNull Email email,
+                @NonNull Username username, 
+                @NonNull Birthday birthday,
+                @NonNull AuditMetadata auditMetadata,
+                boolean enabled, 
+                boolean locked, 
+                boolean deleted, 
+                Instant deletedAt) {
+
+        return new User(id, email, username, birthday, auditMetadata, enabled, locked, deleted, deletedAt);
     }
 
-    // Static factory for creating new data
-    public static User createNew(@NonNull UserId id, @NonNull Email email, @NonNull Username username,
-            @NonNull Birthday birthday) {
-        User user = new User(id, email, username, birthday, new AuditMetadata(), false, false, false, null);
-        CreatedUserDto createdUserDto = new CreatedUserDto(id, email, username, birthday, user.getAuditMetadata());
 
-        UserCreatedDomainEvent userCreatedDomainEvent = new UserCreatedDomainEvent(createdUserDto);
+    public static User createNew(
+                @NonNull UserId id, 
+                @NonNull Email email, 
+                @NonNull Username username,
+                @NonNull Birthday birthday) {
+
+        User user = new User(id, email, username, birthday, new AuditMetadata(), false, false, false, null);
+        UserCreatedDomainEvent userCreatedDomainEvent = new UserCreatedDomainEvent(
+            id, email, username, birthday, user.getAuditMetadata()
+        );
+
         user.getEvents().add(userCreatedDomainEvent);
         return user;
     }
 
-    public void reRegisterWithoutVerifyFirst(UserId userId) {
-        CreateConfirmationTokenDomainEvent createConfirmationTokenDomainEvent = new CreateConfirmationTokenDomainEvent(
-                userId, null);
-        this.getEvents().add(createConfirmationTokenDomainEvent);
-    }
-
     public void validateAccessible() {
-        if (this.isDeleted) {
+        if (this.deleted) {
             throw new UserSoftDeletedException("This user has been soft deleted");
         }
-        if (this.isLocked) {
+        if (this.locked) {
             throw new UserNotAccessibleException("User is locked");
         }
-        if (!this.isEnabled) {
+        if (!this.enabled) {
             throw new UserNotAccessibleException("User is unabled");
         }
     }
 
-    public void checkForDisable() {
-        if (this.isEnabled) {
+    public void checkForEnable() {
+        if (this.enabled) {
             throw new UserNotAccessibleException("User is already enabled");
         }
     }
 
+    public void checkForDisable() {
+        if (!this.enabled) {
+            throw new UserNotAccessibleException("User is already disabled");
+        }
+    }
+
     public void checkForSoftDeleted() {
-        if (this.isDeleted) {
+        if (this.deleted) {
             throw new UserNotAccessibleException("User is already soft deleted");
         }
     }
 
     public void checkForLocked() {
-        if (this.isLocked) {
+        if (this.locked) {
             throw new UserNotAccessibleException("User is already locked");
         }
+    }
+
+
+        
+    public void reRegisterWithoutVerifyFirst(UserId userId) {
+        CreateConfirmationTokenDomainEvent createConfirmationTokenDomainEvent = new CreateConfirmationTokenDomainEvent(
+                userId, null);
+        this.getEvents().add(createConfirmationTokenDomainEvent);
     }
 
     public void hardDeleted() {
@@ -141,50 +169,50 @@ public class User {
     }
 
     public void softDelete() {
-        if(this.isDeleted) {
+        if(this.deleted) {
             throw new StateAlreadySatisfiedException("User is already soft deleted");
         }
-        this.isDeleted = true;
+        this.deleted = true;
         this.deletedAt = Instant.now();
         UserSoftDeletedDomainEvent userSoftDeletedDomainEvent = new UserSoftDeletedDomainEvent(this.id);
         this.events.add(userSoftDeletedDomainEvent);
     }
 
     public void restore() {
-        if(!this.isDeleted) {
+        if(!this.deleted) {
             throw new StateAlreadySatisfiedException("User is not soft deleted");
         }
-        this.isDeleted = false;
+        this.deleted = false;
         this.deletedAt = null;
         UserRestoredDomainEvent userRestoredDomainEvent = new UserRestoredDomainEvent(this.id);
         this.events.add(userRestoredDomainEvent);
     }
 
     public void enable() {
-        if(this.isEnabled) {
+        if(this.enabled) {
             throw new StateAlreadySatisfiedException("User is already enabled");
         }
-        this.isEnabled = true;
+        this.enabled = true;
         this.auditMetadata.markUpdated();
         AccountVerifiedDomainEvent accountVerifiedDomainEvent = new AccountVerifiedDomainEvent(this.id);
         this.events.add(accountVerifiedDomainEvent);
     }
 
     public void lock() {
-        if(this.isLocked) {
+        if(this.locked) {
             throw new StateAlreadySatisfiedException("User is already locked");
         }
-        this.isLocked = true;
+        this.locked = true;
         this.auditMetadata.markUpdated();
         UserLockedDomainEvent lockUserDomainEvent = new UserLockedDomainEvent(this.id);
         this.events.add(lockUserDomainEvent);
     }
 
     public void unlock() {
-        if(!this.isLocked) {
+        if(!this.locked) {
             throw new StateAlreadySatisfiedException("User is already unlocked");
         }
-        this.isLocked = false;
+        this.locked = false;
         this.auditMetadata.markUpdated();
         UserUnlockedDomainEvent unlockUserDomainEvent = new UserUnlockedDomainEvent(this.id);
         this.events.add(unlockUserDomainEvent);
@@ -204,5 +232,4 @@ public class User {
     public int hashCode() {
         return id.hashCode();
     }
-
 }

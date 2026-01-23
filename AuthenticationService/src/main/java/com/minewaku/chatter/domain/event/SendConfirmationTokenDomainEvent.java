@@ -10,6 +10,8 @@ import lombok.NonNull;
 @Getter
 public class SendConfirmationTokenDomainEvent extends DomainEvent {
 	
+	private static final String EVENT_TYPE = "SendConfirmationToken";
+
 	@NonNull
 	private final ConfirmationToken confirmationToken;
 	
@@ -23,7 +25,7 @@ public class SendConfirmationTokenDomainEvent extends DomainEvent {
     		@NonNull MailType mailType,
     		String subject) {
     	
-    	super();
+    	super(EVENT_TYPE);
     	this.confirmationToken = confirmationToken;
     	this.mailType = mailType;
     	this.subject = subject;

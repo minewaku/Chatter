@@ -9,13 +9,16 @@ import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Getter
 @Setter
 @NoArgsConstructor
 @Component
 @ConfigurationProperties(prefix = "mail")
 public class VaultMailProperties {
+
     private String username = "dummy";
     private String password = "123456";
 
@@ -24,7 +27,7 @@ public class VaultMailProperties {
 
     @PostConstruct
     private void test() {
-        System.out.println("mail.username from env: " + environment.getProperty("mail.username"));
-        System.out.println("mail.password from env: " + environment.getProperty("mail.password"));
+        log.info("mail.username from env: " + environment.getProperty("mail.username"));
+        log.info("mail.password from env: " + environment.getProperty("mail.password"));
     }
 }

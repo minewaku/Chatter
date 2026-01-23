@@ -54,8 +54,8 @@ public class JpaRoleEntity extends BaseEntity {
     private String description;
     
 	@Column(name = "is_deleted", nullable = false)
-	@NotNull(message = "isDeleted is required")
-	private Boolean isDeleted;
+	@NotNull(message = "deleted is required")
+	private Boolean deleted;
 
 	@Column(name = "deleted_at", nullable = true)
 	private Instant deletedAt;

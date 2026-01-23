@@ -123,7 +123,37 @@ vault write database/roles/authentication-service-postgres-approle \
 ```
 <br>
 
-### 2. For apigateway
+### 2. For profiles-service
+<br>
+
+**Put secrets for profiles-service**
+
+```bash
+vault kv put secret/profiles-service - < ./vault/tmp/profiles-sv-secrets.json
+```
+<br>
+
+**Create PostgreSQL database config with dynamic secrets; access restricted to the "approle" role only**
+```bash copy
+vault write database/config/profiles-service-postgres \
+  plugin_name="postgresql-database-plugin" \
+  connection_url="postgresql://{{username}}:{{password}}@profiles-postgresql-chatter:5441/chatter?sslmode=disable" \
+  allowed_roles="profiles-service-postgres-approle" \
+  username="vault" \
+  password="QIUbomaKaq463g25"
+```
+
+```bash copy
+vault write database/roles/profiles-service-postgres-approle \
+  db_name="profiles-service-postgres" \
+  creation_statements=@./vault/tmp/creation_statements/postgres-role-orm.sql \
+  default_ttl=1h \
+  max_ttl=24h
+```
+<br>
+
+
+### 3. For apigateway
 
 ```bash
 vault kv put secret/api-gateway - < ./vault/tmp/api-gateway-secrets.json
@@ -132,7 +162,7 @@ vault kv put secret/api-gateway - < ./vault/tmp/api-gateway-secrets.json
 
 
 
-### 3. For cerbos-bridge-service
+### 4. For cerbos-bridge-service
 ```bash
 vault kv put secret/cerbos-bridge-service - < ./vault/tmp/cerbos-bridge-sv-secrets.json
 ```
@@ -141,7 +171,7 @@ vault kv put secret/cerbos-bridge-service - < ./vault/tmp/cerbos-bridge-sv-secre
 
 
 
-### 4. For jwt keys
+### 5. For jwt keys
 ```bash
 vault kv put secret/common/jwt/rs256 private-key=@./vault/tmp/private-key.pem public-key=@./vault/tmp/public-key.pem
 ```

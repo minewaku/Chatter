@@ -9,13 +9,16 @@ import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Getter
 @Setter
 @NoArgsConstructor
 @Component
 @ConfigurationProperties(prefix = "debezium")
 public class VaultDebeziumProperties {
+
     private String username = "dummy";
     private String password = "123456";
 
@@ -24,7 +27,7 @@ public class VaultDebeziumProperties {
 
     @PostConstruct
     private void test() {
-        System.out.println("debezium.username from env: " + environment.getProperty("debezium.username"));
-        System.out.println("debezium.password from env: " + environment.getProperty("debezium.password"));
+        log.info("debezium.username from env: " + environment.getProperty("debezium.username"));
+        log.info("debezium.password from env: " + environment.getProperty("debezium.password"));
     }
 }

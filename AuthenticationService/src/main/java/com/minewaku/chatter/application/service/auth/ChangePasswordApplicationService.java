@@ -4,6 +4,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.minewaku.chatter.application.exception.EntityNotFoundException;
 import com.minewaku.chatter.domain.command.auth.ChangePasswordCommand;
+import com.minewaku.chatter.domain.exception.InvalidCredentialsException;
 import com.minewaku.chatter.domain.model.Credentials;
 import com.minewaku.chatter.domain.model.User;
 import com.minewaku.chatter.domain.port.in.auth.ChangePasswordUseCase;
@@ -36,23 +37,21 @@ public class ChangePasswordApplicationService implements ChangePasswordUseCase {
 	@Override
 	@Transactional
 	public Void handle(ChangePasswordCommand command) {
-		User user = userRepository.findByEmail(command.getEmail())
+
+		User user = userRepository.findByEmail(command.email())
 				.orElseThrow(() -> new EntityNotFoundException("User does not exist"));
 		user.validateAccessible();
 
 		Credentials credentials = credentialsRepository.findById(user.getId()).orElseThrow(
-				() -> new EntityNotFoundException("This login method for this user does not exist"));
+				() -> new InvalidCredentialsException("This login method for this user does not exist"));
 
-		
-		
-		passwordSecurityDomainService.validateCredentials(credentials, command.getPassword());
-
-		HashedPassword newHashedPassword = passwordHasher.hash(command.getNewPassword());
-
-		passwordSecurityDomainService.validatePasswordReuse(credentials, command.getNewPassword());
+		passwordSecurityDomainService.validateCredentials(credentials, command.password());
+		HashedPassword newHashedPassword = passwordHasher.hash(command.newPassword());
+		passwordSecurityDomainService.validatePasswordReuse(credentials, command.newPassword());
 
 		credentials.changePassword(newHashedPassword);
 		credentialsRepository.save(credentials);
+
 		return null;
 	}
 }

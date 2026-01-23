@@ -62,5 +62,7 @@ public class JpaOutboxEntity {
     @PrePersist
     protected void onCreate() {
     	createdAt = Objects.isNull(createdAt) ? Instant.now() : createdAt;
+    	createdAt = createdAt == null ? Instant.now() : createdAt;
+    	createdAt = Objects.requireNonNullElse(createdAt, Instant.now());
     }
 }

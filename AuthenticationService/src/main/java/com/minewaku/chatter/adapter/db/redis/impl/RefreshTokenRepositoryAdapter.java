@@ -9,6 +9,7 @@ import com.minewaku.chatter.adapter.db.redis.RedisRefreshTokenRepository;
 import com.minewaku.chatter.adapter.mapper.RefreshTokenMapper;
 import com.minewaku.chatter.domain.model.RefreshToken;
 import com.minewaku.chatter.domain.port.out.repository.RefreshTokenRepository;
+import com.minewaku.chatter.domain.value.id.OpaqueToken;
 
 @Repository
 public class RefreshTokenRepositoryAdapter implements RefreshTokenRepository {
@@ -35,13 +36,13 @@ public class RefreshTokenRepositoryAdapter implements RefreshTokenRepository {
     }
     
     @Override
-    public void deleteById(String token) {
-        redisRefreshTokenRepository.deleteById(token);
+    public void deleteByToken(OpaqueToken token) {
+        redisRefreshTokenRepository.deleteByToken(token.getValue());
     }
 
     @Override
-    public Optional<RefreshToken> findByToken(String token) {
-        return refreshTokenMapper.dtoToDomain(redisRefreshTokenRepository.findByToken(token));
+    public Optional<RefreshToken> findByToken(OpaqueToken token) {
+        return refreshTokenMapper.dtoToDomain(redisRefreshTokenRepository.findByToken(token.getValue()));
     }
 
 }

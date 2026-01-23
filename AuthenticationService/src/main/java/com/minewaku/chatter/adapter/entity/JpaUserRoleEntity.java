@@ -30,23 +30,7 @@ public class JpaUserRoleEntity {
 	
     @EmbeddedId
     private JpaUserRoleId id;
-    
-    // //these references are used only for joins, not for direct access
-    // @Getter(AccessLevel.NONE)
-    // @ManyToOne(fetch = FetchType.LAZY)
-    // @MapsId("userId")
-    // @JoinColumn(name = "user_id", nullable = false)
-    // private JpaUserEntity user;
 
-    // //these references are used only for joins, not for direct access
-    // @Getter(AccessLevel.NONE)
-    // @ManyToOne(fetch = FetchType.LAZY)
-    // @MapsId("roleId")
-    // @JoinColumn(name = "role_id", nullable = false)
-    // private JpaRoleEntity role;
-
-    // BỎ @MapsId đi
-    // Thêm insertable = false, updatable = false để field này chỉ dùng để đọc (JOIN)
     @Getter(AccessLevel.NONE)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", insertable = false, updatable = false) 

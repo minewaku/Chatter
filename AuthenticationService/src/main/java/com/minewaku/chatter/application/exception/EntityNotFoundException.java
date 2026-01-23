@@ -1,15 +1,12 @@
 package com.minewaku.chatter.application.exception;
 
-import lombok.Getter;
+import com.minewaku.chatter.domain.exception.core.BusinessException;
 
-public class EntityNotFoundException extends RuntimeException {
+public class EntityNotFoundException extends BusinessException {
 
-	private static final long serialVersionUID = 1L;
-
-	@Getter
-	private final String errorCode = "ENTITY_NOT_FOUND";
+	private static final String DEFAULT_ERROR_CODE = "ENTITY_NOT_FOUND";
 
 	public EntityNotFoundException(String message) {
-		super(message);
+		super(message, DEFAULT_ERROR_CODE);
 	}
 }

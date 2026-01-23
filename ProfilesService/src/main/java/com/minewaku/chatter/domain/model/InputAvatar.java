@@ -20,7 +20,7 @@ public class InputAvatar extends InputImage {
     @NonNull
     private final StorageKey key;
 
-    private static final StorageCategory STORAGE_CATEGORY = StorageCategory.USER_AVATAR;
+    public static final StorageCategory STORAGE_CATEGORY = StorageCategory.USER_AVATAR;
     private final long MAX_SIZE_IN_BYTES = 10 * 1024 * 1024; // 10 MB
     private final double ASPECT_RATIO = 1.0;
     private final int MIN_WIDTH_IN_PIXELS = 128;
@@ -34,10 +34,6 @@ public class InputAvatar extends InputImage {
         "gif",
         "webp"
     );
-
-    public StorageCategory getStorageCategory() {
-        return STORAGE_CATEGORY;
-    } 
 
     public InputAvatar(
         @NonNull StorageKey key,

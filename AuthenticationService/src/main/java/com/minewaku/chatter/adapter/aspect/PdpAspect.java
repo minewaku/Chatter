@@ -7,8 +7,6 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.Expression;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
@@ -23,14 +21,12 @@ import com.minewaku.chatter.adapter.annotation.Attribute;
 import com.minewaku.chatter.adapter.annotation.PdpCheck;
 import com.minewaku.chatter.adapter.service.IPdpService;
 
-import groovy.util.logging.Slf4j;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Aspect
 @Component
-@Slf4j
 public class PdpAspect {
-
-    private static final Logger log = LoggerFactory.getLogger(PdpAspect.class);
 
     private final IPdpService pdpService;
     private final SpelExpressionParser parser;
@@ -46,11 +42,9 @@ public class PdpAspect {
 @Around("@annotation(pdpCheck)")
     public Object authorize(
             ProceedingJoinPoint joinPoint, 
-            PdpCheck pdpCheck // Spring sẽ tự inject annotation vào đây
-            // SỬA 2: Đã XÓA tham số Jwt jwt ở đây vì AOP không hỗ trợ inject trực tiếp
+            PdpCheck pdpCheck
     ) throws Throwable {
 
-        // ... (Giữ nguyên đoạn xử lý context SpEL) ...
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         String[] paramNames = signature.getParameterNames();
         Object[] args = joinPoint.getArgs();
@@ -62,7 +56,6 @@ public class PdpAspect {
         }
 
         try {
-            // SỬA 3: Lấy Jwt thủ công từ SecurityContextHolder
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String principal = "anonymous";
             
@@ -73,7 +66,6 @@ public class PdpAspect {
                 principal = authentication.getName();
             }
 
-            // ... (Logic cũ của bạn) ...
             String resourceId = evaluateSpel(pdpCheck.resourceIdParam(), context, "resourceId");
             Map<String, Object> resourceAttrs = evaluateAttributes(pdpCheck.resourceAttrs(), context);
 
@@ -86,7 +78,6 @@ public class PdpAspect {
             log.info("isAuthorized: {}", isAuthorized);
             
             if (!isAuthorized) {
-                // ... (Log warn giữ nguyên) ...
                 log.warn("Access denied for principal '{}' on action '{}' for resource '{}:{}'",
                         principal, pdpCheck.action(), pdpCheck.resourceType(), resourceId);
                 
@@ -142,7 +133,6 @@ public class PdpAspect {
                 }
             } catch (Exception e) {
                 log.warn("Failed to evaluate attribute key='{}' with SpEL='{}': {}", key, spel, e.getMessage());
-                // Không throw → vẫn cho phép tiếp tục (attr bị bỏ qua)
             }
         }
         return result;

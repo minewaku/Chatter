@@ -25,35 +25,35 @@ public interface JpaUserRepository extends JpaRepository<JpaUserEntity, Long> {
 
     Page<JpaUserEntity> findAll(Pageable pageable);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE JpaUserEntity u SET u.isEnabled = true WHERE u.id = :id")
     void enableUser(@Param("id") Long id);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE JpaUserEntity u SET u.isEnabled = false WHERE u.id = :id")
     void disableUser(@Param("id") Long id);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE JpaUserEntity u SET u.isLocked = true WHERE u.id = :id")
     void lockUser(@Param("id") Long id);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE JpaUserEntity u SET u.isLocked = false WHERE u.id = :id")
     void unlockUser(@Param("id") Long id);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE JpaUserEntity u SET u.isDeleted = true WHERE u.id = :id")
     void softDeleteById(@Param("id") Long id);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE JpaUserEntity u SET u.isDeleted = false WHERE u.id = :id")
     void restoreById(@Param("id") Long id);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM JpaUserEntity u WHERE u.id = :id")
     void hardDeleteById(@Param("id") Long id);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM JpaUserEntity u WHERE u.id IN :ids")
     void bulkHardDeleteByIds(@Param("ids") Iterable<Long> ids);
 }

@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.minewaku.chatter.adapter.entity.JpaOutboxEntity;
+import com.minewaku.chatter.adapter.messaging.message.CreateUserMessage;
 import com.minewaku.chatter.domain.event.AccountVerifiedDomainEvent;
 import com.minewaku.chatter.domain.event.UserCreatedDomainEvent;
 import com.minewaku.chatter.domain.event.UserHardDeletedDomainEvent;
@@ -34,12 +35,26 @@ public class OutboxMapper {
 	}
 
 	public JpaOutboxEntity fromUserCreatedDomainEventToEntity(UserCreatedDomainEvent event) {
-		JsonNode payload = objectMapper.convertValue(event.getCreatedUserDto(), JsonNode.class);
+		
+		CreateUserMessage createUserMessage = new CreateUserMessage(
+				event.getId().getValue(),
+				event.getEmail().getValue(),
+				event.getUsername().getValue(),
+				event.getBirthday().getValue().toString(),
+				event.isEnabled(),
+				event.isLocked(),
+				event.isDeleted(),
+				event.getDeletedAt().toString(),
+				event.getAuditMetadata().getCreatedAt().toString(),
+				event.getAuditMetadata().getModifiedAt().toString()
+		);
+		
+		JsonNode payload = objectMapper.convertValue(createUserMessage, JsonNode.class);
 
 		return JpaOutboxEntity.builder()
-				.aggregateId(event.getCreatedUserDto().getId().getValue().toString())
+				.aggregateId(event.getId().getValue().toString())
 				.aggregateType(User.class.getSimpleName())
-				.eventType(UserCreatedDomainEvent.class.getSimpleName())
+				.eventType(event.getEventType())
 				.payload(payload)
 				.build();
 	}
@@ -50,7 +65,7 @@ public class OutboxMapper {
 		return JpaOutboxEntity.builder()
 				.aggregateId(event.getUserId().getValue().toString())
 				.aggregateType(User.class.getSimpleName())
-				.eventType(AccountVerifiedDomainEvent.class.getSimpleName())
+				.eventType(event.getEventType())
 				.payload(payload)
 				.build();
 	}
@@ -61,7 +76,7 @@ public class OutboxMapper {
 		return JpaOutboxEntity.builder()
 				.aggregateId(event.getUserId().getValue().toString())
 				.aggregateType(User.class.getSimpleName())
-				.eventType(UserSoftDeletedDomainEvent.class.getSimpleName())
+				.eventType(event.getEventType())
 				.payload(payload)
 				.build();
 	}
@@ -72,7 +87,7 @@ public class OutboxMapper {
 		return JpaOutboxEntity.builder()
 				.aggregateId(event.getUserId().getValue().toString())
 				.aggregateType(User.class.getSimpleName())
-				.eventType(UserRestoredDomainEvent.class.getSimpleName())
+				.eventType(event.getEventType())
 				.payload(payload)
 				.build();
 	}
@@ -83,7 +98,7 @@ public class OutboxMapper {
 		return JpaOutboxEntity.builder()
 				.aggregateId(event.getUserId().getValue().toString())
 				.aggregateType(User.class.getSimpleName())
-				.eventType(UserHardDeletedDomainEvent.class.getSimpleName())
+				.eventType(event.getEventType())
 				.payload(payload)
 				.build();
 	}
@@ -94,7 +109,7 @@ public class OutboxMapper {
 		return JpaOutboxEntity.builder()
 				.aggregateId(event.getUserId().getValue().toString())
 				.aggregateType(User.class.getSimpleName())
-				.eventType(UserLockedDomainEvent.class.getSimpleName())
+				.eventType(event.getEventType())
 				.payload(payload)
 				.build();
 	}
@@ -105,7 +120,7 @@ public class OutboxMapper {
 		return JpaOutboxEntity.builder()
 				.aggregateId(event.getUserId().getValue().toString())
 				.aggregateType(User.class.getSimpleName())
-				.eventType(UserUnlockedDomainEvent.class.getSimpleName())
+				.eventType(event.getEventType())
 				.payload(payload)
 				.build();
 	}

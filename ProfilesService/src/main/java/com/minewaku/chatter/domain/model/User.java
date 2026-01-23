@@ -1,6 +1,5 @@
 package com.minewaku.chatter.domain.model;
 
-import java.net.URI;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,22 +34,19 @@ public class User {
     @NonNull
     private final Email email;
 
-    private Optional<InputAvatar> avatar;
+    private StorageFile avatar;
 
-    private Optional<InputBanner> banner;
+    private StorageFile banner;
 
     @NonNull
     private Username username;
 
-    private Optional<DisplayName> displayName;
+    private DisplayName displayName;
 
-    private Optional<Bio> bio;
+    private Bio bio;
 
     @NonNull
     private final Birthday birthday;
-
-    @Setter
-    private boolean discoverable;
 
     @Setter
     private boolean enabled;
@@ -73,14 +69,13 @@ public class User {
     private User(
         @NonNull UserId id, 
         @NonNull Email email,
-        InputAvatar avatar,
-        InputBanner banner,
+        StorageFile avatar,
+        StorageFile banner,
         @NonNull Username username,
         DisplayName displayName,
         Bio bio,
         @NonNull Birthday birthday, 
         @NonNull AuditMetadata auditMetadata,
-        boolean discoverable,
         boolean enabled, 
         boolean locked, 
         boolean deleted, 
@@ -91,9 +86,7 @@ public class User {
         this.id = id;
         this.email = email;
         this.avatar = avatar;
-        this.avatarKey = avatarKey;
         this.banner = banner;
-        this.bannerKey = bannerKey;
         this.username = username;
         this.birthday = birthday;
         this.displayName = displayName;
@@ -109,22 +102,19 @@ public class User {
     public static User reconstitute(
             @NonNull UserId id, 
             @NonNull Email email,
-            URI avatar,
-            String avatarKey,
-            URI banner,
-            String bannerKey,
+            StorageFile avatar,
+            StorageFile banner, 
             @NonNull Username username, 
             DisplayName displayName, 
             Bio bio,
             @NonNull Birthday birthday,
             @NonNull AuditMetadata auditMetadata,
-            boolean discoverable,
             boolean enabled,
             boolean locked, 
             boolean deleted, 
             Instant deletedAt) {
 
-        return new User(id, email, avatar, avatarKey, banner, bannerKey, username, displayName, bio, birthday, auditMetadata, discoverable, enabled, locked, deleted, deletedAt);
+        return new User(id, email, avatar, banner, username, displayName, bio, birthday, auditMetadata, enabled, locked, deleted, deletedAt);
     }
 
     // Static factory for creating new data
@@ -133,14 +123,14 @@ public class User {
             @NonNull Email email, 
             @NonNull Username username,
             @NonNull Birthday birthday,
-            @NonNull AuditMetadata auditMetadata,
-            @NonNull boolean locked,
-            @NonNull boolean enabled,
-            @NonNull boolean deleted,
-            @NonNull Instant deletedAt
-    ) {
+            boolean enabled,
+            boolean locked,
+            boolean deleted,
+            Instant deletedAt,
+            @NonNull AuditMetadata auditMetadata
+            ) {
                 
-        User user = new User(id, email, null, null, null, null, username, null, null, birthday, auditMetadata, locked, enabled, deleted, deletedAt);
+        User user = new User(id, email, null, null, username, null, null, birthday, auditMetadata, enabled, locked, deleted, deletedAt);
         return user;
     }
 
@@ -164,25 +154,13 @@ public class User {
         this.auditMetadata.markUpdated();
     }
 
-    public void setAvatar(URI avatar, String avatarKey) {
-        if((avatar == null) != (avatarKey == null)) {
-            throw new IllegalArgumentException("Both avatar and avatarKey must be null or non-null");
-        }
-        if (avatar == null) return;
-
+    public void setAvatar(StorageFile avatar) {
         this.avatar = avatar;
-        this.avatarKey = avatarKey;
         this.auditMetadata.markUpdated();
     }   
 
-    public void setBanner(URI banner, String bannerKey) {
-        if((banner == null) != (bannerKey == null)) {
-            throw new IllegalArgumentException("Both banner and bannerKey must be null or non-null");
-        }
-        if (banner == null) return;
-
+    public void setBanner(StorageFile banner) {
         this.banner = banner;
-        this.bannerKey = bannerKey;
         this.auditMetadata.markUpdated();
     }
 

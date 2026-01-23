@@ -9,7 +9,9 @@ import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Setter
 @Getter
 @NoArgsConstructor
@@ -27,7 +29,7 @@ public class VaultJwtProperties {
 
     @PostConstruct
     private void test() {
-        System.out.println("privateKey from env: " + environment.getProperty("private-key"));
-        System.out.println("publicKey from env: " + environment.getProperty("public-key"));
+        log.info("privateKey from env: " + environment.getProperty("private-key"));
+        log.info("publicKey from env: " + environment.getProperty("public-key"));
     }
 }

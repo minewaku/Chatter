@@ -24,8 +24,8 @@ import com.minewaku.chatter.domain.command.profile.UploadFileCommand;
 import com.minewaku.chatter.domain.model.User;
 import com.minewaku.chatter.domain.value.Bio;
 import com.minewaku.chatter.domain.value.DisplayName;
-import com.minewaku.chatter.domain.value.InputImage;
 import com.minewaku.chatter.domain.value.Username;
+import com.minewaku.chatter.domain.value.file.InputImage;
 import com.minewaku.chatter.domain.value.id.UserId;
 
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
@@ -98,7 +98,7 @@ public class ProfileController {
         resourceType = "profile", 
         action = "update"
     )
-    @PostMapping("/{id}")
+    @PostMapping("/{id}/avatar")
     public ResponseEntity<Void> uploadAvatar(@RequestParam("file") MultipartFile file, @PathVariable Long id) {
         UserId userId = new UserId(id);
         InputImage inputImage = multipartFileMapper.toInputImage(file);
@@ -115,7 +115,7 @@ public class ProfileController {
         resourceType = "profile", 
         action = "update"
     )
-    @PostMapping("/{id}")
+    @PostMapping("/{id}/banner")
     public ResponseEntity<Void> uploadBanner(@RequestParam("file") MultipartFile file, @PathVariable Long id) {
         UserId userId = new UserId(id);
         InputImage inputImage = multipartFileMapper.toInputImage(file);

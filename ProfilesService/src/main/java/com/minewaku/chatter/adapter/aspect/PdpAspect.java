@@ -67,8 +67,8 @@ public class PdpAspect {
             String principal = "anonymous";
             
             if (authentication != null && authentication.getPrincipal() instanceof Jwt) {
-                 Jwt jwt = (Jwt) authentication.getPrincipal();
-                 principal = jwt.getSubject();
+                Jwt jwt = (Jwt) authentication.getPrincipal();
+                principal = jwt.getSubject();
             } else if (authentication != null) {
                 principal = authentication.getName();
             }

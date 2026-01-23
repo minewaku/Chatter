@@ -32,16 +32,6 @@ public class UserRepositoryAdapter implements UserRepository {
 	}
 
 	@Override
-	public Optional<User> findByIdAndIsDeletedFalse(UserId id) {
-		return userMapper.entityToDomain(jpaUserRepository.findByIdAndIsDeletedFalse(id.getValue()));
-	}
-
-	@Override
-	public Optional<User> findByEmailAndIsDeletedFalse(Email email) {
-		return userMapper.entityToDomain(jpaUserRepository.findByEmailAndIsDeletedFalse(email.getValue()));
-	}
-
-	@Override
 	public Optional<User> findById(UserId id) {
 		return userMapper.entityToDomain(jpaUserRepository.findById(id.getValue()));
 	}

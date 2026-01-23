@@ -11,11 +11,13 @@ import lombok.NonNull;
 @Builder
 public class UserUnlockedDomainEvent extends DomainEvent {
 	
+	private static final String EVENT_TYPE = "AccountVerified";
+
 	@NonNull
 	private final UserId userId;
 	
 	public UserUnlockedDomainEvent(@NonNull UserId userId) {
-		super();
+		super(EVENT_TYPE);
 		this.userId = userId;
 	}
 }

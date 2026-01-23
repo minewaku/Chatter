@@ -49,10 +49,10 @@ public class JpaUserEntity extends BaseEntity implements UserDetails, Credential
 	@Column(name = "avatar", unique = true)
 	private String avatar;
 
-	@Column(name = "cover_key", unique = true)
-	private String coverKey;
-	@Column(name = "cover", unique = true)
-	private String cover;
+	@Column(name = "banner_key", unique = true)
+	private String bannerKey;
+	@Column(name = "banner", unique = true)
+	private String banner;
 
 	@Column(name = "username", length = 255, nullable = false, unique = true, updatable = false)
 	@NotBlank(message = "Username is required")
@@ -70,21 +70,17 @@ public class JpaUserEntity extends BaseEntity implements UserDetails, Credential
 	@NotNull(message = "Birthday cannot be null")
 	private LocalDate birthday;
 
-	@Column(name = "discoverable", nullable = false)
-	@NotNull(message = "Discoverable is required")
-	private Boolean discoverable;
-
 	@Column(name = "is_enabled", nullable = false)
 	@NotNull(message = "isEnabled is required")
-	private Boolean isEnabled;
+	private Boolean enabled;
 
 	@Column(name = "is_locked", nullable = false)
 	@NotNull(message = "isLocked is required")
-	private Boolean isLocked;
+	private Boolean locked;
 
 	@Column(name = "is_deleted", nullable = false)
 	@NotNull(message = "isDeleted is required")
-	private Boolean isDeleted;
+	private Boolean deleted;
 
 	@Column(name = "deleted_at", nullable = true)
 	private Instant deletedAt;
@@ -92,21 +88,17 @@ public class JpaUserEntity extends BaseEntity implements UserDetails, Credential
 	@PrePersist
 	protected void onCreate() {
 		super.onCreate();
-
-		if(discoverable == null) {
-			discoverable = true;
+		
+		if (enabled == null) {
+			enabled = false;
 		}
 
-		if (isEnabled == null) {
-			isEnabled = false;
+		if (locked == null) {
+			locked = false;
 		}
 
-		if (isLocked == null) {
-			isLocked = false;
-		}
-
-		if (isDeleted == null) {
-			isDeleted = false;
+		if (deleted == null) {
+			deleted = false;
 		}
 	}
 
@@ -122,7 +114,7 @@ public class JpaUserEntity extends BaseEntity implements UserDetails, Credential
 
 	@Override
 	public boolean isAccountNonLocked() {
-		return !isLocked;
+		return !locked;
 	}
 
 	@Override
@@ -132,12 +124,12 @@ public class JpaUserEntity extends BaseEntity implements UserDetails, Credential
 
 	@Override
 	public boolean isEnabled() {
-		return isEnabled;
+		return enabled;
 	}
 
 	@Override
 	public void eraseCredentials() {
-		this.isDeleted = true;
+		this.deleted = true;
 	}
 
 	@Override

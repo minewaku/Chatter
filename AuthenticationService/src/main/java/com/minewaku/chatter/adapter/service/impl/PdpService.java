@@ -2,8 +2,6 @@ package com.minewaku.chatter.adapter.service.impl;
 
 import java.util.Map;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -14,15 +12,16 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import com.minewaku.chatter.adapter.filter.JwtAuthenticationFilter;
 import com.minewaku.chatter.adapter.service.IPdpService;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Service
 public class PdpService implements IPdpService {
 
     private final static String PDP_URL = "http://CERBOS-BRIDGE-SERVICE/api/v1/resources/check";
     private final RestTemplate restTemplate;
-    private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
     public PdpService(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;

@@ -14,7 +14,7 @@ public class UserRestoredDomainEvent extends DomainEvent {
 	private final UserId userId;
 	
 	public UserRestoredDomainEvent(@NonNull UserId userId) {
-		super();
+		super("UserRestored");
 		this.userId = userId;
 	}
 }

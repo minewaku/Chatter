@@ -7,8 +7,10 @@ import lombok.Getter;
 @Getter
 public class DomainEvent {
 	private final Instant occurredAt;
+	private final String eventType;
 	
-	public DomainEvent() {
+	public DomainEvent(String eventType) {
 		this.occurredAt = Instant.now();
+		this.eventType = this.getClass().getSimpleName();
 	}
 }

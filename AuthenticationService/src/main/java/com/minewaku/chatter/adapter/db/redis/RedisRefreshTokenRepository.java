@@ -37,7 +37,7 @@ public class RedisRefreshTokenRepository {
 		redisTemplateRefreshTokenDto.opsForValue().set(key, refreshTokenDto, ttl);
 	}
 	
-	public void deleteById(String token) {
+	public void deleteByToken(String token) {
 		String key = Prefix.REFRESH_TOKEN_VALUE.format(token);
 		redisTemplateRefreshTokenDto.delete(key);
 	}

@@ -14,7 +14,6 @@ public class DeleteConfirmationTokenApplicationService implements DeleteConfirma
 		this.confirmationTokenRepository = confirmationTokenRepository;
 	}
 	
-	
     @Override
 	@Transactional
     public Void handle(String token) {

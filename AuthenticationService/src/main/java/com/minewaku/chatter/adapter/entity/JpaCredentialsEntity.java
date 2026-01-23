@@ -2,6 +2,8 @@ package com.minewaku.chatter.adapter.entity;
 
 import java.time.Instant;
 
+import org.springframework.data.annotation.Version;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -16,11 +18,11 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import lombok.experimental.SuperBuilder;
 
 @Getter
 @Setter
@@ -30,12 +32,16 @@ import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "credentials")
-@SuperBuilder
+@Builder
 public class JpaCredentialsEntity {
 
 	@Id
 	@Column(name = "user_id", nullable = false, updatable = false)
 	private Long userId;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
 
 	// these references are used only for joins, not for direct access
 	@Getter(AccessLevel.NONE)

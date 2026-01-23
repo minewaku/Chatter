@@ -2,13 +2,14 @@ package com.minewaku.chatter.application.service.profile;
 
 import com.minewaku.chatter.application.exception.EntityNotFoundException;
 import com.minewaku.chatter.domain.command.profile.UploadFileCommand;
-import com.minewaku.chatter.domain.model.InputBanner;
+import com.minewaku.chatter.domain.model.StorageFile;
 import com.minewaku.chatter.domain.model.User;
 import com.minewaku.chatter.domain.port.in.profile.UploadBannerUseCase;
 import com.minewaku.chatter.domain.port.out.repository.ProfileRepository;
 import com.minewaku.chatter.domain.port.out.service.FileStorage;
 import com.minewaku.chatter.domain.port.out.service.FileStorageKeyGenerator;
 import com.minewaku.chatter.domain.response.FileStorageResponse;
+import com.minewaku.chatter.domain.value.InputBanner;
 
 public class UploadBannerApplicationService implements UploadBannerUseCase {
 
@@ -33,10 +34,11 @@ public class UploadBannerApplicationService implements UploadBannerUseCase {
         User user = profileRepository.findActivatedByUserId(command.userId())
                 .orElseThrow(() -> new EntityNotFoundException("User does not exist"));
 
-        String key = fileStorageKeyGenerator.generate();
+        StorageKey key = new StorageKey(fileStorageKeyGenerator.generate());
 
         InputBanner inputBanner = new InputBanner(
             key,
+            user.getId(),
             command.inputImage().getOriginalFilename(),
             command.inputImage().getContentType(),
             command.inputImage().getSizeInBytes(),
@@ -44,9 +46,15 @@ public class UploadBannerApplicationService implements UploadBannerUseCase {
         );
 
         FileStorageResponse response = fileStorage.upload(inputBanner);
-        user.setBanner(response.fileUrl(), key);
+        StorageFile banner = new StorageFile(
+            response.key(),
+            response.uri()
+        );
+        user.setBanner(banner);
 
         profileRepository.uploadBannerUrl(user);
+        
+        fileStorage.deleteByKey(user.getBanner().getKey());
         return null;
     }
 }

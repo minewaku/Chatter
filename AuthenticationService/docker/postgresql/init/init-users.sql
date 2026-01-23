@@ -27,7 +27,7 @@ END
 $$;
 
 -------------------------------
--- Create debezium user
+-- 3. Create debezium user & Config Permissions (QUAN TRỌNG)
 -------------------------------
 DO $$
 BEGIN
@@ -36,12 +36,19 @@ BEGIN
   ELSE
     ALTER ROLE debezium WITH REPLICATION PASSWORD 'Yu28OtptFv20rEkG';
   END IF;
+
+
+  EXECUTE 'GRANT pg_read_all_data TO debezium';
+  EXECUTE 'GRANT USAGE ON SCHEMA public TO debezium';
+
+  IF NOT EXISTS (SELECT FROM pg_publication WHERE pubname = 'dbz_publication') THEN
+    EXECUTE 'CREATE PUBLICATION dbz_publication FOR ALL TABLES';
+    EXECUTE 'ALTER PUBLICATION dbz_publication OWNER TO debezium';
+  END IF;
 END
 $$;
 
-GRANT USAGE ON SCHEMA public TO debezium;
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO debezium;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO debezium;
+
 
 -------------------------------
 -- System variables table
@@ -52,5 +59,5 @@ CREATE TABLE IF NOT EXISTS system_variables (
 );
 
 INSERT INTO system_variables (key, value)
-VALUES ('server_id', 3)
+VALUES ('server_id', 8)
 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;

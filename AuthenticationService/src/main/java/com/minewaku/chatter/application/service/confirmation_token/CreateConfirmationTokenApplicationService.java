@@ -42,12 +42,15 @@ public class CreateConfirmationTokenApplicationService implements CreateConfirma
 	@Transactional
 	public ConfirmationToken handle(CreateConfirmationTokenCommand command) {
 		String key = keyGenerator.generate();
-		User user = userRepository.findById(command.getUserId()).orElseThrow(
+		User user = userRepository.findById(command.userId()).orElseThrow(
 				() -> new EntityNotFoundException("User does not exist"));
-		user.validateAccessible();
+		
+		user.checkForEnable();
+		user.checkForSoftDeleted();
+		user.checkForLocked();
 
-		ConfirmationToken confirmationToken = ConfirmationToken.createNew(key, command.getUserId(), user.getEmail(),
-				command.getDuration());
+		ConfirmationToken confirmationToken = ConfirmationToken.createNew(key, command.userId(), user.getEmail(),
+				command.duration());
 		ConfirmationToken newConfirmationToken = confirmationTokenRepository.save(confirmationToken);
 
 		List<DomainEvent> filteredEvents = filterEvents(confirmationToken.getEvents());
