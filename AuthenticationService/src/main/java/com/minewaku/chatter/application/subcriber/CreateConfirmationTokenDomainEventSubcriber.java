@@ -3,7 +3,6 @@ package com.minewaku.chatter.application.subcriber;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.minewaku.chatter.application.exception.EntityNotFoundException;
@@ -40,10 +39,10 @@ public class CreateConfirmationTokenDomainEventSubcriber implements DomainEventS
 	}
 
 	@Override
-	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	@Transactional
 	public void handle(CreateConfirmationTokenDomainEvent event) {
 		String key = keyGenerator.generate();
-		User user = userRepository.findByIdAndIsDeletedFalse(event.getUserId()).orElseThrow(
+		User user = userRepository.findByIdAndIsActivated(event.getUserId()).orElseThrow(
 				() -> new EntityNotFoundException("User does not exist"));
 		
 		ConfirmationToken confirmationToken = ConfirmationToken.createNew(key, event.getUserId(), user.getEmail(), event.getDuration());

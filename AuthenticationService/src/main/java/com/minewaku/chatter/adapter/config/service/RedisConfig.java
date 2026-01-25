@@ -46,9 +46,6 @@ public class RedisConfig {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
 
-        // Enable default typing to include type information during serialization
-        // (without it, the deserializer have no idea how to convert the whole class
-        // back, so it gonna convert it into LinkedHashMap)
         objectMapper.activateDefaultTyping(
                 LaissezFaireSubTypeValidator.instance,
                 ObjectMapper.DefaultTyping.NON_FINAL);
@@ -63,6 +60,10 @@ public class RedisConfig {
         template.setConnectionFactory(redisConnectionFactory);
         template.setKeySerializer(new GenericToStringSerializer<>(Object.class));
         template.setValueSerializer(new GenericToStringSerializer<>(Object.class));
+        
+        // --- BẬT TRANSACTION TẠI ĐÂY ---
+        template.setEnableTransactionSupport(true); 
+        template.afterPropertiesSet();
         return template;
     }
 
@@ -72,6 +73,10 @@ public class RedisConfig {
         template.setConnectionFactory(redisConnectionFactory);
         template.setKeySerializer(new GenericToStringSerializer<>(Object.class));
         template.setValueSerializer(new GenericToStringSerializer<>(Object.class));
+        
+        // --- BẬT TRANSACTION TẠI ĐÂY ---
+        template.setEnableTransactionSupport(true);
+        template.afterPropertiesSet();
         return template;
     }
 
@@ -90,6 +95,9 @@ public class RedisConfig {
 
         template.setKeySerializer(new StringRedisSerializer());
         template.setValueSerializer(serializer);
+        
+        // --- BẬT TRANSACTION TẠI ĐÂY ---
+        template.setEnableTransactionSupport(true);
         template.afterPropertiesSet();
         return template;
     }
@@ -109,18 +117,20 @@ public class RedisConfig {
 
         template.setKeySerializer(new StringRedisSerializer());
         template.setValueSerializer(serializer);
+        template.setEnableTransactionSupport(true);
         template.afterPropertiesSet();
         return template;
     }
 
     @Bean
     RedisTemplate<Object, Object> hashRedisTemplate(RedisConnectionFactory redisConnectionFactory) {
-
         RedisTemplate<Object, Object> redisTemplate = new RedisTemplate<>();
         redisTemplate.setConnectionFactory(redisConnectionFactory);
         redisTemplate.setKeySerializer(new GenericToStringSerializer<>(Object.class));
         redisTemplate.setHashKeySerializer(new GenericToStringSerializer<>(Object.class));
         redisTemplate.setHashValueSerializer(new GenericToStringSerializer<>(Object.class));
+        redisTemplate.setEnableTransactionSupport(true);
+        redisTemplate.afterPropertiesSet();
 
         return redisTemplate;
     }
@@ -129,6 +139,8 @@ public class RedisConfig {
     RedisCacheManager cacheManager(
             RedisConnectionFactory connectionFactory,
             GenericJackson2JsonRedisSerializer genericJackson2JsonRedisSerializer) {
+        // CacheManager thường hoạt động độc lập, nhưng nếu muốn nó sync với transaction
+        // thì cấu hình ở level transaction manager, tuy nhiên code này giữ nguyên là ổn.
         RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(Duration.ofMinutes(10))
                 .disableCachingNullValues()
@@ -139,7 +151,7 @@ public class RedisConfig {
 
         return RedisCacheManager.builder(connectionFactory)
                 .cacheDefaults(config)
+                .transactionAware() // Thêm dòng này nếu muốn Cache cũng rollback khi lỗi
                 .build();
     }
-
 }

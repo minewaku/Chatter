@@ -21,6 +21,5 @@ public interface JpaUserRoleRepository extends JpaRepository<JpaUserRoleEntity, 
             WHERE ur.user.id = :userId
               AND ur.role.isDeleted = false
         """)
-
     List<JpaRoleEntity> findRolesByUserIdAndIsDeletedFalse(@Param("userId") Long userId);
 }

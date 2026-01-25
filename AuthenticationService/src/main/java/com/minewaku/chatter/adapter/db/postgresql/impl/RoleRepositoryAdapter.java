@@ -28,7 +28,7 @@ public class RoleRepositoryAdapter implements RoleRepository {
 
 	@Override
 	public void update(Role role) {
-		jpaRoleRepository.update(roleMapper.domainToEntity(role));
+		jpaRoleRepository.save(roleMapper.domainToEntity(role));
 	}
 
 	@Override
@@ -38,7 +38,7 @@ public class RoleRepositoryAdapter implements RoleRepository {
 
 	@Override
 	public void softDelete(Role role) {
-		jpaRoleRepository.softDelete(roleMapper.domainToEntity(role));
+		jpaRoleRepository.save(roleMapper.domainToEntity(role));
 	}
 
 	@Override
@@ -48,7 +48,7 @@ public class RoleRepositoryAdapter implements RoleRepository {
 
 	@Override
 	public void restore(Role role) {
-		jpaRoleRepository.restore(roleMapper.domainToEntity(role));
+		jpaRoleRepository.save(roleMapper.domainToEntity(role));
 	}
 
 	@Override

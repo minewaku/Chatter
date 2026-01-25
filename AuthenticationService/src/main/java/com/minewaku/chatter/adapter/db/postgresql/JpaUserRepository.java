@@ -19,9 +19,8 @@ public interface JpaUserRepository extends JpaRepository<JpaUserEntity, Long> {
 
     Optional<JpaUserEntity> findByEmail(String email);
 
-    Optional<JpaUserEntity> findByIdAndIsDeletedFalse(Long userId);
-
-    Optional<JpaUserEntity> findByEmailAndIsDeletedFalse(String email);
+    @Query("SELECT FROM JpaUserEntity u WHERE u.id = :id AND u.enabled = true AND u.locked = false AND u.isDeleted = false")
+    Optional<JpaUserEntity> findByIdAndIsActivated(Long userId);
 
     Page<JpaUserEntity> findAll(Pageable pageable);
 
@@ -40,14 +39,6 @@ public interface JpaUserRepository extends JpaRepository<JpaUserEntity, Long> {
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE JpaUserEntity u SET u.isLocked = false WHERE u.id = :id")
     void unlockUser(@Param("id") Long id);
-
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("UPDATE JpaUserEntity u SET u.isDeleted = true WHERE u.id = :id")
-    void softDeleteById(@Param("id") Long id);
-
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("UPDATE JpaUserEntity u SET u.isDeleted = false WHERE u.id = :id")
-    void restoreById(@Param("id") Long id);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM JpaUserEntity u WHERE u.id = :id")

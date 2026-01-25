@@ -1,5 +1,6 @@
 package com.minewaku.chatter.application.service.auth;
 
+
 import org.springframework.transaction.annotation.Transactional;
 
 import com.minewaku.chatter.application.exception.EntityNotFoundException;
@@ -13,6 +14,8 @@ import com.minewaku.chatter.domain.port.out.repository.UserRepository;
 import com.minewaku.chatter.domain.port.out.service.PasswordHasher;
 import com.minewaku.chatter.domain.service.auth.PasswordSecurityDomainService;
 import com.minewaku.chatter.domain.value.HashedPassword;
+
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 
 public class ChangePasswordApplicationService implements ChangePasswordUseCase {
 

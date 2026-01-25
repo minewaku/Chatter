@@ -32,13 +32,8 @@ public class UserRepositoryAdapter implements UserRepository {
 	}
 
 	@Override
-	public Optional<User> findByIdAndIsDeletedFalse(UserId id) {
-		return userMapper.entityToDomain(jpaUserRepository.findByIdAndIsDeletedFalse(id.getValue()));
-	}
-
-	@Override
-	public Optional<User> findByEmailAndIsDeletedFalse(Email email) {
-		return userMapper.entityToDomain(jpaUserRepository.findByEmailAndIsDeletedFalse(email.getValue()));
+	public Optional<User> findByIdAndIsActivated(UserId id) {
+		return userMapper.entityToDomain(jpaUserRepository.findByIdAndIsActivated(id.getValue()));
 	}
 
 	@Override
@@ -53,12 +48,12 @@ public class UserRepositoryAdapter implements UserRepository {
 
 	@Override
 	public void enable(User user) {
-		jpaUserRepository.enableUser(user.getId().getValue());
+		jpaUserRepository.save(userMapper.domainToEntity(user));
 	}
 
 	@Override
 	public void softDelete(User user) {
-		jpaUserRepository.softDeleteById(user.getId().getValue());
+		jpaUserRepository.save(userMapper.domainToEntity(user));
 	}
 
 	@Override
@@ -68,22 +63,22 @@ public class UserRepositoryAdapter implements UserRepository {
 
 	@Override
 	public void restore(User user) {
-		jpaUserRepository.restoreById(user.getId().getValue());
+		jpaUserRepository.save(userMapper.domainToEntity(user));
 	}
 
 	@Override
 	public void disable(User user) {
-		jpaUserRepository.disableUser(user.getId().getValue());
+		jpaUserRepository.save(userMapper.domainToEntity(user));
 	}
 
 	@Override
 	public void lock(User user) {
-		jpaUserRepository.lockUser(user.getId().getValue());
+		jpaUserRepository.save(userMapper.domainToEntity(user));
 	}
 
 	@Override
 	public void unlock(User user) {
-		jpaUserRepository.unlockUser(user.getId().getValue());
+		jpaUserRepository.save(userMapper.domainToEntity(user));
 	}
 
 }
