@@ -15,7 +15,7 @@ import com.minewaku.chatter.domain.port.out.service.PasswordHasher;
 import com.minewaku.chatter.domain.service.auth.PasswordSecurityDomainService;
 import com.minewaku.chatter.domain.value.HashedPassword;
 
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 
 public class ChangePasswordApplicationService implements ChangePasswordUseCase {
 
@@ -38,6 +38,7 @@ public class ChangePasswordApplicationService implements ChangePasswordUseCase {
 	}
 
 	@Override
+	@Retry(name = "transientDataAccess")
 	@Transactional
 	public Void handle(ChangePasswordCommand command) {
 

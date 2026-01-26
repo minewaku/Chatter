@@ -15,6 +15,8 @@ import com.minewaku.chatter.domain.port.in.user.SoftDeleteUserUseCase;
 import com.minewaku.chatter.domain.port.out.repository.UserRepository;
 import com.minewaku.chatter.domain.value.id.UserId;
 
+import io.github.resilience4j.retry.annotation.Retry;
+
 public class SoftDeleteUserApplicationService implements SoftDeleteUserUseCase {
 	
 	private final UserRepository userRepository;
@@ -26,6 +28,7 @@ public class SoftDeleteUserApplicationService implements SoftDeleteUserUseCase {
 	}
 
     @Override
+	@Retry(name = "transientDataAccess")
 	@Transactional
     public Void handle(UserId userId) {
 		User user = userRepository.findById(userId)

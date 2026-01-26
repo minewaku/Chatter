@@ -5,6 +5,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.minewaku.chatter.domain.port.in.confirmation_token.DeleteConfirmationTokenUseCase;
 import com.minewaku.chatter.domain.port.out.repository.ConfirmationTokenRepository;
 
+import io.github.resilience4j.retry.annotation.Retry;
+
 public class DeleteConfirmationTokenApplicationService implements DeleteConfirmationTokenUseCase {
 
 	private final ConfirmationTokenRepository confirmationTokenRepository;
@@ -15,6 +17,7 @@ public class DeleteConfirmationTokenApplicationService implements DeleteConfirma
 	}
 	
     @Override
+	@Retry(name = "transientDataAccess")
 	@Transactional
     public Void handle(String token) {
         confirmationTokenRepository.deleteByToken(token);

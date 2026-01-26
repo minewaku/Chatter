@@ -23,6 +23,8 @@ import com.minewaku.chatter.domain.response.TokenResponse;
 import com.minewaku.chatter.domain.service.auth.PasswordSecurityDomainService;
 import com.minewaku.chatter.domain.value.id.OpaqueToken;
 
+import io.github.resilience4j.retry.annotation.Retry;
+
 public class LoginApplicationService implements LoginUseCase {
 
 	private final CredentialsRepository credentialsRepository;
@@ -55,6 +57,7 @@ public class LoginApplicationService implements LoginUseCase {
 	}
 
 	@Override
+	@Retry(name = "transientDataAccess")
 	@Transactional
 	public TokenResponse handle(LoginCommand command) {
 		User user = userRepository.findByEmail(command.email())

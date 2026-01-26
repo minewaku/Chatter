@@ -18,6 +18,8 @@ import com.minewaku.chatter.domain.port.out.repository.UserRepository;
 import com.minewaku.chatter.domain.port.out.service.ConfirmationTokenGenerator;
 import com.minewaku.chatter.domain.value.Email;
 
+import io.github.resilience4j.retry.annotation.Retry;
+
 public class ResendConfirmationTokenApplicationService implements ResendConfirmationTokenUseCase {
 
 	private final ConfirmationTokenRepository confirmationTokenRepository;
@@ -40,6 +42,7 @@ public class ResendConfirmationTokenApplicationService implements ResendConfirma
 	}
 
 	@Override
+	@Retry(name = "transientDataAccess")
 	@Transactional
 	public Void handle(Email email) {
 		confirmationTokenRepository.deleteByEmail(email);

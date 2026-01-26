@@ -8,6 +8,8 @@ import com.minewaku.chatter.domain.port.in.auth.LogoutUseCase;
 import com.minewaku.chatter.domain.port.out.repository.RefreshTokenRepository;
 import com.minewaku.chatter.domain.value.id.OpaqueToken;
 
+import io.github.resilience4j.retry.annotation.Retry;
+
 public class LogoutApplicationService implements LogoutUseCase {
 	
 	private final RefreshTokenRepository refreshTokenRepository;
@@ -19,6 +21,7 @@ public class LogoutApplicationService implements LogoutUseCase {
 
 	
     @Override
+	@Retry(name = "transientDataAccess")
 	@Transactional
     public Void handle(OpaqueToken opaqueToken) {
 		RefreshToken existRefreshToken = refreshTokenRepository.findByToken(opaqueToken)

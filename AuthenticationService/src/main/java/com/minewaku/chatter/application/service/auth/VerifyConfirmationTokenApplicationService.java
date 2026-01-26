@@ -17,6 +17,8 @@ import com.minewaku.chatter.domain.port.in.auth.VerifyConfirmationTokenUseCase;
 import com.minewaku.chatter.domain.port.out.repository.ConfirmationTokenRepository;
 import com.minewaku.chatter.domain.port.out.repository.UserRepository;
 
+import io.github.resilience4j.retry.annotation.Retry;
+
 public class VerifyConfirmationTokenApplicationService implements VerifyConfirmationTokenUseCase {
 
 	private final ConfirmationTokenRepository confirmationTokenRepository;
@@ -37,6 +39,7 @@ public class VerifyConfirmationTokenApplicationService implements VerifyConfirma
 	}
 	
     @Override
+	@Retry(name = "transientDataAccess")
     @Transactional
     public Void handle(String confirmationToken) {
 		ConfirmationToken existConfirmationToken = confirmationTokenRepository.findByToken(confirmationToken)

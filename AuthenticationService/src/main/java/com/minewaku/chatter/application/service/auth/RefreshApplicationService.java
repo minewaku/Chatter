@@ -18,6 +18,8 @@ import com.minewaku.chatter.domain.port.out.service.RefreshTokenGenerator;
 import com.minewaku.chatter.domain.response.TokenResponse;
 import com.minewaku.chatter.domain.value.id.OpaqueToken;
 
+import io.github.resilience4j.retry.annotation.Retry;
+
 public class RefreshApplicationService implements RefreshUseCase {
 
 	private final RefreshTokenRepository refreshTokenRepository;
@@ -40,6 +42,7 @@ public class RefreshApplicationService implements RefreshUseCase {
 	}
 
 	@Override
+	@Retry(name = "transientDataAccess")
 	@Transactional
 	public TokenResponse handle(OpaqueToken opaqueToken) {
 		RefreshToken existToken = refreshTokenRepository.findByToken(opaqueToken)

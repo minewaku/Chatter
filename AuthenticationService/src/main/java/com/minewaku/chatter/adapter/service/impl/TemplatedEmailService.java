@@ -12,6 +12,7 @@ import com.minewaku.chatter.domain.port.out.service.EmailSender;
 import com.minewaku.chatter.domain.value.Email;
 import com.minewaku.chatter.domain.value.MailType;
 
+import io.github.resilience4j.retry.annotation.Retry;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 
@@ -44,6 +45,7 @@ public class TemplatedEmailService implements EmailSender {
 	}
 
 	@Override
+	@Retry(name = "mailRetry")
 	public void send(Email to, String subject, String content) {
 		try {
 			MimeMessage message = mailSender.createMimeMessage();

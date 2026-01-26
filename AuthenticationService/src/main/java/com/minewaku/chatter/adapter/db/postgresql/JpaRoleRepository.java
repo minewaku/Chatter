@@ -26,4 +26,8 @@ public interface JpaRoleRepository extends JpaRepository<JpaRoleEntity, Long> {
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM JpaRoleEntity u WHERE u.id IN :ids")
     void bulkHardDeleteByIds(@Param("ids") Iterable<Long> ids);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("DELETE FROM JpaRoleEntity r WHERE r.createdAt < :cutoffDateTime")
+	void deleteByCreatedAtBefore(java.time.LocalDateTime cutoffDateTime);
 }

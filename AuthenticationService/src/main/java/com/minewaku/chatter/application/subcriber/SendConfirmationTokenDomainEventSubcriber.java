@@ -9,6 +9,8 @@ import com.minewaku.chatter.domain.event.core.DomainEventSubscriber;
 import com.minewaku.chatter.domain.port.out.service.EmailSender;
 import com.minewaku.chatter.domain.port.out.service.UrlGenerator;
 
+import io.github.resilience4j.retry.annotation.Retry;
+
 public class SendConfirmationTokenDomainEventSubcriber
 		implements DomainEventSubscriber<SendConfirmationTokenDomainEvent> {
 
@@ -23,6 +25,7 @@ public class SendConfirmationTokenDomainEventSubcriber
 	}
 
 	@Override
+	@Retry(name = "transientDataAccess")
 	@Transactional
 	public void handle(SendConfirmationTokenDomainEvent event) {
 		String verifyUrl = urlGenerator

@@ -12,7 +12,7 @@ import com.minewaku.chatter.domain.port.out.service.IdGenerator;
  * Github: @see <a href="https://github.com/chinabugotech" /a>
  * Source code: @see <a href="https://www.cnblogs.com/relucent/p/4955340.html" /a>
  * 
- * Note: Note: This snippet has been modified to fit the project configuration, and the comments have been translated into English 
+ * Note: This class has been modified to fit the project configurations
  */
 @Service
 public class SnowflakeIdGenerator implements IdGenerator {

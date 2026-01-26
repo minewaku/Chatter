@@ -39,7 +39,7 @@ public class PdpAspect {
         this.parser = parser;
     }
 
-@Around("@annotation(pdpCheck)")
+    @Around("@annotation(pdpCheck)")
     public Object authorize(
             ProceedingJoinPoint joinPoint, 
             PdpCheck pdpCheck

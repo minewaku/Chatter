@@ -35,7 +35,7 @@ public class Rs256JwtTokenProvider implements AccessTokenGenerator {
 		String jwt = Jwts.builder()
 				.claims()
 				.subject(user.getId().getValue().toString())
-				.issuer("chatter-idp")
+				.issuer("authentication-service")
 				.issuedAt(issuedAt)
 				.expiration(expiration)
 				.audience().add("chatter").and()

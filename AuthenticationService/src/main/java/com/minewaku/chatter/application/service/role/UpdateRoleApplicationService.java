@@ -8,6 +8,8 @@ import com.minewaku.chatter.domain.model.Role;
 import com.minewaku.chatter.domain.port.in.role.UpdateRoleUseCase;
 import com.minewaku.chatter.domain.port.out.repository.RoleRepository;
 
+import io.github.resilience4j.retry.annotation.Retry;
+
 public class UpdateRoleApplicationService implements UpdateRoleUseCase {
 	
 	final RoleRepository roleRepository;
@@ -19,6 +21,7 @@ public class UpdateRoleApplicationService implements UpdateRoleUseCase {
 	}
 
     @Override
+	@Retry(name = "transientDataAccess")
 	@Transactional
     public Void handle(UpdateRoleCommand command) {
 		Role role = roleRepository.findById(command.id())

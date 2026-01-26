@@ -8,6 +8,8 @@ import com.minewaku.chatter.domain.port.in.role.SoftDeleteRoleUseCase;
 import com.minewaku.chatter.domain.port.out.repository.RoleRepository;
 import com.minewaku.chatter.domain.value.id.RoleId;
 
+import io.github.resilience4j.retry.annotation.Retry;
+
 public class SoftDeleteRoleApplicationService implements SoftDeleteRoleUseCase {
 
 	final RoleRepository roleRepository;
@@ -17,6 +19,7 @@ public class SoftDeleteRoleApplicationService implements SoftDeleteRoleUseCase {
 	}
 
 	@Override
+	@Retry(name = "transientDataAccess")
 	@Transactional
 	public Void handle(RoleId roleId) {
 		Role role = roleRepository.findById(roleId).orElseThrow(

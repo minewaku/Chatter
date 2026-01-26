@@ -18,6 +18,8 @@ import com.minewaku.chatter.domain.port.out.repository.ConfirmationTokenReposito
 import com.minewaku.chatter.domain.port.out.repository.UserRepository;
 import com.minewaku.chatter.domain.port.out.service.ConfirmationTokenGenerator;
 
+import io.github.resilience4j.retry.annotation.Retry;
+
 public class CreateConfirmationTokenApplicationService implements CreateConfirmationTokenUseCase {
 
 	private final ConfirmationTokenRepository confirmationTokenRepository;
@@ -39,6 +41,7 @@ public class CreateConfirmationTokenApplicationService implements CreateConfirma
 	}
 
 	@Override
+	@Retry(name = "transientDataAccess")
 	@Transactional
 	public ConfirmationToken handle(CreateConfirmationTokenCommand command) {
 		String key = keyGenerator.generate();

@@ -25,6 +25,8 @@ import com.minewaku.chatter.domain.service.auth.CheckRegisterUserDomainService;
 import com.minewaku.chatter.domain.value.HashedPassword;
 import com.minewaku.chatter.domain.value.id.UserId;
 
+import io.github.resilience4j.retry.annotation.Retry;
+
 public class RegisterApplicationService implements RegisterUseCase {
 
 	private final CredentialsRepository credentialsRepository;
@@ -59,6 +61,7 @@ public class RegisterApplicationService implements RegisterUseCase {
 	}
 
 	@Override
+	@Retry(name = "transientDataAccess")
 	@Transactional
 	public Void handle(RegisterCommand command) {
 

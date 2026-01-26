@@ -1,9 +1,5 @@
 package com.minewaku.chatter.adapter.event;
 
-import java.sql.SQLException;
-
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -36,21 +32,11 @@ public class SpringEventListener {
 	}
 
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-	@Retryable(
-		retryFor = { SQLException.class },
-		maxAttempts = 3,
-		backoff = @Backoff(delay = 1000)
-	)
 	public void onCreateConfirmationTokenDomainEvent(CreateConfirmationTokenDomainEvent event) {
 		createConfirmationTokenDomainEventSubcriber.handle(event);
 	}
 
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-	@Retryable(
-		retryFor = { Exception.class },
-		maxAttempts = 3,
-		backoff = @Backoff(delay = 1000)
-	)
 	public void onSendConfirmationTokenDomainEvent(SendConfirmationTokenDomainEvent event) {
 		sendConfirmationTokenDomainEventSubcriber.handle(event);
 	}

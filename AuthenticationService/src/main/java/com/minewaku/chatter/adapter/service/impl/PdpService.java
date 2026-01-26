@@ -14,6 +14,8 @@ import org.springframework.web.client.RestTemplate;
 
 import com.minewaku.chatter.adapter.service.IPdpService;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -40,6 +42,8 @@ public class PdpService implements IPdpService {
             Map<String, Object> resourceAttrs) {
     }
 
+    @CircuitBreaker(name = "pdpService", fallbackMethod = "fallbackAccess")
+    @Retry(name = "httpServer")
     public boolean isAccessAllowed(
             String resourceType, 
             String resourceId, 
@@ -53,7 +57,7 @@ public class PdpService implements IPdpService {
         JwtAuthenticationToken auth = (JwtAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
         String jwt = auth.getToken().getTokenValue();
 
-        // create httpEntity with authorization header abd pdpRequest
+        // create httpEntity with authorization header and pdpRequest
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Bearer " + jwt);
         headers.setContentType(MediaType.APPLICATION_JSON);

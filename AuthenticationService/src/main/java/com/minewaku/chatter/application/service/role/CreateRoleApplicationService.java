@@ -9,6 +9,8 @@ import com.minewaku.chatter.domain.port.out.repository.RoleRepository;
 import com.minewaku.chatter.domain.port.out.service.IdGenerator;
 import com.minewaku.chatter.domain.value.id.RoleId;
 
+import io.github.resilience4j.retry.annotation.Retry;
+
 public class CreateRoleApplicationService implements CreateRoleUseCase {
 
 	private final IdGenerator idGenerator;
@@ -23,6 +25,7 @@ public class CreateRoleApplicationService implements CreateRoleUseCase {
 	}
 
 	@Override
+	@Retry(name = "transientDataAccess")
 	@Transactional
 	public Role handle(CreateRoleCommand command) {
 		RoleId roleId = new RoleId(idGenerator.generate());

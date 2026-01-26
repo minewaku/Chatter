@@ -3,12 +3,14 @@ package com.minewaku.chatter.adapter.exception;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.springframework.dao.ConcurrencyFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.client.HttpServerErrorException;
 
 import com.minewaku.chatter.adapter.web.response.ErrorResponse;
 import com.minewaku.chatter.application.exception.DataInconsistencyException;
@@ -108,7 +110,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex) {
+    public ResponseEntity<ErrorResponse> handleValidation(AccessDeniedException ex) {
         log.error("Access denied error: {}", ex);
         ErrorResponse errorResponse = new ErrorResponse("ACCESS_DENIED", "Access denied");
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
@@ -137,5 +139,20 @@ public class GlobalExceptionHandler {
         body.put("message", message);
         log.error("Validation error: {}", message);
         return ResponseEntity.status(status).body(body);
+    }
+
+
+    // https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/dao/ConcurrencyFailureException.html
+    @ExceptionHandler(ConcurrencyFailureException.class)
+    public ResponseEntity<ErrorResponse> handleFallback(ConcurrencyFailureException ex) {
+            ErrorResponse errorResponse = new ErrorResponse("CONFLICT", "Conflict detected: The resource version is outdated.");
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    }
+
+    // https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/web/client/HttpServerErrorException.html
+    @ExceptionHandler(HttpServerErrorException.class)
+    public ResponseEntity<ErrorResponse> handleFallback(HttpServerErrorException ex) {
+        ErrorResponse errorResponse = new ErrorResponse("SERVICE_UNAVAILABLE", "Service temporarily unavailable, please try again later.");
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(errorResponse);
     }
 }
