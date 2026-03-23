@@ -1,0 +1,25 @@
+server:
+  httpListenAddr: ":3599"
+  grpcListenAddr: ":3600"
+  adminAPI:
+    enabled: true
+    adminCredentials:
+      passwordHash: JDJhJDEyJEUveW9LOFlqa1dOeTNtbERIa2VMU2UxN3EwZTlJQjhERnJ6dVBLcURIS1dmbVVENzlhcTFl
+      username: admin
+
+storage:
+  driver: disk
+  disk:
+    directory: /policies
+    watchForChanges: true
+
+audit:
+  accessLogsEnabled: true
+  enabled: true
+  backend: file
+  file:
+      logRotation:
+        maxFileAgeDays: 10
+        maxFileCount: 10
+        maxFileSizeMB: 100 
+      path: ./data/audit/audit.log

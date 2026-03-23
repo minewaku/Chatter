@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>com.minewaku.chatter</groupId>
+	<artifactId>profile</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>pom</packaging>
+
+	<modules>
+    	<module>profile-start</module>
+    	<module>profile-infrastructure</module>
+    	<module>profile-presentation</module>
+    	<module>profile-domain</module>
+    	<module>profile-application</module>
+    </modules>
+
+	<name>Chatter Profile Parent Project</name>
+  	<description>Chatter Profile Parent Project</description>
+  
+    <properties>
+		<maven.compiler.source>17</maven.compiler.source>
+		<maven.compiler.target>17</maven.compiler.target>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<spring-boot.version>3.5.11</spring-boot.version>
+		<spring-cloud.version>2025.0.0</spring-cloud.version>
+		<lombok.version>1.18.38</lombok.version>
+	</properties>
+	
+    <dependencyManagement>
+    	<dependencies>
+    		<dependency>
+    			<groupId>org.springframework.boot</groupId>
+    			<artifactId>spring-boot-dependencies</artifactId>
+				<version>${spring-boot.version}</version>
+    			<type>pom</type>
+    			<scope>import</scope>
+    		</dependency>
+
+			<dependency>
+				<groupId>org.springframework.cloud</groupId>
+				<artifactId>spring-cloud-dependencies</artifactId>
+				<version>${spring-cloud.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+    	</dependencies>
+    </dependencyManagement>
+    
+    <dependencies>
+    	<!-- 
+			*** LOMBOK PACKAGES ***
+		-->
+		
+		<!-- https://mvnrepository.com/artifact/org.projectlombok/lombok -->
+		<!-- 1.18.38 -->
+	    <dependency>
+	        <groupId>org.projectlombok</groupId>
+	        <artifactId>lombok</artifactId>
+	        <scope>provided</scope>
+	    </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                    <source>${maven.compiler.source}</source>
+                    <target>${maven.compiler.target}</target>
+                    
+                    <annotationProcessorPaths>
+						<!-- Lombok -->
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

@@ -1,0 +1,14 @@
+apiVersion: api.cerbos.dev/v1
+resourcePolicy:
+  resource: "user-role"
+  version: "default"
+  importDerivedRoles:
+    - user_roles
+  constants:
+    local:
+      corporate_network_ip_range: 10.20.0.0/16
+  rules:
+    - actions: ['*']
+      effect: EFFECT_ALLOW
+      derivedRoles:
+        - admin

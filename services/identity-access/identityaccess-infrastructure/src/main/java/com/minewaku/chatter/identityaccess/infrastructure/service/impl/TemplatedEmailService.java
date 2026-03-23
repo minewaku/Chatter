@@ -1,0 +1,71 @@
+package com.minewaku.chatter.identityaccess.infrastructure.service.impl;
+
+import java.util.Map;
+
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.stereotype.Service;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
+
+import com.minewaku.chatter.identityaccess.application.port.outbound.notification.EmailSender;
+import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.Email;
+import com.minewaku.chatter.identityaccess.domain.sharedkernel.value.MailType;
+
+import io.github.resilience4j.retry.annotation.Retry;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
+
+@Service
+public class TemplatedEmailService implements EmailSender {
+	
+	private final JavaMailSender mailSender;
+	private final TemplateEngine templateEngine;
+
+	public TemplatedEmailService(JavaMailSender mailSender, TemplateEngine templateEngine) {
+		this.mailSender = mailSender;
+		this.templateEngine = templateEngine;
+	}
+	
+	@Override
+	public String buildContent(Map<String, String> parameters, MailType mailType) {
+		try {
+		    Context context = new Context();
+
+		    parameters.forEach((key, value) -> {
+		        if (key != null) {
+		            context.setVariable(key.toString(), value);
+		        }
+		    });
+
+		    return templateEngine.process(mailTypeToTemplateName(mailType), context);
+		} catch(Exception e) {
+			throw new RuntimeException("Unable to build the email content");
+		}
+	}
+
+	@Override
+	@Retry(name = "mailRetry")
+	public void send(Email to, String subject, String content) {
+		try {
+			MimeMessage message = mailSender.createMimeMessage();
+			MimeMessageHelper helper = new MimeMessageHelper(message, true);
+			
+			helper.setTo(to.getValue());
+			helper.setSubject(subject);
+			helper.setText(content, true);
+			
+			mailSender.send(message);
+		} catch(MessagingException e) {
+			throw new RuntimeException("Unable to send an email");
+		}
+	}
+	
+	private String mailTypeToTemplateName(MailType mailType) {
+		return switch (mailType) {
+	        case EMAIL_CONFIRMATION -> "verifyEmailTemplate";
+	        case LOGIN_NOTIFICATION -> "login-notification-email";
+	        default -> throw new IllegalArgumentException("Invalid email type: " + mailType);
+		};
+	}
+}

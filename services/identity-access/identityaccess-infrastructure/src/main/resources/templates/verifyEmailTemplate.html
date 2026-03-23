@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Trilog - Verify Your Email</title>
+    <style>
+        /* Reset styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            background-color: #f4f6f8;
+            color: #333;
+            padding: 20px;
+        }
+
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 32px;
+            color: #ffffff;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .welcome-text {
+            color: #ffffff;
+            font-size: 20px;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px 30px;
+        }
+
+        h1 {
+            color: #1f2937;
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        p {
+            color: #4b5563;
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+
+        .button-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .verify-button {
+            display: inline-block;
+            padding: 14px 32px;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: #ffffff !important;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            transition: transform 0.2s ease;
+        }
+
+        .verify-button:hover {
+            transform: translateY(-2px);
+        }
+
+        .link-container {
+            background-color: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            background-color: #f8fafc;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .social-links {
+            margin-top: 20px;
+        }
+
+        .social-link {
+            display: inline-block;
+            margin: 0 10px;
+            color: #6366f1;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+
+            .content {
+                padding: 20px 15px;
+            }
+
+            .verify-button {
+                padding: 12px 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <div class="logo">CHATTER</div>
+            <div class="welcome-text">Welcome aboard!</div>
+        </div>
+        
+        <div class="content">
+            <h1>Verify Your Email Address</h1>
+            
+            <p>Thank you for joining Chatter! We're excited to have you as part of our community. To get started, please verify your email address by clicking the button below:</p>
+            
+            <div class="button-container">
+                <a th:href="${verifyUrl}" class="verify-button">Verify Email Address</a>
+            </div>
+            
+            <p>This link will expire in [[${expirationMinutes}]] minutes. If you didn't create an account with Chatter, you can safely ignore this email.</p>
+            
+            <div class="link-container">
+                <p style="margin-bottom: 10px;">If the button doesn't work, copy the link below:</p>
+                <p style="color: #6366f1; word-wrap: break-word;">[[${verifyUrl}]]</p>
+            </div>
+            
+            <p>Need help? Contact our support team at support@chatter.com</p>
+        </div>
+        
+        <div class="footer">
+            <p>© 2025 Chatter. All rights reserved.</p>
+            <div class="social-links">
+                <a href="https://youtu.be/dQw4w9WgXcQ?si=bmA8Afj1eep9XCOC" class="social-link">Twitter</a>
+                <a href="https://youtu.be/dQw4w9WgXcQ?si=bmA8Afj1eep9XCOC" class="social-link">Facebook</a>
+                <a href="https://youtu.be/dQw4w9WgXcQ?si=bmA8Afj1eep9XCOC" class="social-link">Instagram</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

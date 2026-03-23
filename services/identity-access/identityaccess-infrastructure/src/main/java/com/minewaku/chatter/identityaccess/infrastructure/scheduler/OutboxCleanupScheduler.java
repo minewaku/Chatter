@@ -1,0 +1,25 @@
+package com.minewaku.chatter.identityaccess.infrastructure.scheduler;
+
+import java.time.LocalDateTime;
+
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.minewaku.chatter.identityaccess.infrastructure.persistence.JpaOutboxRepository;
+
+@Component
+public class OutboxCleanupScheduler {
+
+    private final JpaOutboxRepository outboxRepository;
+
+    public OutboxCleanupScheduler(JpaOutboxRepository outboxRepository) {
+        this.outboxRepository = outboxRepository;
+    }
+
+    @Scheduled(fixedRateString = "P1D")
+    @Transactional
+    public void cleanupOldEvents() {
+        outboxRepository.deleteByCreatedAtBefore(LocalDateTime.now().minusHours(1));
+    }
+}

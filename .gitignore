@@ -1,0 +1,177 @@
+# ==========================================
+# 1. BUILD ARTIFACTS (JAVA, MAVEN & GRADLE)
+# ==========================================
+# Core build directories
+target/
+build/
+bin/
+/scratch
+
+# Compiled class files
+*.class
+
+# Packaged artifacts
+*.jar
+*.war
+*.ear
+*.nar
+*.zip
+*.tar.gz
+*.tgz
+*.rar
+
+# Maven specific files
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# Gradle specific
+.gradle/
+
+# Allow build directories inside source (NetBeans exception)
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# ==========================================
+# 2. LOGS & CRASH REPORTS
+# ==========================================
+log/
+logs/
+*.log
+
+# JVM Crash logs (e.g., hs_err_pid)
+hs_err_pid*
+*.stackdump
+
+# ==========================================
+# 3. INFRASTRUCTURE & MOUNT DATA (MONOREPO)
+# ==========================================
+# Strictly prevent Git from tracking physical data of Database, Kafka, Vault, etc.
+/infrastructure/**/data/
+/infrastructure/**/logs/
+/infrastructure/**/volume/
+/infrastructure/**/data-mount/
+
+# Vault local file storage backend
+/infrastructure/vault/file/
+
+# ==========================================
+# 4. ENVIRONMENT & SECURITY (SECRETS)
+# ==========================================
+# Vital rule: Never push environment variables or local configs
+.env
+.env.*
+*.properties.local
+*.yml.local
+local.properties
+
+# Ignore certificate/key files generated locally by Cerbos or Vault
+*.pem
+*.jks
+*.p12
+*.crt
+*.key
+
+# ==========================================
+# 5. IDE CONFIGURATIONS
+# ==========================================
+
+# --- VS Code ---
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
+*.code-workspace
+
+# --- IntelliJ IDEA ---
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# --- Eclipse / Spring Tool Suite (STS) ---
+.project
+.classpath
+.settings/
+.metadata
+.factorypath
+.apt_generated/
+.apt_generated
+.springBeans
+.sts4-cache/
+.loadpath
+.recommenders/
+.externalToolBuilders/
+.pydevproject
+.cproject
+.autotools
+.buildpath
+.tern-project
+.texlipse
+.cache-main
+.scala_dependencies
+.worksheet
+*.launch
+
+# --- NetBeans ---
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# --- Other Editors ---
+*.sublime-*
+
+# ==========================================
+# 6. OPERATING SYSTEM FILES
+# ==========================================
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+ehthumbs_vista.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# ==========================================
+# 7. GIT MERGE BACKUPS & TEMP FILES
+# ==========================================
+# Temporary files and swp files
+tmp/
+*.tmp
+*.bak
+*.swp
+*.sw?
+.#*
+*#
+*~
+*~.nib
+
+# Created by git when using merge tools for conflicts
+*.orig
+*.BACKUP.*
+*.BASE.*
+*.LOCAL.*
+*.REMOTE.*
+*_BACKUP_*.txt
+*_BASE_*.txt
+*_LOCAL_*.txt
+*_REMOTE_*.txt
+
+# Miscellaneous
+README.html
+.exercism

@@ -1,0 +1,14 @@
+# ==========================================
+# GIT ATTRIBUTES - LINE ENDING CONFIGURATION
+# ==========================================
+
+# Auto-detect text files and perform LF normalization (Git handles it)
+* text=auto
+
+# Force Bash scripts to ALWAYS use LF line endings (Linux/Docker standard)
+*.sh text eol=lf
+*.bash text eol=lf
+
+# Force Windows batch scripts to ALWAYS use CRLF line endings
+*.cmd text eol=crlf
+*.bat text eol=crlf
