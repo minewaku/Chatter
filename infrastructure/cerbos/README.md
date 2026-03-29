@@ -1,20 +1,7 @@
-# CerbosService — Quick Start
-
-This service runs Cerbos (a policy engine) for authorization checks used by the
-project. The short guide below explains how to start Cerbos locally, where the
-configuration lives, and a few troubleshooting tips.
-
-## Run (Docker)
-
-Start Cerbos using Docker Compose (detached):
-
+## Pulling via Docker
 ```powershell
-docker compose -p cerbos_service_chatter -f docker-compose.yml up -d
+docker compose -p cerbos_chatter -f docker-compose.yml up -d
 ```
-
-Notes:
-- The compose project name `cerbos_service_chatter` is used to namespace containers and network names.
-- Run this command from the `CerbosService` directory (or adjust the `-f` path accordingly).
 
 ## Development credentials
 ```

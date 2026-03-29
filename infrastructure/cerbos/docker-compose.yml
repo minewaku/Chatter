@@ -13,9 +13,9 @@ services:
       - "3599:3599"
       - "3600:3600"
     volumes:
-      - ./docker/policies:/policies
-      - ./docker/data:/data
-      - ./docker/config/config.yaml:/config.yaml
+      - ./policies:/policies
+      - ./.data:/data
+      - ./config/config.yaml:/config.yaml
     command: ["server", "--config=/config.yaml"]
 
 
