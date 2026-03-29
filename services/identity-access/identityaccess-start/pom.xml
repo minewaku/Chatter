@@ -25,7 +25,7 @@
 
 
         <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter -->
-        <!-- 3.5.4 -->
+        <!-- 3.5.11 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
@@ -50,6 +50,25 @@
           <groupId>org.springframework.boot</groupId>
           <artifactId>spring-boot-devtools</artifactId>
         </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-actuator -->
+        <!-- 3.5.11 -->
+        <dependency>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+
+
+        <!--
+          ENV RELATED PACKAGES
+        -->
+        
+        <!-- https://mvnrepository.com/artifact/me.paulschwarz/springboot3-dotenv -->
+        <dependency>
+            <groupId>me.paulschwarz</groupId>
+            <artifactId>springboot3-dotenv</artifactId>
+        </dependency>
         
   </dependencies>
 
@@ -58,6 +77,19 @@
         <plugin>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-maven-plugin</artifactId>
+            <version>${spring-boot.version}</version>
+
+            <executions>
+                <execution>
+                    <goals>
+                        <goal>repackage</goal>
+                    </goals>
+                </execution>
+            </executions>
+            
+            <configuration>
+                <mainClass>com.minewaku.chatter.chatter.identityaccess.start.StartApplication</mainClass>
+            </configuration>
         </plugin>
     </plugins>
   </build>

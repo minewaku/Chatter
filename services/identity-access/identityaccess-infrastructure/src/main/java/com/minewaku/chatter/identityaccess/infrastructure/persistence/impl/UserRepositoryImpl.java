@@ -4,7 +4,6 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Repository;
 
-import com.minewaku.chatter.identityaccess.domain.aggregate.session.model.SessionId;
 import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.Email;
 import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.User;
 import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.UserId;
@@ -46,10 +45,5 @@ public class UserRepositoryImpl implements UserRepository {
 	@Override
 	public Optional<User> findByEmail(Email email) {
 		return jpaUserRepository.findByEmail(email.getValue()).map(userMapper::entityToDomain);
-	}
-
-	@Override
-	public Optional<User> findBySessionId(SessionId sessionId) {
-		return jpaUserRepository.findBySessionsSessionId(sessionId.getValue()).map(userMapper::entityToDomain);
 	}
 }

@@ -1,0 +1,48 @@
+version: '3.8'
+
+networks:
+  chatter-net:
+    name: chatter-net
+    driver: bridge
+
+services:
+  profile-redis-chatter:
+      image: redis:7
+      container_name: profile-redis-chatter
+      restart: always
+      ports:
+        - "6388:6388"
+      volumes:
+        - ./environment/redis/.data:/data
+        - ./environment/redis/config/redis.conf:/usr/local/etc/redis/redis.conf
+      command: redis-server /usr/local/etc/redis/redis.conf --port 6388 --appendonly yes
+      networks:
+        - chatter-net
+
+  profile-postgresql-chatter:
+    image: postgres:15
+    container_name: profile-postgresql-chatter
+    restart: always
+    environment:
+      POSTGRES_DB: chatter
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "5441:5441"
+    command:
+      - "postgres"
+      - "-c"
+      - "listen_addresses=*"
+      - "-c"
+      - "port=5441"
+      - "-c"
+      - "wal_level=logical"
+      - "-c"
+      - "max_wal_senders=10"
+      - "-c"
+      - "max_replication_slots=10"
+    volumes:
+      - ./environment/postgresql/.data:/var/lib/postgresql/data
+      - ./environment/postgresql/init:/docker-entrypoint-initdb.d
+    networks:
+      - chatter-net

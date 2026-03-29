@@ -10,6 +10,7 @@
   
   	<artifactId>identityaccess-application</artifactId>
 
+
 	<dependencies>
         <dependency>
             <groupId>com.minewaku.chatter</groupId>

@@ -1,0 +1,37 @@
+package com.minewaku.chatter.profile.domain.sharedkernel.value;
+
+import java.time.Instant;
+
+import jakarta.persistence.Embeddable;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.ToString;
+
+@Embeddable
+@Getter
+@ToString
+@EqualsAndHashCode
+public class DeletionStatus {
+    
+    private boolean deleted;
+
+    private Instant deletedAt;
+
+    public DeletionStatus() {
+        this.deleted = false;
+        this.deletedAt = null;
+    }
+
+    public DeletionStatus(boolean deleted, Instant deletedAt) {
+        this.deleted = deleted;
+        this.deletedAt = deletedAt;
+    }
+
+    public DeletionStatus markDeleted() {
+        return new DeletionStatus(true, Instant.now());
+    }
+
+    public DeletionStatus markRestored() {
+        return new DeletionStatus(false, null);
+    }
+}

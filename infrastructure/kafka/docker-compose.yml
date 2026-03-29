@@ -18,7 +18,7 @@ services:
     ports:
       - "2181:2181"
     volumes:
-      - ./data/zookeeper_data:/var/lib/zookeeper
+      - ./.data/zookeeper_data:/var/lib/zookeeper
     networks:
       - chatter-net
 
@@ -29,29 +29,18 @@ services:
     depends_on:
       - kafka-zookeeper-chatter
     ports:
-      - "5003:5003" # Port cho máy ngoài (Java App)
+      - "5003:5003"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: kafka-zookeeper-chatter:2181
-      
-      # --- CẤU HÌNH QUAN TRỌNG ĐÃ SỬA ---
-      # Định nghĩa 2 loại kết nối: INTERNAL (nội bộ) và EXTERNAL (bên ngoài)
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
-      
-      # Mở 2 cổng: 29092 cho nội bộ docker, 5003 cho máy ngoài
       KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:5003
-      
-      # Trả về địa chỉ khác nhau tùy theo ai hỏi:
-      # - Nếu là Docker (Kafka UI) -> Trả về 'kafka-chatter:29092'
-      # - Nếu là Java App (Máy thật) -> Trả về 'localhost:5003'
-      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka-chatter:29092,EXTERNAL://localhost:5003
-      
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka-chatter:29092,EXTERNAL://localhost:5003   
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
-      # ----------------------------------
       
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     volumes:
-      - ./data/kafka_data:/var/lib/kafka/data
+      - ./.data/kafka_data:/var/lib/kafka/data
       - ./scripts:/opt/kafka/scripts
     networks:
       - chatter-net
@@ -64,7 +53,6 @@ services:
       - "8080:8080"
     environment:
       - KAFKA_CLUSTERS_0_NAME=local
-      # Kafka UI nằm trong mạng Docker, nên phải gọi vào cổng nội bộ (29092)
       - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka-chatter:29092
       - KAFKA_CLUSTERS_0_READONLY=false
     depends_on:

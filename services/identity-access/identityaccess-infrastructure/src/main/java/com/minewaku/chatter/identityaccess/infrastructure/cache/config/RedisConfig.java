@@ -24,19 +24,20 @@ import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.minewaku.chatter.identityaccess.infrastructure.cache.dto.ConfirmationTokenCacheDto;
 import com.minewaku.chatter.identityaccess.infrastructure.cache.dto.SessionCacheDto;
+import com.minewaku.chatter.identityaccess.infrastructure.cache.property.VaultRedisProperties;
 
 
 @Configuration
 public class RedisConfig {
 
     @Bean
-    LettuceConnectionFactory redisConnectionFactory(RedisProperties redisProperties) {
+    LettuceConnectionFactory redisConnectionFactory(RedisProperties redisProperties, VaultRedisProperties vaultRedisProperties) {
         RedisStandaloneConfiguration config = new RedisStandaloneConfiguration(
                 redisProperties.getHost(),
                 redisProperties.getPort());
 
-        config.setUsername(redisProperties.getUsername());
-        config.setPassword(redisProperties.getPassword());
+        config.setUsername(vaultRedisProperties.getUsername());
+        config.setPassword(vaultRedisProperties.getPassword());
 
         LettuceConnectionFactory factory = new LettuceConnectionFactory(config);
         return factory;

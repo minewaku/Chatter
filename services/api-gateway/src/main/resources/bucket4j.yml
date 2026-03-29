@@ -1,0 +1,30 @@
+app:
+  rate-limit:
+    rules:
+      - pathPattern: "/api/v*/auth/**"
+        initialTokens: 10
+        capacity: 10
+        refilltokens: 10
+        period: 1m
+        isGreedyRefill: false
+
+      - pathPattern: "api/v*/users/**"
+        initialTokens: 100
+        capacity: 100
+        refilltokens: 100
+        period: 1m
+        isGreedyRefill: false
+
+      - pathPattern: "api/v*/profiles/**"
+        initialTokens: 100
+        capacity: 100
+        refilltokens: 100
+        period: 1m
+        isGreedyRefill: false
+
+      - pathPattern: "api/index"
+        initialTokens: 10
+        capacity: 10
+        refilltokens: 10
+        period: 1m
+        isGreedyRefill: false

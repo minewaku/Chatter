@@ -1,199 +1,164 @@
 # VaultService — Quick Start
 
-This document explains how to run the Vault server for this project, initialize and unseal it, enable engines, and store secrets used by the services in this repo.
+This document provides a step-by-step guide on how to run the Vault server for this project, initialize and unseal it, enable secret engines, and securely store the secrets required by the various services in this repository.
 
-## Run with Docker
+## 1. Setup and Initialization
 
-
-
-
-Start Vault using Docker Compose:
-
+### 1.1 Run with Docker
+Start the Vault service using Docker Compose:
 ```powershell
 docker compose -p vault_service_chatter -f docker-compose.yml up -d
 ```
 
-## Initialize Vault
-
-Initialize Vault and generate unseal keys plus the initial root token:
-
+### 1.2 Initialize Vault
+Initialize Vault and generate the unseal keys along with the initial root token:
 ```bash
 vault operator init -key-shares=1 -key-threshold=1
 ```
 
 > [!NOTE]
-> - This command generates 1 unseal key and 1 initial root token (because the **-key-shares** and **-key-threshold** are both 1).
-> - Vault encrypts data at rest; it must be unsealed before use.
+> - This command generates exactly **1 unseal key** and **1 initial root token**.
+> - After initialization, Vault remains in a **sealed** state. You must run the unseal command below before you can use it.
 
-## Unseal the Vault
-
-Use the unseal command and provide the unseal key(s) produced during init:
-
+### 1.3 Unseal Vault
+Unlock Vault using the key generated during the initialization step:
 ```bash
 vault operator unseal
 ```
+*You will be prompted to provide the required number of unseal keys based on your configured `key-threshold`.*
 
-Then provided the required number of unseal keys based on the key-threshold.
-
-## Login
-
-Authenticate using the initial root token from the init step:
-
+### 1.4 Login
+Authenticate using the initial root token obtained from the initialization step:
 ```bash
 vault login <root_token>
 ```
 
-## Enable KV engine for secrets
+---
 
-Enable the KV (key/value) engine at the `secret` path (using KV v2):
+## 2. Enable Secret Engines
 
+### 2.1 Key-Value (KV) Engine for Static Secrets
+Enable the KV (Key/Value) engine at the `secret` path using KV version 2:
 ```bash
 vault secrets enable -path=secret kv-v2
 ```
 
 > [!NOTE]
-> This creates a `./secret` namespace that stores secrets in a key–value structure (kv-v2 supports versioned secret values).
+> This creates a `secret/` namespace that stores static secrets in a key-value structure. KV-v2 supports versioning for secret values.
 
-## Enable database secrets engine (dynamic secrets)
-
-To allow Vault to manage database credentials dynamically (MySQL, Postgres, Redis, etc.):
-
+### 2.2 Database Engine for Dynamic Secrets
+To allow Vault to dynamically manage database credentials (e.g., MySQL, PostgreSQL), enable the database secrets engine:
 ```bash
 vault secrets enable database
 ```
-vault secrets enable database
+
+*(Optional)* If you ever need to disable specific database secret engines, you can use:
+```bash
 vault secrets disable database/authentication-service
 vault secrets disable database/apigateway
+```
 
-Useful references:
-- Understand static vs dynamic secrets: https://developer.hashicorp.com/vault/tutorials/get-started/understand-static-dynamic-secrets
-- Database secrets engine API: https://developer.hashicorp.com/vault/api-docs/secret/databases
-- Spring Vault configuration (see each service's application-dev.properties): https://docs.spring.io/spring-cloud-vault/reference/advanced-topics.html
+**Useful References:**
+- [Understand static vs dynamic secrets](https://developer.hashicorp.com/vault/tutorials/get-started/understand-static-dynamic-secrets)
+- [Database secrets engine API](https://developer.hashicorp.com/vault/api-docs/secret/databases)
+- [Spring Vault configuration](https://docs.spring.io/spring-cloud-vault/reference/advanced-topics.html)
 
-## Putting secrets into Vault
+---
+
+## 3. Populating Secrets into Vault
 
 > [!NOTE]
-> The database engine doesn't support nested structures
+> The database engine does not support nested structures.
 
-### 1. For authentication-service
-<br>
+### 3.1 IdentityAccess Service
 
-**Put secrets for authentication-service**
-
+**Add static secrets:**
 ```bash
-vault kv put secret/authentication-service - < ./vault/tmp/authentication-sv-secrets.json
-```
-<br>
-
-**Create MySQL database config with dynamic secrets; access restricted to the "approle" role only**
-```bash copy
-vault write database/config/authentication-service-mysql \
-  plugin_name=mysql-database-plugin \
-  connection_url="{{username}}:{{password}}@tcp(authentication-mysql-chatter:3314)/chatter" \
-  allowed_roles=authentication-service-mysql-approle \
-  username="vault" \
-  password="FT6Qwf4NqRRT9BhA"
+vault kv put secret/identityaccess - < ./vault/tmp/secrets/identityaccess-secrets.json
 ```
 
-```bash copy
-vault write database/roles/authentication-service-mysql-approle \
-    db_name="authentication-service-mysql" \
-    creation_statements=@./vault/tmp/creation_statements/mysql-role-orm.sql \
-    default_ttl=1h \
-    max_ttl=24h
-```
-<br>
-
-**Create PostgreSQL database config with dynamic secrets; access restricted to the "approle" role only**
-```bash copy
-vault write database/config/authentication-service-postgres \
+**Create PostgreSQL dynamic database config:**
+*(Access is restricted to the "approle" role only)*
+```bash
+vault write database/config/identityaccess-postgresql \
   plugin_name="postgresql-database-plugin" \
   connection_url="postgresql://{{username}}:{{password}}@authentication-postgresql-chatter:5440/chatter?sslmode=disable" \
-  allowed_roles="authentication-service-postgres-approle" \
+  allowed_roles="identityaccess-postgresql-approle" \
   username="vault" \
   password="FT6Qwf4NqRRT9BhA"
 ```
 
-```bash copy
-vault write database/roles/authentication-service-postgres-approle \
-  db_name="authentication-service-postgres" \
-  creation_statements=@./vault/tmp/creation_statements/postgres-role-orm.sql \
+**Create the database role:**
+```bash
+vault write database/roles/identityaccess-postgresql-approle \
+  db_name="identityaccess-postgresql" \
+  creation_statements=@./vault/tmp/creation_statements/postgresql-role-orm.sql \
   default_ttl=1h \
   max_ttl=24h
 ```
-<br>
 
-### 2. For profiles-service
-<br>
+### 3.2 Profile Service
 
-**Put secrets for profiles-service**
-
+**Add static secrets:**
 ```bash
-vault kv put secret/profiles-service - < ./vault/tmp/profiles-sv-secrets.json
+vault kv put secret/profile - < ./vault/tmp/secrets/profile-secrets.json
 ```
-<br>
 
-**Create PostgreSQL database config with dynamic secrets; access restricted to the "approle" role only**
-```bash copy
-vault write database/config/profiles-service-postgres \
+**Create PostgreSQL dynamic database config:**
+*(Access is restricted to the "approle" role only)*
+```bash
+vault write database/config/profile-postgresql \
   plugin_name="postgresql-database-plugin" \
   connection_url="postgresql://{{username}}:{{password}}@profiles-postgresql-chatter:5441/chatter?sslmode=disable" \
-  allowed_roles="profiles-service-postgres-approle" \
+  allowed_roles="profile-postgresql-approle" \
   username="vault" \
   password="QIUbomaKaq463g25"
 ```
 
-```bash copy
-vault write database/roles/profiles-service-postgres-approle \
-  db_name="profiles-service-postgres" \
-  creation_statements=@./vault/tmp/creation_statements/postgres-role-orm.sql \
+**Create the database role:**
+```bash
+vault write database/roles/profile-postgresql-approle \
+  db_name="profile-postgresql" \
+  creation_statements=@./vault/tmp/creation_statements/postgresql-role-orm.sql \
   default_ttl=1h \
   max_ttl=24h
 ```
-<br>
 
+### 3.3 ApiGateway Service
 
-### 3. For apigateway
-
+**Add static secrets:**
 ```bash
-vault kv put secret/api-gateway - < ./vault/tmp/api-gateway-secrets.json
-```
-<br>
-
-
-
-### 4. For cerbos-bridge-service
-```bash
-vault kv put secret/cerbos-bridge-service - < ./vault/tmp/cerbos-bridge-sv-secrets.json
+vault kv put secret/apigateway - < ./vault/tmp/secrets/apigateway-secrets.json
 ```
 
-<br>
+### 3.4 Cerbos Bridge Service
 
-
-
-### 5. For jwt keys
+**Add static secrets:**
 ```bash
-vault kv put secret/common/jwt/rs256 private-key=@./vault/tmp/private-key.pem public-key=@./vault/tmp/public-key.pem
+vault kv put secret/cerbos-bridge - < ./vault/tmp/secrets/cerbos-bridge-secrets.json
 ```
 
-## Verify secrets
+### 3.5 JWT Keys
 
+**Add static secrets for common JWT keys:**
 ```bash
-vault kv get secret/authentication-service
+vault kv put secret/common/jwt/rs256 private-key=@./vault/tmp/keys/private-key.pem public-key=@./vault/tmp/keys/public-key.pem
 ```
-
-## Vault UI
-
-Open the Vault UI at the Vault server's address and port to manage secrets using the web interface.
 
 ---
 
-If you want, I can:
-- Add a short script to populate the `./vault/tmp` files from environment variables for CI usage.
-- Replace example passwords and secrets in the README with placeholders and explain secure handling.
-- Add a minimal troubleshooting section for common Vault errors.
+## 4. Verification
 
-Which of these would you like next?
+Verify that your secrets have been stored correctly:
+```bash
+vault kv get secret/identityaccess
+```
+
+---
+
+## 5. Vault UI
+
+You can also manage your secrets using the web interface. Open the Vault UI by navigating to the Vault server's address and port in your web browser, and log in using your root token.
 
 
 > [!CAUTION]

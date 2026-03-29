@@ -1,15 +1,11 @@
 package com.minewaku.chatter.apigateway.filter;
 
-import java.util.List;
-
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.minewaku.chatter.apigateway.constant.ExchangeAttr;
 import com.minewaku.chatter.apigateway.exception.InvalidTokenException;
 import com.minewaku.chatter.apigateway.util.JwtUtil;
@@ -21,15 +17,12 @@ import lombok.extern.slf4j.Slf4j;
 public class AuthenticationFilter extends AbstractGatewayFilterFactory<AuthenticationFilter.Config> {
 
     private final JwtUtil jwtUtils;
-    private final ObjectMapper objectMapper;
 
     public AuthenticationFilter(
-            JwtUtil jwtUtils,
-            ObjectMapper objectMapper) {
+            JwtUtil jwtUtils) {
 
         super(Config.class);
         this.jwtUtils = jwtUtils;
-        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -49,10 +42,6 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
                     .flatMap(claims -> {
                         String username = claims.get("email", String.class);
                         Long userId = Long.parseLong(claims.getSubject());
-                        List<String> roles = objectMapper.convertValue(
-                                claims.get("roles"),
-                                new TypeReference<List<String>>() {
-                                });
 
                         if (username == null || username.isBlank()) {
                             log.warn("Invalid username in token");
@@ -62,7 +51,6 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
 
                         ExchangeAttr.USERNAME.put(exchange, username);
                         ExchangeAttr.USER_ID.put(exchange, userId);
-                        ExchangeAttr.ROLES.put(exchange, java.util.Arrays.asList(roles));
 
                         return chain.filter(exchange);
                     })

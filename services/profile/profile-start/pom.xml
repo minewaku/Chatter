@@ -9,47 +9,65 @@
   
   <artifactId>profile-start</artifactId>
 
-    <dependencies>
-        <dependency>
-            <groupId>com.minewaku.chatter</groupId>
-            <artifactId>profile-presentation</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+  <dependencies>
+      <dependency>
+          <groupId>com.minewaku.chatter</groupId>
+          <artifactId>profile-presentation</artifactId>
+          <version>${project.version}</version>
+      </dependency>
 
-        <dependency>
-            <groupId>com.minewaku.chatter</groupId>
-            <artifactId>profile-infrastructure</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+      <dependency>
+          <groupId>com.minewaku.chatter</groupId>
+          <artifactId>profile-infrastructure</artifactId>
+          <version>${project.version}</version>
+      </dependency>
 
 
-        <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter -->
-        <!-- 3.5.4 -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.springframework.boot</groupId>
-                    <artifactId>spring-boot-starter-logging</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-starter-netflix-eureka-client -->
-        <!-- 4.3.0 -->
-        <dependency>
-          <groupId>org.springframework.cloud</groupId>
-          <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-devtools -->
-        <!-- 3.5.11 -->
-        <dependency>
+      <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter -->
+      <!-- 3.5.11 -->
+      <dependency>
           <groupId>org.springframework.boot</groupId>
-          <artifactId>spring-boot-devtools</artifactId>
-        </dependency>
-        
+          <artifactId>spring-boot-starter</artifactId>
+          <exclusions>
+              <exclusion>
+                  <groupId>org.springframework.boot</groupId>
+                  <artifactId>spring-boot-starter-logging</artifactId>
+              </exclusion>
+          </exclusions>
+      </dependency>
+
+      <!-- https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-starter-netflix-eureka-client -->
+      <!-- 4.3.0 -->
+      <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+      </dependency>
+
+      <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-devtools -->
+      <!-- 3.5.11 -->
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-devtools</artifactId>
+      </dependency>
+
+      <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-actuator -->
+      <!-- 3.5.11 -->
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-actuator</artifactId>
+      </dependency>
+
+
+
+      <!--
+        ENV RELATED PACKAGES
+      -->
+
+    <!-- https://mvnrepository.com/artifact/me.paulschwarz/springboot3-dotenv -->
+    <dependency>
+        <groupId>me.paulschwarz</groupId>
+        <artifactId>springboot3-dotenv</artifactId>
+    </dependency>
   </dependencies>
 
   <build>
@@ -57,7 +75,21 @@
         <plugin>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-maven-plugin</artifactId>
+            <version>${spring-boot.version}</version>
+
+            <executions>
+                <execution>
+                    <goals>
+                        <goal>repackage</goal>
+                    </goals>
+                </execution>
+            </executions>
+            
+            <configuration>
+                <mainClass>com.minewaku.chatter.chatter.profile.start.ProfileStartApplication</mainClass>
+            </configuration>
         </plugin>
     </plugins>
   </build>
+
 </project>

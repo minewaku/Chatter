@@ -1,0 +1,3 @@
+user default off >defaultPass ~* +@all
+user vault on >XIqnIWD0DRb7Axwg ~* +@all
+user dummy on >123456 -@all

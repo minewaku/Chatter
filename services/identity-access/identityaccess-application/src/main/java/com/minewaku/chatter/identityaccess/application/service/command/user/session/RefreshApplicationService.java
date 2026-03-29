@@ -66,11 +66,11 @@ public class RefreshApplicationService implements RefreshUseCase {
 		TokenPayload tokenPayload = refreshTokenEncryptor.decrypt(command.refreshToken());
 		SessionId sessionId = new SessionId(tokenPayload.sessionId());
 
-		User user = userRepository.findBySessionId(sessionId)
-				.orElseThrow(() -> new EntityNotFoundException("User not found"));
-
 		Session session = sessionRepository.findById(sessionId)
 				.orElseThrow(() -> new EntityNotFoundException("Refresh token not found"));
+
+		User user = userRepository.findById(session.getUserId())
+				.orElseThrow(() -> new EntityNotFoundException("User not found"));
 
 
 		Session refreshedSession = refreshDomainService.handle(user, session, tokenPayload.generation());

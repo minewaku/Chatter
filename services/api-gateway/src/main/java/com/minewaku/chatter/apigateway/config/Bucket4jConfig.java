@@ -8,6 +8,8 @@ import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import com.minewaku.chatter.apigateway.config.properties.VaultRedisProperties;
+
 import io.github.bucket4j.distributed.ExpirationAfterWriteStrategy;
 import io.github.bucket4j.distributed.proxy.ProxyManager;
 import io.github.bucket4j.redis.lettuce.cas.LettuceBasedProxyManager;
@@ -23,17 +25,17 @@ public class Bucket4jConfig {
 
     @Bean
     @RefreshScope
-    RedisClient redisClient(RedisProperties redisProperties) {
+    RedisClient redisClient(RedisProperties redisProperties, VaultRedisProperties vaultRedisProperties) {
         System.out.println("port: " + redisProperties.getPort());
         System.out.println("host: " + redisProperties.getHost());
-        System.out.println("username: " + redisProperties.getUsername());
-        System.out.println("password: " + redisProperties.getPassword());
+        System.out.println("username: " + vaultRedisProperties.getUsername());
+        System.out.println("password: " + vaultRedisProperties.getPassword());
         System.out.println("ssl: " + redisProperties.getSsl());
 
         RedisURI redisUri = RedisURI.builder()
                 .withHost(redisProperties.getHost())
                 .withPort(redisProperties.getPort())
-                .withAuthentication(redisProperties.getUsername(), redisProperties.getPassword())
+                .withAuthentication(vaultRedisProperties.getUsername(), vaultRedisProperties.getPassword())
                 .withTimeout(redisProperties.getTimeout() != null ? redisProperties.getTimeout() : Duration.ofSeconds(20))
                 .build();
         return RedisClient.create(redisUri);

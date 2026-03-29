@@ -24,8 +24,6 @@ public interface JpaUserRepository extends JpaRepository<JpaUserEntity, Long> {
 
     Page<JpaUserEntity> findAll(Pageable pageable);
 
-    Optional<JpaUserEntity> findBySessionsSessionId(String sessionId);
-
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM JpaUserEntity u WHERE u.id = :id")
     void hardDeleteById(@Param("id") Long id);

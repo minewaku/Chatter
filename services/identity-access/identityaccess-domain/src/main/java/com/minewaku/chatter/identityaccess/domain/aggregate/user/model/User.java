@@ -2,11 +2,8 @@ package com.minewaku.chatter.identityaccess.domain.aggregate.user.model;
 
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
-import com.minewaku.chatter.identityaccess.domain.aggregate.session.model.Session;
 import com.minewaku.chatter.identityaccess.domain.aggregate.user.event.UserRegisteredDomainEvent;
 import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.credentials.Credentials;
 import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.credentials.HashedPassword;
@@ -48,10 +45,6 @@ public class User {
     private Credentials credentials;
 
     @NonNull
-    private Set<Session> sessions = new HashSet<>();
-
-
-    @NonNull
     private final List<DomainEvent> events = new ArrayList<DomainEvent>();
 
 
@@ -67,8 +60,7 @@ public class User {
                 Instant lastLoginAt,
                 @NonNull Enablement enablement,
                 @NonNull AuditMetadata auditMetadata,
-                @NonNull Credentials credentials,
-                @NonNull Set<Session> sessions) {
+                @NonNull Credentials credentials) {
 
         this.id = id;
         this.email = email;
@@ -79,7 +71,6 @@ public class User {
         this.auditMetadata = auditMetadata;
 
         this.credentials = credentials;
-        this.sessions = sessions;
     }
 
 
@@ -95,11 +86,10 @@ public class User {
                 Instant lastLoginAt,
                 @NonNull Enablement enablement,
                 @NonNull AuditMetadata auditMetadata,
-                @NonNull Credentials credentials,
-                @NonNull Set<Session> sessions
+                @NonNull Credentials credentials
             ) {
 
-        return new User(id, email, username, birthday, lastLoginAt, enablement, auditMetadata, credentials, sessions);
+        return new User(id, email, username, birthday, lastLoginAt, enablement, auditMetadata, credentials);
     }
 
     public static User register (
@@ -120,8 +110,7 @@ public class User {
             null, 
             enablement, 
             auditMetadata, 
-            credentials, 
-            new HashSet<>()
+            credentials
         );        
         
         UserRegisteredDomainEvent userRegisteredDomainEvent = new UserRegisteredDomainEvent(
