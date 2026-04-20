@@ -82,7 +82,7 @@ vault kv put secret/identityaccess - < ./vault/tmp/secrets/identityaccess-secret
 ```bash
 vault write database/config/identityaccess-postgresql \
   plugin_name="postgresql-database-plugin" \
-  connection_url="postgresql://{{username}}:{{password}}@authentication-postgresql-chatter:5440/chatter?sslmode=disable" \
+  connection_url="postgresql://{{username}}:{{password}}@identityaccess-postgresql-chatter:5440/chatter?sslmode=disable" \
   allowed_roles="identityaccess-postgresql-approle" \
   username="vault" \
   password="FT6Qwf4NqRRT9BhA"
@@ -93,6 +93,7 @@ vault write database/config/identityaccess-postgresql \
 vault write database/roles/identityaccess-postgresql-approle \
   db_name="identityaccess-postgresql" \
   creation_statements=@./vault/tmp/creation_statements/postgresql-role-orm.sql \
+  revocation_statements=@./vault/tmp/revocation_statements/postgresql-revoke-orm.sql \
   default_ttl=1h \
   max_ttl=24h
 ```
@@ -109,7 +110,7 @@ vault kv put secret/profile - < ./vault/tmp/secrets/profile-secrets.json
 ```bash
 vault write database/config/profile-postgresql \
   plugin_name="postgresql-database-plugin" \
-  connection_url="postgresql://{{username}}:{{password}}@profiles-postgresql-chatter:5441/chatter?sslmode=disable" \
+  connection_url="postgresql://{{username}}:{{password}}@profile-postgresql-chatter:5441/chatter?sslmode=disable" \
   allowed_roles="profile-postgresql-approle" \
   username="vault" \
   password="QIUbomaKaq463g25"
@@ -120,6 +121,7 @@ vault write database/config/profile-postgresql \
 vault write database/roles/profile-postgresql-approle \
   db_name="profile-postgresql" \
   creation_statements=@./vault/tmp/creation_statements/postgresql-role-orm.sql \
+  revocation_statements=@./vault/tmp/revocation_statements/postgresql-revoke-orm.sql \
   default_ttl=1h \
   max_ttl=24h
 ```

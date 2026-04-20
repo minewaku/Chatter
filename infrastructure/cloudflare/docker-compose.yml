@@ -1,0 +1,19 @@
+version: '3.8'
+
+networks:
+  chatter-net:
+    name: chatter-net
+
+services:
+  cloudflared-chatter:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared-chatter
+    restart: always
+    environment:
+      # Bạn lấy Token này từ trang: Zero Trust -> Networks -> Tunnels
+      - TUNNEL_TOKEN=YOUR_CLOUDFLARE_TUNNEL_TOKEN_HERE
+    command: tunnel --no-autoupdate run
+    networks:
+      - chatter-net
+    depends_on:
+      - kafka-ui-chatter

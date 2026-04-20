@@ -22,10 +22,10 @@ public class AuthenticationRoute {
 		.route("auth", r -> r
 			.path("/api/v*/auth/**")
 			.filters(f -> f
-				.filter(authenticationFilter.apply(new AuthenticationFilter.Config()))
+				// .filter(authenticationFilter.apply(new AuthenticationFilter.Config()))
 				.filter(requestThrottlingFilter.apply(new RequestThrottlingFilter.Config()))
 			)
-			.uri("lb://AUTHENTICATION-SERVICE")
+			.uri("lb://IDENTITYACCESS")
 		)
 		.route("users", r -> r
 			.path("/api/v*/users/**")
@@ -33,15 +33,15 @@ public class AuthenticationRoute {
 				.filter(authenticationFilter.apply(new AuthenticationFilter.Config()))
 				.filter(requestThrottlingFilter.apply(new RequestThrottlingFilter.Config()))
 			)
-			.uri("lb://AUTHENTICATION-SERVICE")
+			.uri("lb://IDENTITYACCESS")
 		)
-		.route("roles", r -> r
-			.path("/api/v*/roles/**")
+		.route("sessions", r -> r
+			.path("/api/v*/sessions/**")
 			.filters(f -> f
 				.filter(authenticationFilter.apply(new AuthenticationFilter.Config()))
 				.filter(requestThrottlingFilter.apply(new RequestThrottlingFilter.Config()))
 			)
-			.uri("lb://AUTHENTICATION-SERVICE")
+			.uri("lb://IDENTITYACCESS")
 		)
 		.route("profiles", r -> r
 			.path("/api/v*/profiles/**")

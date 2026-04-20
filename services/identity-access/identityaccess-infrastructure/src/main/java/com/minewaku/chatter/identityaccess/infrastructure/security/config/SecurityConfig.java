@@ -20,8 +20,10 @@ public class SecurityConfig {
         private final GlobalLoggingFilter globalLoggingFilter;
         private JwtAuthenticationFilter jwtAuthenticationFilter;
 
-        public SecurityConfig(GlobalLoggingFilter globalLoggingFilter,
+        public SecurityConfig(
+                        GlobalLoggingFilter globalLoggingFilter,
                         JwtAuthenticationFilter jwtAuthenticationFilter) {
+                                
                 this.globalLoggingFilter = globalLoggingFilter;
                 this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         }

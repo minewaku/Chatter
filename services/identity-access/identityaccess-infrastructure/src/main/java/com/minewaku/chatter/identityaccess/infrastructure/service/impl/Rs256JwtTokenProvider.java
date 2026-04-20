@@ -16,7 +16,7 @@ import io.jsonwebtoken.Jwts;
 @Service
 public class Rs256JwtTokenProvider implements AccessTokenGenerator {
 
-	private static final long ACCESS_TOKEN_EXPIRATION = 1800000; // 10 seconds (in milliseconds)
+	private static final long ACCESS_TOKEN_EXPIRATION = 900000; // 15 minutes (in milliseconds)
 
 	private final RsaKeyProvider rsaKeyProvider;
 
@@ -34,14 +34,11 @@ public class Rs256JwtTokenProvider implements AccessTokenGenerator {
 		String jwt = Jwts.builder()
 				.claims()
 				.subject(userId.getValue().toString())
-				.issuer("authentication-service")
+				.issuer("identity-access")
 				.issuedAt(issuedAt)
 				.expiration(expiration)
 				.audience().add("chatter").and()
 				.add("email", email.getValue())
-				// .add("roles", roles.stream()
-				// 		.map(role -> role.getCode().getValue())
-				// 		.toList())
 				.and()
 				.signWith(privateKey)
 				.compact();

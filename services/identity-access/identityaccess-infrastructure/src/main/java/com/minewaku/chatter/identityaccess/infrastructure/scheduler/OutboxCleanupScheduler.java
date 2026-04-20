@@ -1,25 +1,28 @@
 package com.minewaku.chatter.identityaccess.infrastructure.scheduler;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.minewaku.chatter.identityaccess.infrastructure.persistence.JpaOutboxRepository;
+import com.minewaku.chatter.identityaccess.infrastructure.persistence.postgresql.JdbcOutboxRepository;
 
 @Component
 public class OutboxCleanupScheduler {
 
-    private final JpaOutboxRepository outboxRepository;
+    private final JdbcOutboxRepository jdbcOutboxRepository;
 
-    public OutboxCleanupScheduler(JpaOutboxRepository outboxRepository) {
-        this.outboxRepository = outboxRepository;
+    public OutboxCleanupScheduler(JdbcOutboxRepository jdbcOutboxRepository) {
+        this.jdbcOutboxRepository = jdbcOutboxRepository;
     }
 
     @Scheduled(fixedRateString = "P1D")
     @Transactional
     public void cleanupOldEvents() {
-        outboxRepository.deleteByCreatedAtBefore(LocalDateTime.now().minusHours(1));
+        Instant cutoffTime = Instant.now().minus(1, ChronoUnit.HOURS);
+        jdbcOutboxRepository.deleteByCreatedAtBefore(cutoffTime);
     }
+
 }

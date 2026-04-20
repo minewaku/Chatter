@@ -5,7 +5,6 @@ import java.time.Duration;
 import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -13,7 +12,6 @@ import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
-import org.springframework.data.redis.serializer.GenericToStringSerializer;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
@@ -23,7 +21,6 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.minewaku.chatter.profile.application.port.outbound.query.model.ProfileReadModel;
-import com.minewaku.chatter.profile.infrastructure.cache.property.VaultRedisProperties;
 
 
 
@@ -31,13 +28,13 @@ import com.minewaku.chatter.profile.infrastructure.cache.property.VaultRedisProp
 public class RedisConfig {
 
     @Bean
-    LettuceConnectionFactory redisConnectionFactory(RedisProperties redisProperties, VaultRedisProperties vaultRedisProperties) {
+    LettuceConnectionFactory redisConnectionFactory(RedisProperties redisProperties) {
         RedisStandaloneConfiguration config = new RedisStandaloneConfiguration(
                 redisProperties.getHost(),
                 redisProperties.getPort());
 
-        config.setUsername(vaultRedisProperties.getUsername());
-        config.setPassword(vaultRedisProperties.getPassword());
+        config.setUsername(redisProperties.getUsername());
+        config.setPassword(redisProperties.getPassword());
 
         LettuceConnectionFactory factory = new LettuceConnectionFactory(config);
         return factory;
@@ -56,33 +53,6 @@ public class RedisConfig {
     }
 
     @Bean
-    @Primary
-    RedisTemplate<Object, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
-        RedisTemplate<Object, Object> template = new RedisTemplate<>();
-        template.setConnectionFactory(redisConnectionFactory);
-        template.setKeySerializer(new GenericToStringSerializer<>(Object.class));
-        template.setValueSerializer(new GenericToStringSerializer<>(Object.class));
-        
-        // --- BẬT TRANSACTION TẠI ĐÂY ---
-        template.setEnableTransactionSupport(true); 
-        template.afterPropertiesSet();
-        return template;
-    }
-
-    @Bean
-    public RedisTemplate<String, String> redisTemplateString(RedisConnectionFactory redisConnectionFactory) {
-        RedisTemplate<String, String> template = new RedisTemplate<>();
-        template.setConnectionFactory(redisConnectionFactory);
-        template.setKeySerializer(new GenericToStringSerializer<>(Object.class));
-        template.setValueSerializer(new GenericToStringSerializer<>(Object.class));
-        
-        // --- BẬT TRANSACTION TẠI ĐÂY ---
-        template.setEnableTransactionSupport(true);
-        template.afterPropertiesSet();
-        return template;
-    }
-
-    @Bean
     RedisTemplate<String, ProfileReadModel> redisTemplateProfileReadModel(
             RedisConnectionFactory connectionFactory) {
         RedisTemplate<String, ProfileReadModel> template = new RedisTemplate<>();
@@ -97,25 +67,8 @@ public class RedisConfig {
 
         template.setKeySerializer(new StringRedisSerializer());
         template.setValueSerializer(serializer);
-        
-        // --- BẬT TRANSACTION TẠI ĐÂY ---
-        template.setEnableTransactionSupport(true);
         template.afterPropertiesSet();
         return template;
-    }
-
-
-    @Bean
-    RedisTemplate<Object, Object> hashRedisTemplate(RedisConnectionFactory redisConnectionFactory) {
-        RedisTemplate<Object, Object> redisTemplate = new RedisTemplate<>();
-        redisTemplate.setConnectionFactory(redisConnectionFactory);
-        redisTemplate.setKeySerializer(new GenericToStringSerializer<>(Object.class));
-        redisTemplate.setHashKeySerializer(new GenericToStringSerializer<>(Object.class));
-        redisTemplate.setHashValueSerializer(new GenericToStringSerializer<>(Object.class));
-        redisTemplate.setEnableTransactionSupport(true);
-        redisTemplate.afterPropertiesSet();
-
-        return redisTemplate;
     }
 
     @Bean

@@ -86,7 +86,7 @@
             </executions>
             
             <configuration>
-                <mainClass>com.minewaku.chatter.chatter.profile.start.ProfileStartApplication</mainClass>
+                <mainClass>com.minewaku.chatter.profile.start.StartApplication</mainClass>
             </configuration>
         </plugin>
     </plugins>

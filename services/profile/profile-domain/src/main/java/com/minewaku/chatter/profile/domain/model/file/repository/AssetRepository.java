@@ -8,5 +8,6 @@ import com.minewaku.chatter.profile.domain.model.file.model.AssetId;
 public interface AssetRepository {
     void save(Asset file);
     void delete(Asset file);
+    void deleteByFileHash(String hash);
     Optional<Asset> findById(AssetId assetId);
 }

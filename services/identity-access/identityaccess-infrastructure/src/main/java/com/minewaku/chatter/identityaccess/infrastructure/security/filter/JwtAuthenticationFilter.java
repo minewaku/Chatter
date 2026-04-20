@@ -6,6 +6,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.security.web.authentication.WebAuthenticationDetails;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -54,7 +56,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 JwtDecoder jwtDecoder = accessTokenVerifier.getJwtDecoder();
                 Jwt jwt = jwtDecoder.decode(jwtString);
+                
                 JwtAuthenticationToken authentication = new JwtAuthenticationToken(jwt);
+                WebAuthenticationDetails details = new WebAuthenticationDetailsSource().buildDetails(request);
+                authentication.setDetails(details);
+
                 authentication.setAuthenticated(true);
                 SecurityContextHolder.getContext().setAuthentication(authentication);   
             }

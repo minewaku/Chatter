@@ -1,6 +1,5 @@
 package com.minewaku.chatter.profile.application.port.inbound.command.profile.command;
 
-import java.io.InputStream;
 import java.util.Set;
 
 import com.minewaku.chatter.profile.application.port.outbound.storage.AssetStorage.StorableFile;
@@ -25,30 +24,23 @@ public class InputBanner extends InputImage implements StorableFile {
     private static final int MAX_WIDTH_IN_PIXELS = 2560;
     private static final int MAX_HEIGHT_IN_PIXELS = 1024;
     private static final Set<String> VALID_CONTENT_TYPES = Set.of(
-        "png",
-        "jpg",
-        "jpeg",
-        "gif",
-        "webp"
+        "png", "jpg", "jpeg", "gif", "webp"
     );
 
     public InputBanner(
-        // @NonNull ObjectKey objectKey,
-        // @NonNull UserId userId,
         @NonNull String originalFilename,
         @NonNull String contentType,
         long sizeInBytes,
-        @NonNull InputStream contentStream
+        @NonNull InputStreamSupplier streamSupplier // Chuyển sang Supplier
     ) {
         super(
             VALID_CONTENT_TYPES,
             originalFilename,
             contentType,
             sizeInBytes,
-            contentStream
+            streamSupplier
         );
 
-        // this.objectKey = objectKey;
         validate();
     }
 
@@ -69,11 +61,6 @@ public class InputBanner extends InputImage implements StorableFile {
         if (Math.abs(actualAspectRatio - InputBanner.ASPECT_RATIO) > 0.01) {
             throw new IllegalArgumentException("Banner must have an aspect ratio of " + InputBanner.ASPECT_RATIO + ":1 (square).");
         }
-    }
-
-    @Override
-    public InputStream getInputStream() {
-        return this.contentStream;
     }
 
     @Override

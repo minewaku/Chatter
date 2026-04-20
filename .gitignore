@@ -57,6 +57,7 @@ hs_err_pid*
 /infrastructure/**/logs/
 /infrastructure/**/volume/
 /infrastructure/**/data-mount/
+.data/
 
 # Vault local file storage backend
 /infrastructure/vault/file/

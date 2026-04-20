@@ -3,12 +3,12 @@ package com.minewaku.chatter.identityaccess.application.service.command.confirma
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.minewaku.chatter.identityaccess.application.exception.EntityNotFoundException;
 import com.minewaku.chatter.identityaccess.application.messaging.publisher.domain.DomainEventPublisher;
-import com.minewaku.chatter.identityaccess.application.messaging.publisher.domain.sync.SyncDomainEventPublisher;
-import com.minewaku.chatter.identityaccess.application.messaging.publisher.domain.sync.SyncDomainEventQueue;
+import com.minewaku.chatter.identityaccess.application.messaging.publisher.domain.EventQueue;
 import com.minewaku.chatter.identityaccess.application.port.inbound.command.confirmationtoken.usecase.VerifyConfirmationTokenUseCase;
 import com.minewaku.chatter.identityaccess.domain.aggregate.confirmationtoken.event.ConfirmationTokenVerifiedDomainEvent;
 import com.minewaku.chatter.identityaccess.domain.aggregate.confirmationtoken.model.ConfirmationToken;
@@ -17,6 +17,7 @@ import com.minewaku.chatter.identityaccess.domain.sharedkernel.event.DomainEvent
 
 import io.github.resilience4j.retry.annotation.Retry;
 
+@Service
 public class VerifyConfirmationTokenApplicationService implements VerifyConfirmationTokenUseCase {
 	
 	private final ConfirmationTokenRepository confirmationTokenRepository;
@@ -24,15 +25,15 @@ public class VerifyConfirmationTokenApplicationService implements VerifyConfirma
 
 	public VerifyConfirmationTokenApplicationService(
 			ConfirmationTokenRepository confirmationTokenRepository,
-			SyncDomainEventQueue syncDomainEventQueue) {	
+			EventQueue eventQueue) {	
 		
 		this.confirmationTokenRepository = confirmationTokenRepository;
-		this.domainEventPublisher = new SyncDomainEventPublisher(syncDomainEventQueue);
+		this.domainEventPublisher = new DomainEventPublisher(eventQueue);
 	}
 	
     @Override
 	@Retry(name = "transientDataAccess")
-    @Transactional
+	@Transactional
     public Void handle(String confirmationToken) {
 		ConfirmationToken existConfirmationToken = confirmationTokenRepository.findByToken(confirmationToken)
 				.orElseThrow(() -> new EntityNotFoundException("Token does not exist"));

@@ -3,7 +3,7 @@ package com.minewaku.chatter.apigateway.constant;
 import org.springframework.web.server.ServerWebExchange;
 
 public enum ExchangeAttr {
-    USER_ID, USERNAME, ROLES, TENANT_ID, TRACE_ID;
+    USER_ID, USERNAME, TENANT_ID, TRACE_ID;
 
     public String key() {
         return "REQUEST_ATTR_" + name();

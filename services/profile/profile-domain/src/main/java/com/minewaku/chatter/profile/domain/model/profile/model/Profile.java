@@ -1,7 +1,10 @@
 package com.minewaku.chatter.profile.domain.model.profile.model;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
+import com.minewaku.chatter.profile.domain.sharedkernel.event.DomainEvent;
 import com.minewaku.chatter.profile.domain.sharedkernel.value.AuditMetadata;
 
 import jakarta.persistence.AttributeOverride;
@@ -11,6 +14,7 @@ import jakarta.persistence.Embedded;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -30,11 +34,6 @@ public class Profile {
     private ProfileId id;
 
     @Embedded
-    @AttributeOverride(name = "value", column = @Column(name = "email", unique = true, nullable = false))
-    @NonNull
-    private Email email;
-
-    @Embedded
     @AttributeOverride(name = "value", column = @Column(name = "username", unique = true, length = 32,nullable = false))
     @NonNull
     private Username username;
@@ -44,11 +43,6 @@ public class Profile {
 
     @Column(name = "banner", length = 255)
     private String bannerHash;
-
-    @Embedded
-    @AttributeOverride(name = "value", column = @Column(name = "birthday", nullable = false))
-    @NonNull
-    private Birthday birthday;
 
     @Embedded
     @AttributeOverride(name = "value", column = @Column(name = "display_name", length = 32))
@@ -76,23 +70,23 @@ public class Profile {
     @NonNull
     private AuditMetadata auditMetadata;
 
+    @NonNull
+    @Transient
+    private List<DomainEvent> domainEvents = new ArrayList<>();
+
     /*
     * PRIVATE CONSTRUCTOR
     */
     private Profile(
                 @NonNull ProfileId id, 
-                @NonNull Email email,
                 @NonNull Username username,     
-                @NonNull Birthday birthday,
                 DisplayName displayName,
                 Bio bio,
                 @NonNull Enablement enablement,
                 @NonNull AuditMetadata auditMetadata) {
 
         this.id = id;
-        this.email = email;
         this.username = username;
-        this.birthday = birthday;
         this.displayName = displayName;
         this.bio = bio;
         this.enablement = enablement;
@@ -104,84 +98,84 @@ public class Profile {
     */
     public static Profile reconstitute(
                 @NonNull ProfileId id, 
-                @NonNull Email email,
                 @NonNull Username username, 
-                @NonNull Birthday birthday,
                 DisplayName displayName,
                 Bio bio,
                 @NonNull Enablement enablement,
                 @NonNull AuditMetadata auditMetadata
             ) {
 
-        return new Profile(id, email, username, birthday, displayName, bio, enablement, auditMetadata);
+        return new Profile(id, username, displayName, bio, enablement, auditMetadata);
     }
+    
+    public static Profile CreateNew(
+                @NonNull ProfileId id, 
+                @NonNull Username username, 
+                DisplayName displayName,
+                Bio bio,
+                @NonNull Enablement enablement
+            ) {
+
+        return new Profile(id, username, displayName, bio, enablement, new AuditMetadata());
+    }
+
+    public void isAccessible() {
+        this.enablement.validateAccessible();
+    }
+
+    public boolean isUnverified() {
+        return this.enablement.isUnverified();
+    }
+
+    public boolean isBanned() {
+        return this.enablement.isBanned();
+    }
+
+    public boolean isSoftDeleted() {
+        return this.enablement.isSoftDeleted();
+    }
+
+    
 
     /*
-    * BEHAVIORS
+    * BEHAVIORS (MODIFY SECURE STATUSES)
     */
-    public boolean softDelete() {
-        var newEnablement = this.enablement.softDelete();
-        if (this.enablement.equals(newEnablement)) {
-            return false;
+
+    public boolean softDelete(
+        @NonNull Username username,
+        @NonNull Enablement enablement
+    ) {
+        if (this.enablement.isSoftDeleted()) {
+            return false; 
         }
-        this.enablement = newEnablement;
+
+        this.username = username;
+        this.bio = null;
+        this.displayName = null;
+        this.avatarHash = null;
+        this.bannerHash = null;
+        this.enablement = enablement;
+        this.auditMetadata = this.auditMetadata.markUpdated();
+
+        //publish event
         return true;
     }
 
-    public boolean restore() {
-        var newEnablement = this.enablement.restore();
-        if (this.enablement.equals(newEnablement)) {
-            return false;
-        }
-        this.enablement = newEnablement;
-        return true;
-    }
-
-    public boolean enable() {
-        var newEnablement = this.enablement.enable();
-        if (this.enablement.equals(newEnablement)) {
-            return false;
-        }
-        this.enablement = newEnablement;
-        return true;
-    }
-
-    public boolean disable() {
-        var newEnablement = this.enablement.disable();
-        if (this.enablement.equals(newEnablement)) {
-            return false;
-        }
-        this.enablement = newEnablement;
-        return true;
-    }
-
-    public boolean lock() {
-        var newEnablement = this.enablement.lock();
-        if (this.enablement.equals(newEnablement)) {
-            return false;
-        }
-        this.enablement = newEnablement;
-        return true;
-    }
-
-    public boolean unlock() {
-        var newEnablement = this.enablement.unlock();
-        if (this.enablement.equals(newEnablement)) {
-            return false;
-        }
-        this.enablement = newEnablement;
-        return true;
-    }
 
     public boolean changeAvatar(String avatarHash) {
+        this.enablement.validateAccessible();
         if (Objects.equals(this.avatarHash, avatarHash)) {
             return false; 
         }
         this.avatarHash = avatarHash;
+
+        
+
         return true;
     }
 
     public boolean changeBanner(String bannerHash) {
+        this.enablement.validateAccessible();
         if (Objects.equals(this.bannerHash, bannerHash)) {
             return false;
         }
@@ -204,6 +198,15 @@ public class Profile {
             return false;
         }
         this.bio = newBio;
+        return true;
+    }
+        
+    public boolean updateEnablement(Enablement newEnablement) {
+        if (this.enablement.equals(newEnablement)) {
+            return false; 
+        }
+        this.enablement = newEnablement;
+        this.auditMetadata = this.auditMetadata.markUpdated();
         return true;
     }
 

@@ -1,9 +1,13 @@
 package com.minewaku.chatter.identityaccess.domain.service;
 
+import org.springframework.stereotype.Service;
+
 import com.minewaku.chatter.identityaccess.domain.aggregate.confirmationtoken.model.ConfirmationToken;
 import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.User;
+import com.minewaku.chatter.identityaccess.domain.sharedkernel.exception.BusinessRuleViolationException;
 import com.minewaku.chatter.identityaccess.domain.sharedkernel.service.UniqueStringIdGenerator;
 
+@Service
 public class ResendConfirmationTokenDomainService {
 
     private final UniqueStringIdGenerator uniqueStringIdGenerator;
@@ -15,7 +19,10 @@ public class ResendConfirmationTokenDomainService {
     }
 
     public ConfirmationToken handle(User user) {
-        user.isAccessible();
+
+        if(!user.isUnverified()) {
+            throw new BusinessRuleViolationException("User is already verified");
+        }
 
         String token = uniqueStringIdGenerator.generate();
         ConfirmationToken confirmationToken = ConfirmationToken.createNew(

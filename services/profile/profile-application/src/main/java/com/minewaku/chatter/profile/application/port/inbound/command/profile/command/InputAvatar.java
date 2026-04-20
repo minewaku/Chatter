@@ -1,6 +1,5 @@
 package com.minewaku.chatter.profile.application.port.inbound.command.profile.command;
 
-import java.io.InputStream;
 import java.util.Set;
 
 import com.minewaku.chatter.profile.application.port.outbound.storage.AssetStorage.StorableFile;
@@ -18,36 +17,30 @@ public class InputAvatar extends InputImage implements StorableFile {
 
     public static final Namespace NAMESPACE = Namespace.USER_AVATARS;
 
-    private static final long MAX_SIZE_IN_BYTES = 10 * 1024 * 1024; // 10 MB
+    private static final long MAX_SIZE_IN_BYTES = 10 * 1024 * 1024;
     private static final double ASPECT_RATIO = 1.0;
     private static final int MIN_WIDTH_IN_PIXELS = 128;
     private static final int MIN_HEIGHT_IN_PIXELS = 128; 
     private static final int MAX_WIDTH_IN_PIXELS = 1024;
     private static final int MAX_HEIGHT_IN_PIXELS = 1024;
     private static final Set<String> VALID_CONTENT_TYPES = Set.of(
-        "png",
-        "jpg",
-        "jpeg",
-        "gif",
-        "webp"
+        "png", "jpg", "jpeg", "gif", "webp"
     );
 
     public InputAvatar(
-        // @NonNull ObjectKey objectKey,
         @NonNull String originalFilename,
         @NonNull String contentType,
         long sizeInBytes,
-        @NonNull InputStream contentStream
+        @NonNull InputStreamSupplier streamSupplier
     ) {
         super(
             VALID_CONTENT_TYPES,
             originalFilename,
             contentType,
             sizeInBytes,
-            contentStream
+            streamSupplier
         );
 
-        // this.objectKey = objectKey;
         validate();
     }
 
@@ -68,11 +61,6 @@ public class InputAvatar extends InputImage implements StorableFile {
         if (Math.abs(actualAspectRatio - InputAvatar.ASPECT_RATIO) > 0.01) {
             throw new IllegalArgumentException("Avatar must have an aspect ratio of " + InputAvatar.ASPECT_RATIO + ":1 (square).");
         }
-    }
-
-    @Override
-    public InputStream getInputStream() {
-        return this.contentStream;
     }
 
     @Override

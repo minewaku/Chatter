@@ -6,9 +6,7 @@ import com.minewaku.chatter.identityaccess.domain.aggregate.confirmationtoken.mo
 import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.Email;
 
 public interface ConfirmationTokenRepository {
+	ConfirmationToken save(ConfirmationToken confirmationToken);
 	Optional<ConfirmationToken> findByToken(String token);
 	void deleteByEmail(Email email);
-	void deleteByToken(String token);
-	ConfirmationToken save(ConfirmationToken confirmationToken);
-	void confirmEmail(ConfirmationToken confirmationToken);
 }

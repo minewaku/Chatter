@@ -5,11 +5,11 @@ import java.util.List;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
-import com.minewaku.chatter.identityaccess.application.messaging.publisher.domain.sync.SyncDomainEventQueue;
+import com.minewaku.chatter.identityaccess.application.messaging.publisher.domain.EventQueue;
 import com.minewaku.chatter.identityaccess.domain.sharedkernel.event.DomainEvent;
 
 @Component
-public class SpringEventSyncMessageQueue implements SyncDomainEventQueue {
+public class SpringEventSyncMessageQueue implements EventQueue {
 
 	private final ApplicationEventPublisher eventPublisher;
 

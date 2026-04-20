@@ -5,6 +5,6 @@ public record ProfileReadModel(
     String username,
     String displayName,
     String bio,
-    String avatarUrl,
-    String bannerUrl){
+    String avatarHash,
+    String bannerHash){
 }

@@ -19,10 +19,10 @@
   	<description>Chatter Identity And Access Parent Project</description>
   
     <properties>
-		<maven.compiler.source>17</maven.compiler.source>
-		<maven.compiler.target>17</maven.compiler.target>
+		<maven.compiler.source>21</maven.compiler.source>
+		<maven.compiler.target>21</maven.compiler.target>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<spring-boot.version>3.5.11</spring-boot.version>
+		<spring-boot.version>3.5.13</spring-boot.version>
 		<spring-cloud.version>2025.0.0</spring-cloud.version>
 		<lombok.version>1.18.38</lombok.version>
 		<spring-dotenv.version>5.1.0</spring-dotenv.version>
@@ -68,6 +68,17 @@
 	        <artifactId>lombok</artifactId>
 	        <scope>provided</scope>
 	    </dependency>
+
+
+
+		<!-- 
+			*** SPRING CONTEXT ANNOTATION PACKAGES ***
+		-->
+
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-context</artifactId>
+		</dependency>
     </dependencies>
 
     <build>
@@ -80,6 +91,10 @@
 					<configuration>
 						<source>${maven.compiler.source}</source>
 						<target>${maven.compiler.target}</target>
+
+						<compilerArgs>
+                        	<arg>-parameters</arg>
+                    	</compilerArgs>
 						
 						<annotationProcessorPaths>
 							<path>

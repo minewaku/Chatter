@@ -3,27 +3,39 @@ package com.minewaku.chatter.identityaccess.application.messaging.publisher.inte
 import java.time.Instant;
 import java.time.LocalDate;
 
-import lombok.Getter;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 
-@Getter
+@Data
+@EqualsAndHashCode(callSuper=false)
 public class UserRegisteredIntegrationEvent extends IntegrationEvent {
 
     private static final String AGGREGATE_TYPE = "User";
-    private static final String EVENT_TYPE = "UserRegisted";
+    private static final String EVENT_TYPE = "UserRegistered";
 
-    private final long userId;
-    private final String email;
-    private final String username;
-    private final LocalDate birthday;
-    private final boolean enabled;
-    private final boolean deleted;
-    private final boolean locked;
+    private Long userId;
+    private String email;
+    private String username;
+    private LocalDate birthday;
+    private boolean enabled;
+    private boolean deleted;
+    private boolean locked;
     private Instant deletedAt;
 
+    public UserRegisteredIntegrationEvent() {
+        super(AGGREGATE_TYPE, EVENT_TYPE); 
+    }
     
-    public UserRegisteredIntegrationEvent(long userId, String email, String username, 
-                                        LocalDate birthday, boolean enabled, 
-                                        boolean deleted, boolean locked, Instant deletedAt) {
+    public UserRegisteredIntegrationEvent(
+            Long userId, 
+            String email, 
+            String username, 
+            LocalDate birthday, 
+            boolean enabled, 
+            boolean deleted, 
+            boolean locked, 
+            Instant deletedAt) {
+
         super(AGGREGATE_TYPE, EVENT_TYPE);
         this.userId = userId;
         this.email = email;

@@ -1,34 +1,45 @@
 package com.minewaku.chatter.identityaccess.domain.aggregate.session.model;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.ToString;
 
 @Getter
+@Builder
 @ToString
 @EqualsAndHashCode
+@AllArgsConstructor
 public class DeviceInfo {
-    // private final String userAgent;
+
     @NonNull
     private final String ipAddress;
 
-    // used Yauaa to extract device info from http request header
-    // private final String deviceType;  // VD: "WEB_BROWSER", "DESKTOP_APP", "MOBILE_APP"
-    // private final String os;          // VD: "Windows 11", "macOS", "iOS"
-    // private final String browser;     // VD: "Chrome", "Safari", "N/A" (nếu là Desktop App)
+    @NonNull
+    private final String country;
 
-    // used GeoIP
-    // // 4. Quản lý trạng thái và rủi ro (Security & Lifecycle)
-    // private final String location;    // Map từ IP ra vị trí (VD: "Ho Chi Minh City, Vietnam")
-    // private final Instant loginAt;    // Thời điểm thiết bị này đăng nhập lần đầu
-    // private final Instant lastActive; // Cập nhật mỗi khi có request tới, dùng để check session idle
+    @NonNull
+    private final String rawUserAgent;
 
-    public DeviceInfo(String ipAddress) {
-        this.ipAddress = ipAddress;
-    }
-
+    @NonNull
+    private final String deviceType;       // Desktop | Phone | Tablet | Robot
     
+    @NonNull
+    private final String deviceBrand;      // Apple | Samsung | ...
+    
+    @NonNull
+    private final String osName;           // Windows | macOS | Android | iOS
+    
+    @NonNull
+    private final String osVersion;        // 14.0 | 11 | ...
+    
+    @NonNull
+    private final String browserName;      // Chrome | Firefox | Safari | ...
+    
+    @NonNull
+    private final String browserVersion;   // 120.0.0 | ...
 
     public void validateDeviceInfo(DeviceInfo incomingDeviceInfo) {
         if (!this.equals(incomingDeviceInfo)) {

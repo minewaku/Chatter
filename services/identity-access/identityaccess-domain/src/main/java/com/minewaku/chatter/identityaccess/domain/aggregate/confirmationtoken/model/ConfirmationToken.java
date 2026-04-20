@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-import com.minewaku.chatter.identityaccess.domain.aggregate.confirmationtoken.event.ConfirmationTokenCreatedDomainEvent;
 import com.minewaku.chatter.identityaccess.domain.aggregate.confirmationtoken.event.ConfirmationTokenVerifiedDomainEvent;
 import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.Email;
 import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.UserId;
@@ -92,15 +91,6 @@ public class ConfirmationToken {
             new ConfirmationToken(
                 token, userId, email, dur, now, now.plus(dur),null
             );
-
-        ConfirmationTokenCreatedDomainEvent event = new ConfirmationTokenCreatedDomainEvent(
-            confirmationToken.getToken(),
-            String.valueOf(confirmationToken.getUserId().getValue()),
-            confirmationToken.getEmail().getValue(),
-            confirmationToken.getDuration().toString(),
-            confirmationToken.getExpiresAt().toString()
-        );
-        confirmationToken.getEvents().add(event);
 
         return confirmationToken;
     }

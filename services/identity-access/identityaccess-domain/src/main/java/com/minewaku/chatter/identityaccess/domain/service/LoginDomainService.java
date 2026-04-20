@@ -2,16 +2,20 @@ package com.minewaku.chatter.identityaccess.domain.service;
 
 import java.time.Duration;
 
+import org.springframework.stereotype.Service;
+
 import com.minewaku.chatter.identityaccess.domain.aggregate.session.model.DeviceInfo;
 import com.minewaku.chatter.identityaccess.domain.aggregate.session.model.Session;
 import com.minewaku.chatter.identityaccess.domain.aggregate.session.model.SessionId;
 import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.User;
-import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.credentials.HashedPassword;
+import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.credentials.Password;
+import com.minewaku.chatter.identityaccess.domain.sharedkernel.service.PasswordHasher;
 import com.minewaku.chatter.identityaccess.domain.sharedkernel.service.UniqueStringIdGenerator;
 
 import lombok.NonNull;
 
-public class LoginDomainService {
+@Service
+public class LoginDomainService{
 
     private final UniqueStringIdGenerator uniqueStringIdGenerator;
 
@@ -22,13 +26,14 @@ public class LoginDomainService {
     }
 
 
-    public Session handle(    
+    public Session handle(
+            @NonNull PasswordHasher passwordHasher,
             @NonNull User user,
-            @NonNull HashedPassword hashedPassword,
+            @NonNull Password password,
             @NonNull DeviceInfo deviceInfo,
-            @NonNull Duration sessionLifespan) {
+            Duration sessionLifespan) {
 
-        user.authenticate(hashedPassword);
+        user.authenticate(passwordHasher, password);
         SessionId sessionId = new SessionId(uniqueStringIdGenerator.generate());
         Session session = Session.createNew(sessionId, user.getId(), deviceInfo, sessionLifespan);
 

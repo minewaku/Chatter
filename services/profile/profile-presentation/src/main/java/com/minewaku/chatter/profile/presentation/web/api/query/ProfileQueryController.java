@@ -1,6 +1,8 @@
 package com.minewaku.chatter.profile.presentation.web.api.query;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,11 +27,24 @@ public class ProfileQueryController {
         this.getProfileUseCase = getProfileUseCase;
     }
 
+    @GetMapping("/@me")
+    public ResponseEntity<ProfileReadModel> getProfile(
+                @AuthenticationPrincipal Jwt jwt) {
+
+        ProfileId profileId = new ProfileId(Long.parseLong(jwt.getSubject()));
+        ProfileReadModel profile = getProfileUseCase.handle(profileId);
+        
+        return ResponseEntity.ok(profile);
+    }
+
     @GetMapping("/{id}")
-    public ResponseEntity<ProfileReadModel> getProfile(@PathVariable("id") Long id) {
+    public ResponseEntity<ProfileReadModel> getProfile(
+                @PathVariable("id") Long id) {
+
         ProfileId profileId = new ProfileId(id);
         ProfileReadModel profile = getProfileUseCase.handle(profileId);
         
         return ResponseEntity.ok(profile);
     }
+
 }

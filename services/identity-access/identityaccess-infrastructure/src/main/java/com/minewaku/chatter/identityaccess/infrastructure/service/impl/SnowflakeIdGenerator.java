@@ -4,7 +4,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.minewaku.chatter.identityaccess.domain.sharedkernel.service.TimeBasedIdGenerator;
-import com.minewaku.chatter.identityaccess.infrastructure.persistence.VariableServerRepository;
+import com.minewaku.chatter.identityaccess.infrastructure.persistence.postgresql.VariableServerRepository;
 
 
 /**

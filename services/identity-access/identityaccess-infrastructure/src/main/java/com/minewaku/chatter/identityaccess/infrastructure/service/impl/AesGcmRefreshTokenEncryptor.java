@@ -9,8 +9,8 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.minewaku.chatter.identityaccess.application.port.outbound.provider.RefreshTokenEncryptor;
+import com.minewaku.chatter.identityaccess.domain.aggregate.session.exception.InvalidRefreshTokenException;
 import com.minewaku.chatter.identityaccess.domain.aggregate.session.model.Session;
-import com.minewaku.chatter.identityaccess.domain.aggregate.user.exception.InvalidRefreshTokenException;
 import com.minewaku.chatter.identityaccess.infrastructure.config.property.VaultRefreshProperties;
 
 @Service
@@ -53,7 +53,7 @@ public class AesGcmRefreshTokenEncryptor implements RefreshTokenEncryptor {
         } catch (IllegalArgumentException e) {
             throw new InvalidRefreshTokenException("Invalid refresh token format");
         } catch (Exception e) {
-            throw new InvalidRefreshTokenException("Invalid refresh token, the token has been tampered with or is corrupted");
+            throw new RuntimeException("Invalid refresh token, the token has been tampered with or is corrupted", e);
         }
     }
 }

@@ -15,13 +15,14 @@ import org.springframework.web.client.HttpServerErrorException;
 
 import com.minewaku.chatter.identityaccess.application.exception.DataInconsistencyException;
 import com.minewaku.chatter.identityaccess.application.exception.EntityNotFoundException;
+import com.minewaku.chatter.identityaccess.domain.aggregate.session.exception.CompromisedSessionException;
+import com.minewaku.chatter.identityaccess.domain.aggregate.session.exception.InvalidRefreshTokenException;
 import com.minewaku.chatter.identityaccess.domain.aggregate.user.exception.InvalidCredentialsException;
 import com.minewaku.chatter.identityaccess.domain.aggregate.user.exception.RegisterExistDisableUserException;
+import com.minewaku.chatter.identityaccess.domain.aggregate.user.exception.UserAlreadyExistException;
 import com.minewaku.chatter.identityaccess.domain.aggregate.user.exception.UserNotAccessibleException;
-import com.minewaku.chatter.identityaccess.domain.aggregate.user.exception.UserSoftDeletedException;
 import com.minewaku.chatter.identityaccess.domain.sharedkernel.exception.BusinessRuleViolationException;
 import com.minewaku.chatter.identityaccess.domain.sharedkernel.exception.DomainValidationException;
-import com.minewaku.chatter.identityaccess.domain.sharedkernel.exception.StateAlreadySatisfiedException;
 
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
@@ -29,6 +30,7 @@ import lombok.extern.log4j.Log4j2;
 @Log4j2
 @ControllerAdvice
 public class GlobalExceptionHandler {
+    
 
     @ExceptionHandler(BusinessRuleViolationException.class)
     public ResponseEntity<ErrorResponse> handleValidation(BusinessRuleViolationException ex) {
@@ -44,6 +46,24 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
 
+
+
+    @ExceptionHandler(CompromisedSessionException.class)
+    public ResponseEntity<ErrorResponse> handleValidation(CompromisedSessionException ex) {
+        log.error("Validation error: {}", ex);
+        ErrorResponse errorResponse = new ErrorResponse(ex.getErrorCode(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+    }
+
+    @ExceptionHandler(InvalidRefreshTokenException.class)
+    public ResponseEntity<ErrorResponse> handleValidation(InvalidRefreshTokenException ex) {
+        log.error("Validation error: {}", ex);
+        ErrorResponse errorResponse = new ErrorResponse(ex.getErrorCode(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+    }
+
+
+
     @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleValidation(InvalidCredentialsException ex) {
         log.error("Validation error: {}", ex);
@@ -51,11 +71,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
     }
 
-    @ExceptionHandler(MalformRefreshTokenException.class)
-    public ResponseEntity<ErrorResponse> handleValidation(MalformRefreshTokenException ex) {
+    @ExceptionHandler(UserAlreadyExistException.class)
+    public ResponseEntity<ErrorResponse> handleValidation(UserAlreadyExistException ex) {
         log.error("Validation error: {}", ex);
         ErrorResponse errorResponse = new ErrorResponse(ex.getErrorCode(), ex.getMessage());
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
     }
 
     @ExceptionHandler(RegisterExistDisableUserException.class)
@@ -65,24 +85,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
 
-    @ExceptionHandler(StateAlreadySatisfiedException.class)
-    public ResponseEntity<ErrorResponse> handleValidation(StateAlreadySatisfiedException ex) {
-        log.error("Validation error: {}", ex);
-        return ResponseEntity.ok().build();
-    }
-
     @ExceptionHandler(UserNotAccessibleException.class)
     public ResponseEntity<ErrorResponse> handleValidation(UserNotAccessibleException ex) {
         log.error("Validation error: {}", ex);
         ErrorResponse errorResponse = new ErrorResponse(ex.getErrorCode(), ex.getMessage());
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
-    }
-
-    @ExceptionHandler(UserSoftDeletedException.class)
-    public ResponseEntity<ErrorResponse> handleValidation(UserSoftDeletedException ex) {
-        log.error("Validation error: {}", ex);
-        ErrorResponse errorResponse = new ErrorResponse("INVALID_CREDENTIALS", "Invalid credentials");
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
     }
 
 
@@ -94,6 +101,8 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
     }
     
+
+
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleValidation(EntityNotFoundException ex) {
         log.error("Validation error: {}", ex);
@@ -101,7 +110,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
     }
 
-
+    
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {
@@ -114,15 +123,6 @@ public class GlobalExceptionHandler {
         log.error("Access denied error: {}", ex);
         ErrorResponse errorResponse = new ErrorResponse("ACCESS_DENIED", "Access denied");
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
-    }
-
-
-
-    @ExceptionHandler(ApiException.class)
-    public ResponseEntity<ErrorResponse> handleValidation(ApiException ex) {
-        log.error("Validation error: {}", ex);
-        ErrorResponse errorResponse = new ErrorResponse(ex.getErrorCode(), ex.getMessage());
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
     }
 
     @ExceptionHandler(Exception.class)

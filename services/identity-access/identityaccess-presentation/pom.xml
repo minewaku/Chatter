@@ -26,6 +26,13 @@
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
 
+		<!-- https://mvnrepository.com/artifact/org.springframework.kafka/spring-kafka -->
+        <!-- 3.3.8 -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+
 		<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-oauth2-resource-server -->
 		<!-- 3.5.11 -->
 		<dependency>
@@ -44,6 +51,20 @@
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
 			<version>2.8.0</version>
+		</dependency>
+
+
+
+        <!-- 
+			*** REQUEST HEADER PARSER PACKAGES ***
+		-->
+
+		<!-- Source: https://mvnrepository.com/artifact/nl.basjes.parse.useragent/yauaa -->
+		<dependency>
+			<groupId>nl.basjes.parse.useragent</groupId>
+			<artifactId>yauaa</artifactId>
+			<version>7.32.0</version>
+			<scope>compile</scope>
 		</dependency>
     </dependencies>
     

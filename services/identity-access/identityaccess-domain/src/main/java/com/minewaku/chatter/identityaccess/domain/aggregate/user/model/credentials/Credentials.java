@@ -5,6 +5,7 @@ import java.time.temporal.ChronoUnit;
 
 import com.minewaku.chatter.identityaccess.domain.aggregate.user.exception.InvalidCredentialsException;
 import com.minewaku.chatter.identityaccess.domain.sharedkernel.exception.BusinessRuleViolationException;
+import com.minewaku.chatter.identityaccess.domain.sharedkernel.service.PasswordHasher;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -36,13 +37,31 @@ public class Credentials {
         return new Credentials(hashedPassword, null);
     }
 
+    public static Credentials reconstitute(
+            @NonNull HashedPassword hashedPassword,
+            Instant modifiedAt) {
 
+        return new Credentials(hashedPassword, modifiedAt);
+    }
+
+
+    public Credentials anonymize() {
+        HashedPassword anonymizedPassword = new HashedPassword("anonymized", "anonymized", new byte[16]);
+        
+        Credentials anonymizedCredentials = new Credentials(anonymizedPassword, Instant.now());
+        return anonymizedCredentials;
+    }
 
     public Credentials changePassword (
-            @NonNull HashedPassword oldHashedPassword, 
-            @NonNull HashedPassword newHashedPassword) {
+            @NonNull PasswordHasher passwordHasher,
+            @NonNull Password oldPassword, 
+            @NonNull Password newPassword) {
 
-        if (oldHashedPassword.equals(newHashedPassword)) {
+        if (!passwordHasher.matchesRawAndHashedPassword(oldPassword, this.hashedPassword)) {
+            throw new InvalidCredentialsException("Old password is incorrect");
+        }
+
+        if (!passwordHasher.matchesRawAndHashedPassword(newPassword, this.hashedPassword)) {
             throw new BusinessRuleViolationException("New password cannot be the same as the old password");
         }
 
@@ -56,11 +75,13 @@ public class Credentials {
             }
         }
 
+        HashedPassword newHashedPassword = passwordHasher.hash(newPassword);
+
         return new Credentials(newHashedPassword, Instant.now());
     }
 
-    public void validateHashedPassword(HashedPassword inputHashedPassword) {
-        if (!this.hashedPassword.equals(inputHashedPassword)) {
+    public void validateHashedPassword(@NonNull PasswordHasher passwordHasher, Password rawPassword) {
+         if (!passwordHasher.matchesRawAndHashedPassword(rawPassword, this.hashedPassword)) {
             throw new InvalidCredentialsException("Invalid credentials");
         }
     }

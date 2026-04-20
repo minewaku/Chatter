@@ -1,10 +1,14 @@
 ## Pulling via Docker
 ```powershell
 docker compose -p kafka_chatter -f docker-compose.yml up -d
+
+docker compose -p kafka_chatter -f docker-compose.yml down -v
 ```
 
-```bash
-sed -i 's/\r$//' ../../opt/kafka/scripts/create-topics.sh
+```powershell
+mkdir ".data/kafka_data", ".data/zookeeper_data"
+icacls ".\.data\kafka_data" /grant Everyone:"(OI)(CI)F" /T
+icacls ".\.data\zookeeper_data" /grant Everyone:"(OI)(CI)F" /T
 ```
 
 ## Creating topics by script
@@ -17,3 +21,6 @@ sed -i 's/\r$//' ../../opt/kafka/scripts/create-topics.sh
 
 # 2. Execute the script
 bash ../../opt/kafka/scripts/create-topics.sh
+
+# optional: delete a topic
+bash ../../bin/kafka-topics.sh --bootstrap-server localhost:5003 --delete --topic <topic_name>

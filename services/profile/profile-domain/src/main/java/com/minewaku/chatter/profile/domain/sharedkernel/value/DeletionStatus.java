@@ -28,10 +28,16 @@ public class DeletionStatus {
     }
 
     public DeletionStatus markDeleted() {
+        if (this.deleted) {
+            return this;
+        }
         return new DeletionStatus(true, Instant.now());
     }
 
     public DeletionStatus markRestored() {
+        if (!this.deleted) {
+            return this;
+        }
         return new DeletionStatus(false, null);
     }
 }

@@ -6,10 +6,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-import com.minewaku.chatter.identityaccess.domain.aggregate.session.event.SessionCreatedDomainEvent;
-import com.minewaku.chatter.identityaccess.domain.aggregate.session.event.SessionRefreshedDomainEvent;
-import com.minewaku.chatter.identityaccess.domain.aggregate.user.exception.CompromisedSessionException;
-import com.minewaku.chatter.identityaccess.domain.aggregate.user.exception.InvalidRefreshTokenException;
+import com.minewaku.chatter.identityaccess.domain.aggregate.session.exception.CompromisedSessionException;
+import com.minewaku.chatter.identityaccess.domain.aggregate.session.exception.InvalidRefreshTokenException;
 import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.UserId;
 import com.minewaku.chatter.identityaccess.domain.sharedkernel.event.DomainEvent;
 import com.minewaku.chatter.identityaccess.domain.sharedkernel.exception.BusinessRuleViolationException;
@@ -47,6 +45,7 @@ public class Session {
     private boolean revoked;
     private Instant revokedAt;
 
+    private final Integer version;
 
     @NonNull
     private final List<DomainEvent> events = new ArrayList<DomainEvent>();
@@ -59,10 +58,11 @@ public class Session {
             @NonNull DeviceInfo deviceInfo,
             int generation,
             @NonNull Instant issuedAt,
-            @NonNull Instant lastRefreshedAt,
+            Instant lastRefreshedAt,
             @NonNull Instant expiresAt,
             boolean revoked,
-            Instant revokedAt) {
+            Instant revokedAt,
+            Integer version) {
 
         this.sessionId = sessionId;
         this.userId = userId;
@@ -73,6 +73,7 @@ public class Session {
         this.expiresAt = expiresAt;
         this.revoked = revoked;
         this.revokedAt = revokedAt;
+        this.version = version;
     }
 
     public static Session reconstitute(
@@ -81,10 +82,11 @@ public class Session {
                 @NonNull DeviceInfo deviceInfo,
                 int generation,
                 @NonNull Instant issuedAt,
-                @NonNull Instant lastRefreshedAt,
+                Instant lastRefreshedAt,
                 @NonNull Instant expiresAt,
                 boolean revoked,
-                Instant revokedAt) {
+                Instant revokedAt,
+                Integer version) {
 
         return new Session(
             sessionId,
@@ -95,7 +97,8 @@ public class Session {
             lastRefreshedAt, 
             expiresAt,
             revoked, 
-            revokedAt);
+            revokedAt,
+            version);
     }
 
 
@@ -119,25 +122,20 @@ public class Session {
             null,
             now.plus(dur),
             false,
+            null,
             null
         );
-
-        SessionCreatedDomainEvent event = new SessionCreatedDomainEvent(sessionId.getValue().toString(), userId.getValue().toString(), now.toString());
-        session.events.add(event);
 
         return session;
     }
 
 
-    // RECHECK: recheck the logic and exception types
-    public void refresh(int incomingGeneration) {
-
+    public boolean refresh(int incomingGeneration) {
         if (this.revoked) {
             throw new InvalidRefreshTokenException("Session is completely revoked at " + this.revokedAt);
         }
 
         Instant now = Instant.now();
-
         if (now.isAfter(this.expiresAt)) {
             throw new InvalidRefreshTokenException("Token is expired at " + this.expiresAt);
         }
@@ -150,15 +148,7 @@ public class Session {
             this.generation = this.generation + 1;
             this.lastRefreshedAt = now;
             this.expiresAt = now.plus(SESSION_LIFESPAN);
-            
-            SessionRefreshedDomainEvent event = new SessionRefreshedDomainEvent(
-                this.sessionId.getValue().toString(),
-                this.userId.getValue().toString(),
-                now.toString()
-            );
-            this.events.add(event);
-            
-            return;
+            return true; 
         }
 
         if (incomingGeneration == this.generation - 1) {
@@ -166,7 +156,7 @@ public class Session {
                 Instant gracePeriodEnd = this.lastRefreshedAt.plus(REFRESH_GRACE_PERIOD);
                 
                 if (!now.isAfter(gracePeriodEnd)) {
-                    return;
+                    return false;
                 }
             }
             
@@ -178,26 +168,33 @@ public class Session {
         throw new CompromisedSessionException("Reuse Detection: Old token generation used. Session compromised.");
     }
 
-    private void markAsCompromised() {
+
+    public boolean revoke() {
+        if (this.revoked) {
+            return false; 
+        }
+
+        if (Instant.now().isAfter(this.expiresAt)) {
+            return false; 
+        }
+        
         this.revoked = true;
         this.revokedAt = Instant.now();
+        return true;
     }
 
-    public void revoke() {
-        if (revoked) {
-            throw new BusinessRuleViolationException("Session already revoked at " + revokedAt);
-        }
-        if (Instant.now().isAfter(expiresAt)) {
-            throw new BusinessRuleViolationException("Cannot revoke an expired session");
-        }
-        this.revoked = true;
-        this.revokedAt = Instant.now();
-    }
 
-    public void logoutFromCurrentSession(SessionId incomingSessionId) {
+    public boolean logoutFromCurrentSession(SessionId incomingSessionId) {
         if (!this.sessionId.equals(incomingSessionId)) {
             throw new BusinessRuleViolationException("Session ID mismatch: Cannot logout from a different session");
         }
-        revoke();
+        
+        return revoke();
+    }
+
+
+    private void markAsCompromised() {
+        this.revoked = true;
+        this.revokedAt = Instant.now();
     }
 }

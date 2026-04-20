@@ -2,17 +2,19 @@ package com.minewaku.chatter.identityaccess.application.messaging.publisher.inte
 
 import java.time.Instant;
 
-import lombok.Getter;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 
-@Getter
+@Data
+@EqualsAndHashCode(callSuper=false)
 public class IntegrationEventWrapper<T extends IntegrationEvent> {
 
-    private final String id;
-    private final String aggregateId;
-    private final String aggregateType;
-    private final String eventType;
-    private final T event;
-    private final String occurredAt;
+    private String id;
+    private String aggregateId;
+    private String aggregateType;
+    private String eventType;
+    private T event;
+    private Instant occurredAt;
 
     public IntegrationEventWrapper(String id, String aggregateId, T event) {
         this.id = id;
@@ -20,6 +22,6 @@ public class IntegrationEventWrapper<T extends IntegrationEvent> {
         this.aggregateType = event.getAggregateType();
         this.eventType = event.getEventType();
         this.event = event;
-        this.occurredAt = Instant.now().toString();
+        this.occurredAt = Instant.now();
     }
 }

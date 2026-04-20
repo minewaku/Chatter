@@ -1,7 +1,6 @@
 package com.minewaku.chatter.identityaccess.domain.aggregate.user.model;
 
 import com.minewaku.chatter.identityaccess.domain.aggregate.user.exception.UserNotAccessibleException;
-import com.minewaku.chatter.identityaccess.domain.aggregate.user.exception.UserSoftDeletedException;
 import com.minewaku.chatter.identityaccess.domain.sharedkernel.value.DeletionStatus;
 
 import lombok.EqualsAndHashCode;
@@ -15,7 +14,6 @@ import lombok.ToString;
 public class Enablement {
     
     private boolean enabled;
-
     private boolean locked;
 
     @NonNull
@@ -33,85 +31,57 @@ public class Enablement {
         this.deletionStatus = deletionStatus;
     }
 
-
     public void validateAccessible() {
         if (this.deletionStatus.isDeleted()) {
-            throw new UserSoftDeletedException("This user has been soft deleted");
+            throw new UserNotAccessibleException("This user has been soft deleted");
         }
         if (this.locked) {
             throw new UserNotAccessibleException("User is locked");
         }
         if (!this.enabled) {
-            throw new UserNotAccessibleException("User is unabled");
+            throw new UserNotAccessibleException("User is disabled");
         }
     }
 
-    public void checkForEnable() {
-        if (this.enabled) {
-            throw new UserNotAccessibleException("User is already enabled");
-        }
+    public boolean isUnverified() {
+        return !this.enabled && !this.locked && !this.deletionStatus.isDeleted();
     }
 
-    public void checkForDisable() {
-        if (!this.enabled) {
-            throw new UserNotAccessibleException("User is already disabled");
-        }
+    public boolean isBanned() {
+        return !this.enabled && this.locked && !this.deletionStatus.isDeleted();
     }
 
-    public void checkForSoftDeleted() {
-        if (this.deletionStatus.isDeleted()) {
-            throw new UserNotAccessibleException("User is already soft deleted");
-        }
+    public boolean isSoftDeleted() {
+        return this.deletionStatus.isDeleted();
     }
-
-    public void checkForLocked() {
-        if (this.locked) {
-            throw new UserNotAccessibleException("User is already locked");
-        }
-    }
-
 
     protected Enablement lock() {
-        if (this.locked) {
-            throw new UserNotAccessibleException("User is already locked");
-        }
-
+        if (this.locked) return this; 
         return new Enablement(this.enabled, true, this.deletionStatus);
     }
 
     protected Enablement unlock() {
-        if (!this.locked) {
-            throw new UserNotAccessibleException("User is already unlocked");
-        }
-
+        if (!this.locked) return this;
         return new Enablement(this.enabled, false, this.deletionStatus);
     }
 
     protected Enablement enable() {
-        if (this.enabled) {
-            throw new UserNotAccessibleException("User is already enabled");
-        }
-
+        if (this.enabled) return this;
         return new Enablement(true, this.locked, this.deletionStatus);
     }
-
     
     protected Enablement disable() {
-        if (!this.enabled) {
-            throw new UserNotAccessibleException("User is already disabled");
-        }
-
+        if (!this.enabled) return this;
         return new Enablement(false, this.locked, this.deletionStatus);
     }
 
-
     protected Enablement softDelete() {
-        DeletionStatus deletionStatus = this.deletionStatus.markDeleted();
-        return new Enablement(this.enabled, this.locked, deletionStatus);
-    }
+        DeletionStatus newDeletionStatus = this.deletionStatus.markDeleted();
 
-    protected Enablement restore() {
-        DeletionStatus deletionStatus = this.deletionStatus.markRestored();
-        return new Enablement(this.enabled, this.locked, deletionStatus);
+        if (!this.enabled && this.deletionStatus.equals(newDeletionStatus)) {
+            return this;
+        }
+
+        return new Enablement(false, this.locked, newDeletionStatus);
     }
 }
