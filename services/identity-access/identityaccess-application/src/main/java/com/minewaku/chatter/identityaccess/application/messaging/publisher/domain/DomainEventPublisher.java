@@ -4,7 +4,7 @@ import java.util.List;
 
 import com.minewaku.chatter.identityaccess.domain.sharedkernel.event.DomainEvent;
 
-public class DomainEventPublisher{
+public class DomainEventPublisher {
 	
 	private final EventQueue messageQueue;
 	

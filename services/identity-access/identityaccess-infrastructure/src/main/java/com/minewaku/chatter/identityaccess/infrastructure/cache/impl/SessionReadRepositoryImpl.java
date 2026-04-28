@@ -23,15 +23,7 @@ public class SessionReadRepositoryImpl implements SessionReadRepository {
     @Override
     public Set<SessionReadModel> findAllSessionsByUserId(UserId userId) {
         Set<SessionReadModel > sessionCacheDtos = redisSessionReadRepository.findAllSessionsByUserId(userId.getValue().toString());
-        return sessionCacheDtos.stream()
-                .map(dto -> new SessionReadModel(
-                        dto.sessionId(),
-                        dto.userId(),
-                        dto.deviceInfo(),
-                        dto.issuedAt(),
-                        dto.expiresAt(),
-                        dto.lastRefreshedAt()))
-                .collect(java.util.stream.Collectors.toSet());
+        return sessionCacheDtos;
     }
     
 }

@@ -69,8 +69,6 @@
 	        <scope>provided</scope>
 	    </dependency>
 
-
-
 		<!-- 
 			*** SPRING CONTEXT ANNOTATION PACKAGES ***
 		-->

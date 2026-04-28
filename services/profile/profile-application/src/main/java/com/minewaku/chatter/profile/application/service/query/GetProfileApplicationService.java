@@ -1,6 +1,5 @@
 package com.minewaku.chatter.profile.application.service.query;
 
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import com.minewaku.chatter.profile.application.exception.EntityNotFoundException;
@@ -21,7 +20,6 @@ public class GetProfileApplicationService implements GetProfileUseCase {
     }
 
     @Override
-    @Cacheable(value = "profile", key = "#request.value()")
     @Retry(name = "transientDataAccess")
     public ProfileReadModel handle(ProfileId request) {
         ProfileReadModel model = profileCacheRepository.findById(request)

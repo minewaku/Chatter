@@ -2,29 +2,36 @@ package com.minewaku.chatter.profile.domain.sharedkernel.value;
 
 import java.time.Instant;
 
-import jakarta.persistence.Embeddable;
+import org.springframework.data.annotation.PersistenceCreator;
+import org.springframework.data.relational.core.mapping.Column;
+
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.ToString;
 
-@Embeddable
 @Getter
 @ToString
 @EqualsAndHashCode
 public class DeletionStatus {
     
-    private boolean deleted;
+    @Column("is_deleted")
+    private Boolean deleted;
 
+    @Column("deleted_at")
     private Instant deletedAt;
 
-    public DeletionStatus() {
-        this.deleted = false;
-        this.deletedAt = null;
-    }
+    @PersistenceCreator
+    public DeletionStatus(
+                @NonNull Boolean deleted, 
+                Instant deletedAt) {
 
-    public DeletionStatus(boolean deleted, Instant deletedAt) {
         this.deleted = deleted;
         this.deletedAt = deletedAt;
+    }
+
+    public static DeletionStatus createNew() {
+        return new DeletionStatus(false, null);
     }
 
     public DeletionStatus markDeleted() {

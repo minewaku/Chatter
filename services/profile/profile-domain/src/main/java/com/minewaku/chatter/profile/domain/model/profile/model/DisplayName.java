@@ -2,21 +2,19 @@ package com.minewaku.chatter.profile.domain.model.profile.model;
 
 import java.util.regex.Pattern;
 
+import org.springframework.data.annotation.PersistenceCreator;
+import org.springframework.data.relational.core.mapping.Column;
+
 import com.minewaku.chatter.profile.domain.sharedkernel.exception.DomainValidationException;
 
-import jakarta.persistence.Embeddable;
-import lombok.AccessLevel;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.ToString;
 
-@Embeddable
 @Getter
 @ToString
 @EqualsAndHashCode
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public final class DisplayName {
 
     private static final int MIN_LENGTH = 1;
@@ -24,9 +22,11 @@ public final class DisplayName {
     private static final String REGEX = "^[^\\n\\r\\t]+$";
     private static final Pattern PATTERN = Pattern.compile(REGEX);
 
-    @NonNull
+    @Column("display_name")
     private String value;
 
+    
+    @PersistenceCreator
     public DisplayName(@NonNull String value) {
         String processedValue = value.trim();
 

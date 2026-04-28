@@ -19,10 +19,13 @@ CREATE TABLE "account" (
 
     version INTEGER DEFAULT NULL
 );
+CREATE INDEX idx_account_inactive ON account (id) WHERE is_deleted = TRUE;
+CREATE INDEX idx_account_created_at ON account (created_at DESC);
+
 
 -- Bảng "session"
 CREATE TABLE session (
-    session_id UUID PRIMARY KEY,
+    id UUID PRIMARY KEY,
     user_id BIGINT NOT NULL,
     device_info JSONB, 
     generation INTEGER DEFAULT 0,
@@ -37,6 +40,9 @@ CREATE TABLE session (
     -- Ràng buộc khóa ngoại
     CONSTRAINT fk_session_user FOREIGN KEY (user_id) REFERENCES account (id) ON DELETE CASCADE
 );
+CREATE INDEX idx_session_user_id ON session (user_id);
+CREATE INDEX idx_session_expires_at ON session (expires_at);
+
 
 -- Bảng "outbox"
 CREATE TABLE outbox (
@@ -47,3 +53,4 @@ CREATE TABLE outbox (
     payload JSONB NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+CREATE INDEX idx_outbox_created_at ON outbox (created_at ASC);

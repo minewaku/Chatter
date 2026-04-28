@@ -18,9 +18,12 @@ public class GenerateUploadSignatureApplicationService implements GenerateUpload
     }
 
     @Override
-    public AssetStorage.Response handle(Command command) {
+    public AssetStorage.UploadSignature handle(Command command) {
         log.info("receive the fucking link! ");
-        AssetStorage.Response response = assetStorage.generateUploadSignature(command.namespace());
+        AssetStorage.UploadSignature response = assetStorage.generateUploadSignature(
+            command.namespace(), 
+            command.params());
+        
         return response;
     }
     

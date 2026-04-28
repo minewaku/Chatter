@@ -1,47 +1,53 @@
 package  com.minewaku.chatter.profile.domain.model.profile.model;
 
+import org.springframework.data.annotation.PersistenceCreator;
+import org.springframework.data.relational.core.mapping.Column;
+import org.springframework.data.relational.core.mapping.Embedded;
+
 import com.minewaku.chatter.profile.domain.model.profile.exception.UserNotAccessibleException;
 import com.minewaku.chatter.profile.domain.model.profile.exception.UserSoftDeletedException;
 import com.minewaku.chatter.profile.domain.sharedkernel.value.DeletionStatus;
 
-import jakarta.persistence.Embeddable;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.ToString;
 
-@Embeddable
 @Getter
 @ToString
 @EqualsAndHashCode
 public class Enablement {
     
-    private boolean enabled;
+    @Column("is_enabled")
+    private Boolean enabled;
 
-    private boolean locked;
+    @Column("is_locked")
+    private Boolean locked;
 
-    @NonNull
+    @Embedded.Nullable
     private DeletionStatus deletionStatus;
 
-    public Enablement() {
-        this.enabled = false;
-        this.locked = false;
-        this.deletionStatus = new DeletionStatus();
-    }
+    @PersistenceCreator
+    public Enablement(
+                @NonNull Boolean enabled, 
+                @NonNull Boolean locked, 
+                @NonNull DeletionStatus deletionStatus) {
 
-    public Enablement(boolean enabled, boolean locked, DeletionStatus deletionStatus) {
-        this.enabled = enabled;
-        this.locked = locked;
+        this.enabled = enabled != null ? enabled : false;
+        this.locked = locked != null ? locked : false;
         this.deletionStatus = deletionStatus;
     }
 
-    public static Enablement enabled() {
-        return new Enablement(true, false, new DeletionStatus());
+    public static Enablement createNew() {
+        return new Enablement(false, false, DeletionStatus.createNew());
     }
 
+    public Enablement enabled() {
+        return new Enablement(true, this.locked, this.deletionStatus);
+    }
 
     public void validateAccessible() {
-        if (this.deletionStatus.isDeleted()) {
+        if (this.deletionStatus.getDeleted()) {
             throw new UserSoftDeletedException("This user has been soft deleted");
         }
         if (this.locked) {
@@ -53,14 +59,14 @@ public class Enablement {
     }
 
     public boolean isUnverified() {
-        return !this.enabled && !this.locked && !this.deletionStatus.isDeleted();
+        return !this.enabled && !this.locked && !this.deletionStatus.getDeleted();
     }
 
     public boolean isBanned() {
-        return !this.enabled && this.locked && !this.deletionStatus.isDeleted();
+        return !this.enabled && this.locked && !this.deletionStatus.getDeleted();
     }
 
     public boolean isSoftDeleted() {
-        return this.deletionStatus.isDeleted();
+        return this.deletionStatus.getDeleted();
     }
 }

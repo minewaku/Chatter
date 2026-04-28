@@ -4,73 +4,53 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.PersistenceCreator;
+import org.springframework.data.annotation.Transient;
+import org.springframework.data.annotation.Version;
+import org.springframework.data.relational.core.mapping.Column;
+import org.springframework.data.relational.core.mapping.Embedded;
+import org.springframework.data.relational.core.mapping.Table;
+
 import com.minewaku.chatter.profile.domain.sharedkernel.event.DomainEvent;
 import com.minewaku.chatter.profile.domain.sharedkernel.value.AuditMetadata;
 
-import jakarta.persistence.AttributeOverride;
-import jakarta.persistence.AttributeOverrides;
-import jakarta.persistence.Column;
-import jakarta.persistence.Embedded;
-import jakarta.persistence.EmbeddedId;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
-import jakarta.persistence.Transient;
-import lombok.AccessLevel;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.ToString;
 
-@Entity
-@Table(name = "\"profile\"")
 @Getter
+@Table("profile")
 @ToString
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Profile {
 
-    @EmbeddedId
-    @AttributeOverride(name = "value", column = @Column(name = "id"))
-    @NonNull
+    @Id
     private ProfileId id;
 
-    @Embedded
-    @AttributeOverride(name = "value", column = @Column(name = "username", unique = true, length = 32,nullable = false))
-    @NonNull
+    @Embedded.Nullable
     private Username username;
 
-    @Column(name = "avatar", length = 255)
+    @Column("avatar")
     private String avatarHash;
 
-    @Column(name = "banner", length = 255)
+    @Column("banner")
     private String bannerHash;
 
-    @Embedded
-    @AttributeOverride(name = "value", column = @Column(name = "display_name", length = 32))
+    @Embedded.Nullable
     private DisplayName displayName;
 
-    @Embedded
-    @AttributeOverride(name = "value", column = @Column(name = "bio", length = 190))
+    @Embedded.Nullable
     private Bio bio;
 
-    @Embedded
-    @AttributeOverrides({
-        @AttributeOverride(name = "enabled", column = @Column(name = "is_enabled")),
-        @AttributeOverride(name = "locked", column = @Column(name = "is_locked")),
-        @AttributeOverride(name = "deletionStatus.deleted", column = @Column(name = "is_deleted")),
-        @AttributeOverride(name = "deletionStatus.deletedAt", column = @Column(name = "deleted_at"))
-    })
-    @NonNull
+    @Embedded.Nullable
     private Enablement enablement;
 
-    @Embedded
-    @AttributeOverrides({
-        @AttributeOverride(name = "createdAt", column = @Column(name = "created_at")),
-        @AttributeOverride(name = "modifiedAt", column = @Column(name = "modified_at"))
-    })
-    @NonNull
+    @Embedded.Nullable
     private AuditMetadata auditMetadata;
 
-    @NonNull
+    @Version
+    private Integer version;
+
     @Transient
     private List<DomainEvent> domainEvents = new ArrayList<>();
 
@@ -96,6 +76,7 @@ public class Profile {
     /*
     * STATIC FACTORIES
     */
+    @PersistenceCreator
     public static Profile reconstitute(
                 @NonNull ProfileId id, 
                 @NonNull Username username, 
@@ -116,9 +97,10 @@ public class Profile {
                 @NonNull Enablement enablement
             ) {
 
-        return new Profile(id, username, displayName, bio, enablement, new AuditMetadata());
+        return new Profile(id, username, displayName, bio, enablement, AuditMetadata.createNew());
     }
 
+    
     public void isAccessible() {
         this.enablement.validateAccessible();
     }

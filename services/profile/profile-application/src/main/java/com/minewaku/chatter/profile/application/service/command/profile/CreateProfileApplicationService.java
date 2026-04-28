@@ -1,6 +1,5 @@
 package com.minewaku.chatter.profile.application.service.command.profile;
 
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,7 +22,6 @@ public class CreateProfileApplicationService implements CreateProfileUseCase {
 
     @Override
     @Retry(name = "transientDataAccess")
-    @CacheEvict(value = "profiles", key = "#command.profileId().value()")
 	@Transactional
     public Void handle(Command command) {
 

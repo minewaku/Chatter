@@ -49,6 +49,7 @@ public class KafkaConsumer {
 
         } catch (Exception e) {
             log.error("Kafka error: {}", payload, e);
+            throw new RuntimeException(e);
         }
     }
 

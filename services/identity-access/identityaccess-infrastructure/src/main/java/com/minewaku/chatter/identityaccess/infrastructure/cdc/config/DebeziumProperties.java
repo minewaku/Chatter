@@ -42,7 +42,7 @@ public class DebeziumProperties {
         props.setProperty("database.user", vaultDebeziumProperties.getUsername());
         props.setProperty("database.password", vaultDebeziumProperties.getPassword());
         props.setProperty("database.dbname", "chatter");
-        props.setProperty("database.server.name", "authentication-postgresql-chatter");
+        props.setProperty("database.server.name", "identityaccess-postgresql-chatter");
         props.setProperty("database.server.id", String.valueOf(variableServerRepository.getServerId()));
         
         // Plugin 

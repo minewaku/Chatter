@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.minewaku.chatter.identityaccess.application.port.inbound.query.FindAllSessionsUseCase;
+import com.minewaku.chatter.identityaccess.application.port.inbound.query.FindSessionsByUserIdUseCase;
 import com.minewaku.chatter.identityaccess.application.port.outbound.query.model.SessionReadModel;
 import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.UserId;
 
@@ -20,11 +20,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @RequestMapping("/api/v1/sessions")
 public class SessionReadController {
 
-    private final FindAllSessionsUseCase findAllSessionsUseCase;
+    private final FindSessionsByUserIdUseCase findSessionsByUserIdUseCase;
 
     public SessionReadController(
-            FindAllSessionsUseCase findAllSessionsUseCase) {
-        this.findAllSessionsUseCase = findAllSessionsUseCase;
+            FindSessionsByUserIdUseCase findSessionsByUserIdUseCase) {
+        this.findSessionsByUserIdUseCase = findSessionsByUserIdUseCase;
     }
 
     @GetMapping("")
@@ -32,7 +32,7 @@ public class SessionReadController {
 			@AuthenticationPrincipal Jwt jwt) {
         
         String userId = jwt.getSubject();      
-        Set<SessionReadModel> sessions = findAllSessionsUseCase.handle(new UserId(Long.parseLong(userId)));
+        Set<SessionReadModel> sessions = findSessionsByUserIdUseCase.handle(new UserId(Long.parseLong(userId)));
 		return ResponseEntity.ok(sessions);
 	}
 }

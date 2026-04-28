@@ -23,7 +23,7 @@ import lombok.NoArgsConstructor;
 public class JdbcSessionEntity {
 
     @Id 
-    @Column("session_id")
+    @Column("id")
     private UUID id;
 
     @Column("user_id")

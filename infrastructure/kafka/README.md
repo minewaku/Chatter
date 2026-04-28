@@ -21,6 +21,9 @@ sed -i 's/\r$//' ../../opt/kafka/scripts/create-topics.sh
 
 # 2. Execute the script
 bash ../../opt/kafka/scripts/create-topics.sh
+bash opt/kafka/scripts/create-topics.sh
 
 # optional: delete a topic
 bash ../../bin/kafka-topics.sh --bootstrap-server localhost:5003 --delete --topic <topic_name>
+
+bash kafka-topics --bootstrap-server localhost:5003 --delete --topic <topic_name>

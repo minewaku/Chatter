@@ -18,14 +18,14 @@ import lombok.NonNull;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class AssetId implements Serializable {
 
-    @Column(name = "id")
     private Long value;
 
     public AssetId(@NonNull Long value) {
-        if(Long.valueOf(value) <= 0) {
+
+		if(Long.valueOf(value) <= 0) {
 			throw new DomainValidationException("AssetId value cannot be smaller than 1");
 		}
 		
 		this.value = value;
-    }
+	}
 }

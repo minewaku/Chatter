@@ -6,7 +6,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.minewaku.chatter.profile.application.exception.EntityNotFoundException;
 import com.minewaku.chatter.profile.application.port.inbound.command.security.usecase.SoftDeleteProfileUseCase;
-import com.minewaku.chatter.profile.application.port.outbound.storage.AssetStorage;
 import com.minewaku.chatter.profile.domain.model.file.repository.AssetRepository;
 import com.minewaku.chatter.profile.domain.model.profile.model.Profile;
 import com.minewaku.chatter.profile.domain.model.profile.repository.ProfileRepository;
@@ -18,17 +17,14 @@ public class SoftDeleteProfileApplicationService implements SoftDeleteProfileUse
 	
 	private final ProfileRepository profileRepository;
 	private final AssetRepository assetRepository;
-	private final AssetStorage assetStorage;
 	
 
 	public SoftDeleteProfileApplicationService(
 				ProfileRepository profileRepository,
-				AssetRepository assetRepository,
-				AssetStorage assetStorage) {
+				AssetRepository assetRepository) {
 
 		this.profileRepository = profileRepository;
 		this.assetRepository = assetRepository;
-		this.assetStorage = assetStorage;
 	}
 
 
@@ -54,9 +50,10 @@ public class SoftDeleteProfileApplicationService implements SoftDeleteProfileUse
 				assetRepository.deleteByFileHash(hashBanner);
 			}
 		}
-		assetStorage.delete(hashAvatar);
-		assetStorage.delete(hashBanner);
-		
+		// assetStorage.delete(hashAvatar);
+		// assetStorage.delete(hashBanner);
+		//publish event
+
         return null;
 	}
 }

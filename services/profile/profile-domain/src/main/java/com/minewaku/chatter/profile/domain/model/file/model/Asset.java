@@ -1,52 +1,55 @@
 package com.minewaku.chatter.profile.domain.model.file.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Embedded;
-import jakarta.persistence.EmbeddedId;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.Index;
-import jakarta.persistence.Table;
-import lombok.AccessLevel;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.PersistenceCreator;
+import org.springframework.data.domain.Persistable;
+import org.springframework.data.relational.core.mapping.Column;
+import org.springframework.data.relational.core.mapping.Embedded;
+import org.springframework.data.relational.core.mapping.Table;
+
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.ToString;
 
-@Entity
-@Table(name = "assets", indexes = {
-    @Index(name = "idx_asset_hash", columnList = "file_hash") 
-})
-@Getter
-@ToString
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Asset {
 
-    @EmbeddedId
-    @NonNull
+@Getter
+@Table("asset")
+@ToString
+public class Asset implements Persistable<AssetId> {
+
+    @Id
+    @Embedded.Nullable
     private AssetId id;
 
-    @NonNull
-    @Enumerated(EnumType.STRING)
-    @Column(name = "namespace", nullable = false, length = 32)
+    @Column("namespace")
     private Namespace namespace;
 
-    @Column(name = "file_hash", nullable = false, length = 64)
+    @Column("file_hash")
     private String fileHash; 
 
-    @Embedded
-    private ImageDimension dimension;
+    @Embedded.Nullable
+    private AssetDimension dimension;
 
+    @Column("file_size")
+    private Integer fileSize;
+
+    @PersistenceCreator
     public Asset(
                 @NonNull AssetId assetId,
                 @NonNull Namespace namespace,
                 @NonNull String fileHash, 
-                @NonNull ImageDimension dimension) {
+                @NonNull AssetDimension dimension,
+                @NonNull Integer fileSize) {
 
         this.id = assetId;
         this.namespace = namespace;
         this.fileHash = fileHash;
         this.dimension = dimension;
+        this.fileSize = fileSize;
+    }
+
+    @Override
+    public boolean isNew() {
+        return true;
     }
 }

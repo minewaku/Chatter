@@ -58,6 +58,7 @@ hs_err_pid*
 /infrastructure/**/volume/
 /infrastructure/**/data-mount/
 .data/
+.data*
 
 # Vault local file storage backend
 /infrastructure/vault/file/
@@ -85,6 +86,8 @@ local.properties
 
 # --- VS Code ---
 .vscode/*
+.vscode/
+.idea/
 !.vscode/launch.json
 !.vscode/tasks.json
 *.code-workspace

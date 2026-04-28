@@ -1,7 +1,7 @@
 package com.minewaku.chatter.profile.application.port.outbound.query.model;
 
 public record ProfileReadModel(
-    long profileId,
+    Long id,
     String username,
     String displayName,
     String bio,

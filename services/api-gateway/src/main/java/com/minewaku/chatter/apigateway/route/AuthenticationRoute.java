@@ -43,13 +43,20 @@ public class AuthenticationRoute {
 			)
 			.uri("lb://IDENTITYACCESS")
 		)
+		.route("profile webhooks", r -> r
+			.path("/api/v*/profiles/webhooks/**")
+			.filters(f -> f
+				.filter(requestThrottlingFilter.apply(new RequestThrottlingFilter.Config()))
+			)
+			.uri("lb://PROFILE")
+		)
 		.route("profiles", r -> r
 			.path("/api/v*/profiles/**")
 			.filters(f -> f
 				.filter(authenticationFilter.apply(new AuthenticationFilter.Config()))
 				.filter(requestThrottlingFilter.apply(new RequestThrottlingFilter.Config()))
 			)
-			.uri("lb://PROFILES-SERVICE")
+			.uri("lb://PROFILE")
 		)
 		.build();
 	}

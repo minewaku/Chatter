@@ -3,36 +3,39 @@ package com.minewaku.chatter.profile.presentation.webhooks;
 import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.minewaku.chatter.profile.application.port.inbound.command.profile.usecase.GenerateUploadSignatureUseCase;
+import com.minewaku.chatter.profile.application.port.inbound.command.file.usecase.HandleUploadNotificationUseCase;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.log4j.Log4j2;
 
 @Tag(name = "Upload Image Webhook Notifications", description = "Webhook notifications for image uploads")
 @RestController
-@RequestMapping("/webhooks/upload")
+@RequestMapping("/api/v1/profiles/webhooks/upload")
 @Log4j2
 public class UploadImageWebhook {
 
-	private final GenerateUploadSignatureUseCase generateUploadSignatureUseCase;
+	private final HandleUploadNotificationUseCase handleUploadNotificationUseCase;
 
 	public UploadImageWebhook(
-			GenerateUploadSignatureUseCase generateUploadSignatureUseCase) {
+			HandleUploadNotificationUseCase handleUploadNotificationUseCase) {
 				
-		this.generateUploadSignatureUseCase = generateUploadSignatureUseCase;
+		this.handleUploadNotificationUseCase = handleUploadNotificationUseCase;
 	}
 
 	
-	@PutMapping("/temp")
+	@PostMapping("/temp")
 	public ResponseEntity<Void> generateSignature(
-				@RequestBody Map<String, Object> map) {
+				@RequestHeader Map<String, String> headers,
+				@RequestBody Map<String, Object> body) {
 
-		log.info("Received the fuking webhook notification! {}", map);
+		log.info("Received upload notification with headers: {} and body: {}", headers, body);
+		handleUploadNotificationUseCase.handle(new HandleUploadNotificationUseCase.Command(headers, body));
 		return ResponseEntity.ok().build();
 	}
 }

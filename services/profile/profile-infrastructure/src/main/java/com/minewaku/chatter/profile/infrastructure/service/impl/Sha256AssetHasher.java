@@ -1,7 +1,6 @@
 package com.minewaku.chatter.profile.infrastructure.service.impl;
 
 import java.io.InputStream;
-import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
@@ -18,7 +17,7 @@ public class Sha256AssetHasher implements AssetHasher {
     public String hash(InputStream inputStream) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
-            DigestInputStream digestStream = new DigestInputStream(inputStream, md); 
+            // DigestInputStream digestStream = new DigestInputStream(inputStream, md); 
             byte[] digest = md.digest();
             String hashString = HexFormat.of().formatHex(digest);
             return hashString;

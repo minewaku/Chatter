@@ -3,8 +3,8 @@ package com.minewaku.chatter.profile.infrastructure.service.impl;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import com.minewaku.chatter.profile.infrastructure.persistence.VariableServerRepository;
 import com.minewaku.chatter.profile.domain.sharedkernel.service.TimeBasedIdGenerator;
+import com.minewaku.chatter.profile.infrastructure.persistence.postgresql.VariableServerRepository;
 
 
 /**

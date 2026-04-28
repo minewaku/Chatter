@@ -20,6 +20,7 @@
     + Consider the affect of anonymization status for all other services (like may a anonymize user dont own a profile)
 - Remove the Cerbos, each service now have to manage it own policies (implement policies as bussiness logics)
 - standardize all serialization
+- check lai session_id trong init schema
 
 -readMessage(serverId) (IS_MEMBER)
 -addMessage(serverId, message) (IS_MEMBER)
@@ -31,6 +32,11 @@
 ```bash
 psql -h localhost -p 5440 -U admin -d chatter
 redis-cli -h localhost -p 6387 --user vault -a XIqnIWD0DRb7Axwg
+```
+
+```bash
+psql -h localhost -p 5441 -U admin -d chatter
+redis-cli -h localhost -p 6388 --user vault -a FcDSikLxXFLaf6KN
 ```
 
 ## Access PosgresQL CLI
@@ -67,3 +73,22 @@ BEGIN
         RAISE NOTICE 'Đã dọn dẹp và xóa role: %', r.rolname;
     END LOOP; 
 END $$; 
+
+Server
+-createServer
+-addChannel(ChannelType(voice, chat))
+-addBanner()
+-deleteChannel()
+-createInviteLink()
+
+Channel
+
+Member
+-kickMember()
+-joinServer()
+-leaveServer()
+
+---
+Message
+
+

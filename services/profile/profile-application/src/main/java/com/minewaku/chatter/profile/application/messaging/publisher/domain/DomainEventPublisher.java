@@ -4,7 +4,19 @@ import java.util.List;
 
 import com.minewaku.chatter.profile.domain.sharedkernel.event.DomainEvent;
 
-public interface DomainEventPublisher {
-    void publish(DomainEvent event);
-	void publish(List<DomainEvent> events);
+public class DomainEventPublisher {
+	
+	private final EventQueue eventQueue;
+	
+	public DomainEventPublisher(EventQueue eventQueue) {
+		this.eventQueue = eventQueue;
+	}
+
+	public void publish(DomainEvent event) {
+		eventQueue.push(event);
+	}
+	
+	public void publish(List<DomainEvent> events) {
+		eventQueue.push(events);
+	}
 }
