@@ -67,7 +67,6 @@ public class HandleUploadNotificationApplicationService implements HandleUploadN
         assetRepository.save(asset);
 
 
-
         ProfileId profileId = new ProfileId(Long.parseLong(result.context().get("profileId").toString()));
         Profile profile = profileRepository.findById(profileId)
             .orElseThrow(() -> new EntityNotFoundException("Profile not found with id: " + profileId));

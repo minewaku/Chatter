@@ -8,7 +8,7 @@ import com.minewaku.chatter.profile.domain.model.file.model.Namespace;
 
 public interface GenerateUploadSignatureUseCase extends UseCaseHandler<GenerateUploadSignatureUseCase.Command, AssetStorage.UploadSignature> {
     
-    public static record Command(Namespace namespace, Map<String, Object> params) {
+    public record Command(Namespace namespace, Map<String, Object> params) {
 
     }
 }

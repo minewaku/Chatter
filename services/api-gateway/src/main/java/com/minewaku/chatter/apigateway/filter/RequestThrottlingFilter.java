@@ -3,10 +3,12 @@ package com.minewaku.chatter.apigateway.filter;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.stereotype.Component;
 
 import com.minewaku.chatter.apigateway.config.RateLimitConfig;
-import com.minewaku.chatter.apigateway.constant.ExchangeAttr;
 import com.minewaku.chatter.apigateway.model.RateLimitPolicy;
 import com.minewaku.chatter.apigateway.service.IRateLimitService;
 import com.minewaku.chatter.apigateway.util.HttpClientUtil;
@@ -41,9 +43,6 @@ public class RequestThrottlingFilter extends AbstractGatewayFilterFactory<Reques
     public GatewayFilter apply(Config config) {
         return (exchange, chain) -> {
             String path = exchange.getRequest().getURI().getPath();
-
-            String username = ExchangeAttr.USERNAME.get(exchange);
-            
             log.info("Incoming request: {}", config.toString());
 
             RateLimitPolicy matchedRule = rateLimitConfig.getRules().stream()
@@ -54,10 +53,6 @@ public class RequestThrottlingFilter extends AbstractGatewayFilterFactory<Reques
             if (matchedRule == null) {
                 return chain.filter(exchange);
             }
-
-            String key = (username != null)
-                    ? username
-                    : httpClientUtil.getClientIP(exchange.getRequest());
 
             Bandwidth limit = matchedRule.getIsGreedyRefill() ? 
                 Bandwidth.builder()
@@ -71,22 +66,32 @@ public class RequestThrottlingFilter extends AbstractGatewayFilterFactory<Reques
                     .initialTokens(matchedRule.getInitialTokens())
                     .build();
 
+            return ReactiveSecurityContextHolder.getContext()
+                .map(SecurityContext::getAuthentication)
+                .map(Authentication::getName)
+                .defaultIfEmpty("")
+                .flatMap(username -> {
+                    
+                    String key = !username.isEmpty()
+                            ? username
+                            : httpClientUtil.getClientIP(exchange.getRequest());
+                    log.info("Rate limiting key evaluated: {}", key);
+                    Bucket bucket = rateLimitService.redisBucket(key, limit);
 
-            Bucket bucket = rateLimitService.redisBucket(key, limit);
-
-            return Mono.fromCallable(() -> bucket.tryConsumeAndReturnRemaining(1))
-                    .subscribeOn(Schedulers.boundedElastic())
-                    .flatMap(probe -> {
-                        if (probe.isConsumed()) {
-                            return chain.filter(exchange);
-                        } else {
-                            log.warn("Rate limit exceeded for key: {}", key);
-                            exchange.getResponse().setStatusCode(HttpStatus.TOO_MANY_REQUESTS);
-                            exchange.getResponse().getHeaders().add("Retry-After",
-                                    String.valueOf(matchedRule.getPeriod().getSeconds()));
-                            return exchange.getResponse().setComplete();
-                        }
-                    });
+                    return Mono.fromCallable(() -> bucket.tryConsumeAndReturnRemaining(1))
+                            .subscribeOn(Schedulers.boundedElastic())
+                            .flatMap(probe -> {
+                                if (probe.isConsumed()) {
+                                    return chain.filter(exchange);
+                                } else {
+                                    log.warn("Rate limit exceeded for key: {}", key);
+                                    exchange.getResponse().setStatusCode(HttpStatus.TOO_MANY_REQUESTS);
+                                    exchange.getResponse().getHeaders().add("Retry-After",
+                                            String.valueOf(matchedRule.getPeriod().getSeconds()));
+                                    return exchange.getResponse().setComplete();
+                                }
+                            });
+                });
         };
     }
 

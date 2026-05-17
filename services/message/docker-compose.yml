@@ -1,0 +1,72 @@
+version: '3.8'
+
+networks:
+  chatter-net:
+    name: chatter-net
+    driver: bridge
+
+services:
+  message-redis-chatter:
+      image: redis:7
+      container_name: message-redis-chatter
+      restart: always
+      ports:
+        - "6389:6389"
+      volumes:
+        - ./environment/redis/.data:/data
+        - ./environment/redis/config/redis.conf:/usr/local/etc/redis/redis.conf
+      command: redis-server /usr/local/etc/redis/redis.conf --port 6389 --appendonly yes
+      networks:
+        - chatter-net
+
+  message-postgresql-chatter:
+    image: postgres:15
+    container_name: message-postgresql-chatter
+    restart: always
+    environment:
+      POSTGRES_DB: chatter
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "5442:5442"
+    command:
+      - "postgres"
+      - "-c"
+      - "listen_addresses=*"
+      - "-c"
+      - "port=5442"
+      - "-c"
+      - "wal_level=logical"
+      - "-c"
+      - "max_wal_senders=10"
+      - "-c"
+      - "max_replication_slots=10"
+    volumes:
+      - ./environment/postgresql/.data:/var/lib/postgresql/data
+      - ./environment/postgresql/init:/docker-entrypoint-initdb.d
+    networks:
+      - chatter-net
+
+  message-scylladb-chatter:
+    image: scylladb/scylla:latest
+    container_name: message-scylla-chatter
+    restart: always
+    command:
+      - --developer-mode=1
+      - --smp=1
+      - --authenticator=PasswordAuthenticator
+      - --authorizer=CassandraAuthorizer
+      - --native-transport-port=9052
+    ports:
+      - "9052:9052"
+    volumes:
+      # - ./environment/scylladb/.data:/var/lib/scylla 
+      # create a custom folder to store data in window mean u forces docker to translate between 2 different enviroments 
+      # and since the scylla image is based on linux it will cause a lot of performance issues, so we will use a docker volume instead
+      - scylladb_chatter_data:/var/lib/scylla
+      - ./environment/scylladb/scripts:/scripts
+    networks:
+      - chatter-net
+
+volumes:
+  scylladb_chatter_data:

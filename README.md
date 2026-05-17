@@ -12,19 +12,16 @@
 ```
 
 ## DEV NOTE
-- Since soft-delete is treated as a domain concept, we need to implement user anonymization (e.g., clearing all fields and masking the username to something like DeletedUser#123).
-    + Add an anonymize() method to the User domain model.
-    + Create an AnonymizeExpiredUsersUseCase (Application Service).
-    + Implement a scheduler in the Infrastructure layer to periodically trigger the anonymization use case.
-    + Introduce a state indicator (e.g., a Status enum or isDeleted boolean) in both the User domain model and JPA entity. When a user's account recovery grace period expires, update this state to mark them as fully deleted/anonymized. Introduce specific repository methods (like findByEmailAndDeletedFalse()) and refactor existing Use Cases to strictly filter out deleted users where necessary.
-    + Consider the affect of anonymization status for all other services (like may a anonymize user dont own a profile)
-- Remove the Cerbos, each service now have to manage it own policies (implement policies as bussiness logics)
-- standardize all serialization
+- implement implicit exceptiop types for message domain models
+- implement scheduler for cleaning /temp folder in file storage
 - check lai session_id trong init schema
+- all delete use cases have to fire an integration event for cleaning up associating data
+- implement resilient4j
 
 -readMessage(serverId) (IS_MEMBER)
 -addMessage(serverId, message) (IS_MEMBER)
 -addMember(serverId, userId) (IS_OWNER)
+
 -
 
 
@@ -43,9 +40,20 @@ redis-cli -h localhost -p 6388 --user vault -a FcDSikLxXFLaf6KN
 ```bash
 psql -h localhost -p 5440 -U admin -d chatter
 psql -h localhost -p 5441 -U admin -d chatter
+psql -h localhost -p 5442 -U admin -d chatter
+psql -h localhost -p 5442 -U vault -d chatter
 
 redis-cli -h 127.0.0.1 -p 6387 --user vault -a XIqnIWD0DRb7Axwg
 ```
+
+## Access ScyllaDB CLI
+```bash
+cqlsh localhost 9052 -u cassandra -p cassandra
+cqlsh localhost 9052 -u cassandra -p cassandra -f /scripts/init-roles.cql
+cqlsh 172.18.0.9 9052 -u cassandra -p cassandra -f /scripts/init-roles.cql
+docker exec -it message-scylla-chatter nodetool status
+```
+
 
 INSERT INTO role (id, name, code, description, is_deleted, created_at) 
 VALUES (1445089180648505345, 'admin', 'ADMIN', 'Admin role', false, NOW());

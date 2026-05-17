@@ -31,11 +31,6 @@
           <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <dependency>
-          <groupId>org.postgresql</groupId>
-          <artifactId>postgresql</artifactId>
-        </dependency>
-
     		<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-validation -->
         <!-- 3.5.11 -->
         <dependency>
@@ -256,6 +251,18 @@
           <artifactId>cloudinary-http44</artifactId>
           <version>1.38.0</version>
         </dependency>
+
+
+
+        <!--
+          DATABASE DRIVER
+        -->
+
+        <dependency>
+          <groupId>org.postgresql</groupId>
+          <artifactId>postgresql</artifactId>
+        </dependency>
+
   </dependencies>
 
   <build>
@@ -265,6 +272,7 @@
 				<artifactId>maven-compiler-plugin</artifactId>
 				<configuration>
 					<annotationProcessorPaths combine.children="append">
+          <!-- RECHECK: DELETE THIS LATER-->
 						<path>
 							<groupId>org.hibernate.orm</groupId>
 							<artifactId>hibernate-jpamodelgen</artifactId>

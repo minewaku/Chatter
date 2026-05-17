@@ -133,11 +133,56 @@ vault write database/roles/profile-postgresql-approle \
 vault kv put secret/apigateway - < ./vault/tmp/secrets/apigateway-secrets.json
 ```
 
-### 3.4 Cerbos Bridge Service
+### 3.4 Message Service
 
 **Add static secrets:**
 ```bash
-vault kv put secret/cerbos-bridge - < ./vault/tmp/secrets/cerbos-bridge-secrets.json
+vault kv put secret/message-secrets - < ./vault/tmp/secrets/message-secrets.json
+```
+
+**Create PostgreSQL dynamic database config:**
+*(Access is restricted to the "approle" role only)*
+```bash
+vault write database/config/message-postgresql \
+  plugin_name="postgresql-database-plugin" \
+  connection_url="postgresql://{{username}}:{{password}}@message-postgresql-chatter:5442/chatter?sslmode=disable" \
+  allowed_roles="message-postgresql-approle" \
+  username="vault" \
+  password="tO18Zzeef3BeBufF"
+```
+
+**Create the PostgreSQL database role:**
+```bash
+vault write database/roles/message-postgresql-approle \
+  db_name="message-postgresql" \
+  creation_statements=@./vault/tmp/creation_statements/postgresql-role-orm.sql \
+  revocation_statements=@./vault/tmp/revocation_statements/postgresql-revoke-orm.sql \
+  default_ttl=1h \
+  max_ttl=24h
+```
+
+**Create ScyllaDB dynamic database config:**
+*(Access is restricted to the "approle" role only)*
+```bash
+vault write database/config/message-scylladb \
+  plugin_name="cassandra-database-plugin" \
+  hosts="message-scylladb-chatter" \
+  port="9052" \
+  protocol_version=4 \
+  username="vault" \
+  password="SelJiVviktHEgiYO" \
+  tls="false" \
+  allowed_roles="message-scylladb-approle"
+```
+
+**Create the ScyllaDB database role:**
+```bash
+vault write database/roles/message-scylladb-approle \
+  db_name="message-scylladb" \
+  creation_statements=@./vault/tmp/creation_statements/cassandra-role-orm.cql \
+  revocation_statements=@./vault/tmp/revocation_statements/cassandra-revoke-orm.cql \
+  default_ttl=1h \
+  max_ttl=24h
 ```
 
 ### 3.5 JWT Keys

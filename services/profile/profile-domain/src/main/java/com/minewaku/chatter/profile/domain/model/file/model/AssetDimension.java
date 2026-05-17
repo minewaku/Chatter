@@ -1,25 +1,20 @@
 package com.minewaku.chatter.profile.domain.model.file.model;
 
 import org.springframework.data.annotation.PersistenceCreator;
+import org.springframework.data.relational.core.mapping.Column;
 
 import com.minewaku.chatter.profile.domain.sharedkernel.exception.DomainValidationException;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Embeddable;
-import lombok.AccessLevel;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.NonNull;
 
-@Embeddable
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class AssetDimension {
 
-    @Column(name = "width")
+    @Column("width")
     private Integer width;
 
-    @Column(name = "height")
+    @Column("height")
     private Integer height;
 
     @PersistenceCreator

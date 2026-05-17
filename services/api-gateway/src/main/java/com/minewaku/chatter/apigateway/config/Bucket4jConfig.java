@@ -40,7 +40,6 @@ public class Bucket4jConfig {
         return RedisClient.create(redisUri);
     }
 
-
     @Bean
     ProxyManager<String> lettuceBasedProxyManager(@Autowired RedisClient redisClient) {
         StatefulRedisConnection<String, byte[]> redisConnection = redisClient
