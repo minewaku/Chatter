@@ -1,6 +1,9 @@
 package com.minewaku.chatter.profile.infrastructure.persistence.postgresql.impl;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
@@ -45,4 +48,32 @@ public class ProfileRepositoryImpl implements ProfileRepository {
         return profileJdbcRepository.findById(profileId);
     }
 
+    @Override
+    public List<Profile> findAllByIdInForUpdate(List<ProfileId> profileIds) {
+        if (profileIds == null || profileIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Long> rawIds = profileIds.stream()
+            .map(ProfileId::getValue)
+            .collect(Collectors.toList());
+
+        return profileJdbcRepository.findAllByIdInForUpdate(rawIds);
+    }
+
+    @Override
+    public void saveAll(Iterable<Profile> profiles) {
+        if (profiles == null || !profiles.iterator().hasNext()) {
+            return;
+        }
+
+        List<Profile> savedProfiles = profileJdbcRepository.saveAll(profiles);
+        log.info("Saved batch of {} profiles to JDBC", savedProfiles.size());
+
+        var redisModels = savedProfiles.stream()
+            .map(profileReadMapper::entityToModel)
+            .collect(Collectors.toList());
+
+        profileReadRedisRepository.saveAll(redisModels);
+    }
 }

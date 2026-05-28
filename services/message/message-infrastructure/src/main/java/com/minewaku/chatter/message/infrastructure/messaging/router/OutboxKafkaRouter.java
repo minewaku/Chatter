@@ -29,13 +29,15 @@ public class OutboxKafkaRouter {
     // https://javierholguera.com/2024/08/20/naming-kafka-objects-i-topics/
     // https://javierholguera.com/2024/09/12/naming-kafka-objects-ii-producers-and-consumers/
     // https://javierholguera.com/2024/09/25/naming-kafka-objects-iii-kafka-connectors/
-    private static final String DLQ_TOPIC = "DEAD_LETTER_QUEUE";
+    private static final String DLQ_TOPIC = "dev.internal.event.message.dlq";
     private static final String INTERNAL_TOPIC = "dev.internal.event.message.outbox";
+    private static final String GUILD_ICON_UPLOAD_INTERNAL_TOPIC = "dev.private.event.profile.file.guildIconFileStorageUploaded";
+    private static final String ATTACHEMENT_UPLOAD_INTERNAL_TOPIC = "dev.private.event.profile.file.attachmentFileStorageUploaded";
 
 
     private static final Map<String, List<String>> TOPIC_ROUTING = Map.of(
-            "AttachmentFileStorageUploaded",  List.of(INTERNAL_TOPIC),
-            "GuildIconFileStorageUploaded",  List.of(INTERNAL_TOPIC)
+            "AttachmentFileStorageUploaded",  List.of(ATTACHEMENT_UPLOAD_INTERNAL_TOPIC),
+            "GuildIconFileStorageUploaded",  List.of(GUILD_ICON_UPLOAD_INTERNAL_TOPIC)
     );
 
     @Bean

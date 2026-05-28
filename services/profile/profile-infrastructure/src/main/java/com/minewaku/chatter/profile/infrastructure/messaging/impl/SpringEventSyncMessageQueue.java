@@ -8,24 +8,26 @@ import org.springframework.stereotype.Component;
 import com.minewaku.chatter.profile.application.messaging.publisher.domain.EventQueue;
 import com.minewaku.chatter.profile.domain.sharedkernel.event.DomainEvent;
 
+import lombok.AllArgsConstructor;
+import lombok.extern.log4j.Log4j2;
+
 @Component
+@Log4j2
+@AllArgsConstructor
 public class SpringEventSyncMessageQueue implements EventQueue {
 
-	private final ApplicationEventPublisher eventPublisher;
+    private final ApplicationEventPublisher eventPublisher;
 
-	public SpringEventSyncMessageQueue(ApplicationEventPublisher eventPublisher) {
-		this.eventPublisher = eventPublisher;
-	}
+    @Override
+    public void dispatch(DomainEvent event) {
+		log.info("Pushing single domain event: {}", event.getClass().getSimpleName());
+        eventPublisher.publishEvent(event);
+    }
 
-	@Override
-	public void push(DomainEvent event) {
-		eventPublisher.publishEvent(event);
-	}
-
-	@Override
-	public void push(List<DomainEvent> events) {
-		for (DomainEvent event : events) {
-			eventPublisher.publishEvent(event);
-		}
-	}
+    public void dispatch(List<? extends DomainEvent> events) {
+		log.info("Pushing batch of domain events: {}", events.size());
+        for (DomainEvent event : events) {
+            eventPublisher.publishEvent(event);
+        }
+    }
 }

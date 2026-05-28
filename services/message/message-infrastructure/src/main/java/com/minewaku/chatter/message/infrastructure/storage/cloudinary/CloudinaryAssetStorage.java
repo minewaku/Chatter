@@ -3,6 +3,7 @@ package com.minewaku.chatter.message.infrastructure.storage.cloudinary;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Service;
@@ -45,12 +46,11 @@ public class CloudinaryAssetStorage implements AssetStorage {
         
         long timestamp = System.currentTimeMillis() / 1000L;
         String folder = namespaceToTempFolder(namespace, params);
-        
         String uploadPreset = namespaceToPreset(namespace);
-        String context = cloudinaryContextGenerator(
-            "channelId=" + params.get("channelId"),
-            "messageId=" + params.get("messageId"), 
-            "namespace=" + namespace.name());
+
+        Map<String, Object> uploadParams = buildContext(namespace, params);
+        uploadParams.put("namespace", namespace.name());
+        String context = cloudinaryContextGenerator(uploadParams);
 
         Map<String, Object> paramsToSign = new HashMap<>();
         paramsToSign.put("timestamp", timestamp);
@@ -58,7 +58,6 @@ public class CloudinaryAssetStorage implements AssetStorage {
         paramsToSign.put("upload_preset", uploadPreset);
         paramsToSign.put("tags", namespace.name()); 
         paramsToSign.put("context", context);
-
 
         try {
             String apiSecret = cloudinary.config.apiSecret;
@@ -92,29 +91,21 @@ public class CloudinaryAssetStorage implements AssetStorage {
     @SuppressWarnings("unchecked")
     public UploadResult handleUploadNotification(Map<String, String> headers, Map<String, Object> body) {
         String publicId = (String) body.get("public_id");
+        String fileHash = extractHashFromPublicId(publicId);
         Map<String, Object> contextPayload = (Map<String, Object>) body.get("context");
         Map<String, Object> customContext = (Map<String, Object>) contextPayload.get("custom");
         
         String namespace = Objects.requireNonNull(
             (String) customContext.get("namespace"), "missing namespace in context"
         );
-        
-        String messageIdString = Objects.requireNonNull(
-            (String) customContext.get("messageId"), "missing messageId in context"
-        );
-
-        String channelIdString = Objects.requireNonNull(
-            (String) customContext.get("channelId"), "missing channelId in context"
-        );
 
         int width = (int) body.get("width");
         int height = (int) body.get("height");
         int fileSize = (int) body.get("bytes");
 
-        Map<String, Object> contextMap = Map.of("messageId", messageIdString, "channelId", channelIdString);
-
+        Map<String, Object> contextMap = buildContext(Namespace.valueOf(namespace), customContext);
         return new UploadResult(
-            publicId,
+            fileHash,
             namespace,
             contextMap,
             width,
@@ -135,6 +126,9 @@ public class CloudinaryAssetStorage implements AssetStorage {
         }
     }
 
+
+    //PRIVATE HELPER METHODS
+    //BUILD FOLDER PATHS BASED ON NAMESPACE AND CONTEXT
     private String getTempFolder(
                 Namespace namespace,
                 String fileHash,
@@ -206,8 +200,15 @@ public class CloudinaryAssetStorage implements AssetStorage {
         };
     }
 
+    
+    //OTHER HELPER METHODS
     private String buildPublicId(String folder, String fileHash) {
         return folder + "/" + fileHash;
+    }
+
+    private String extractHashFromPublicId(String publicId) {
+        String[] parts = publicId.split("/");
+        return parts[parts.length - 1];
     }
 
     private String namespaceToPreset(Namespace namespace) {
@@ -217,21 +218,37 @@ public class CloudinaryAssetStorage implements AssetStorage {
         };
     }
 
-    private String cloudinaryContextGenerator(String... context) {
-        return String.join("|", context);
+    private String cloudinaryContextGenerator(Map<String, Object> context) {
+        return context.entrySet().stream()
+                .map(entry -> entry.getKey() + "=" + entry.getValue())
+                .collect(Collectors.joining("|"));
     }
 
-    private Map<String, Object> contextParser(String context) {
-        Map<String, Object> parsedContext = new HashMap<>();
-        String[] pairs = context.split("\\|");
-        for (String pair : pairs) {
-            String[] keyValue = pair.split("=", 2);
-            if (keyValue.length == 2) {
-                parsedContext.put(keyValue[0], keyValue[1]);
-            }
-        }
 
-        return parsedContext;
+    //BUILD CONTEXT HELPER METHODS
+    private Map<String, Object> buildContext(Namespace namespace, Map<String, Object> requestContext) {
+        return switch(namespace) {
+            case ATTACHMENT -> buildAttachmentContext(requestContext);
+            case GUILD_ICON -> buildGuildIconContext(requestContext);
+        };
+    }
+
+    private Map<String, Object> buildAttachmentContext(Map<String, Object> requestContext) {
+        String channelId = (String) requestContext.get("channelId");
+        String messageId = (String) requestContext.get("messageId");
+
+        return Map.of(
+            "channelId", channelId,
+            "messageId", messageId
+        );
+    }
+    
+    private Map<String, Object> buildGuildIconContext(Map<String, Object> requestContext) {
+        String guildId = (String) requestContext.get("guildId");
+
+        return new HashMap<>(Map.of(
+            "guildId", guildId
+        ));
     }
 }
 

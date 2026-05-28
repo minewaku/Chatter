@@ -27,7 +27,8 @@ public class SecurityConfig {
 
     private static final String[] WHITE_LIST_URLS = {
             "/api/v*/webhooks/cloudinary/**",
-            "/api/v*/auth/login",
+            "/api/v*/auth/authenticate",
+            "/api/v*/auth/verification/**",
             "/api/v*/auth/register"
     };
 

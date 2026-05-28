@@ -10,7 +10,6 @@ import com.minewaku.chatter.message.domain.model.message.model.MessageId;
 import com.minewaku.chatter.message.domain.model.recipient.model.UserId;
 
 import lombok.NonNull;
-//RECHECK: CHANGE RETURN TYPE FROM VOID TO SOMETHING ELSE
 public interface GetChannelMessagesUseCase extends UseCaseHandler<GetChannelMessagesUseCase.Command, List<MessageReadModel>> {
 
     public record Command(

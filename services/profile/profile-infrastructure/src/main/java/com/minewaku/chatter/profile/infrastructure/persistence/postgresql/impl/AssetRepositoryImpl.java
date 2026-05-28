@@ -1,5 +1,7 @@
 package com.minewaku.chatter.profile.infrastructure.persistence.postgresql.impl;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.stereotype.Component;
@@ -35,5 +37,29 @@ public class AssetRepositoryImpl implements AssetRepository {
     @Override
     public Optional<Asset> findById(AssetId assetId) {
         return assetJdbcRepository.findById(assetId);
+    }
+
+    @Override
+    public void saveAll(Iterable<Asset> assets) {
+        if (assets == null || !assets.iterator().hasNext()) {
+            return;
+        }
+        assetJdbcRepository.saveAll(assets);
+    }
+
+    @Override
+    public List<Asset> findAllByFileHashInForUpdate(List<String> hashFiles) {
+        if (hashFiles == null || hashFiles.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return assetJdbcRepository.findAllByFileHashInForUpdate(hashFiles);
+    }
+
+    @Override
+    public void deleteAllByIdIn(List<AssetId> assetIds) {
+        if (assetIds == null || assetIds.isEmpty()) {
+            return;
+        }
+        assetJdbcRepository.deleteAllById(assetIds);
     }
 }

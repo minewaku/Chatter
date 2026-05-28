@@ -1,3 +1,7 @@
+
+CREATE KEYSPACE IF NOT EXISTS chatter 
+WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+
 -- ---------------------------------------------------------
 -- 1. Create vault user (superuser)
 -- ---------------------------------------------------------

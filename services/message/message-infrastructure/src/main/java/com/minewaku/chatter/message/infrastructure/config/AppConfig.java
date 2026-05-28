@@ -10,6 +10,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.client.RestTemplate;
 
+import com.fasterxml.uuid.Generators;
+import com.fasterxml.uuid.NoArgGenerator;
+
 
 @Configuration
 public class AppConfig {
@@ -34,5 +37,10 @@ public class AppConfig {
     @Bean
     AntPathMatcher antPathMatcher() {
         return new AntPathMatcher();
+    }
+
+    @Bean
+    NoArgGenerator timeBasedEpochGenerator() {
+        return Generators.timeBasedEpochGenerator();
     }
 }

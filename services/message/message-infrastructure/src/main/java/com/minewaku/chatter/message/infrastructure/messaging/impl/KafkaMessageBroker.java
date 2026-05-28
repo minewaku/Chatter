@@ -22,7 +22,7 @@ public class KafkaMessageBroker implements MessageBroker {
     }
 
     @Override
-    public void dispatch(List<IntegrationEventWrapper<?>> events) {
+    public void dispatch(List<? extends IntegrationEventWrapper<?>> events) {
         for (IntegrationEventWrapper<?> event : events) {
             this.dispatch(event);
         }

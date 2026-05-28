@@ -19,7 +19,8 @@
             "mainClass": "com.minewaku.chatter.service_registry.ServiceRegistryApplication",
             "projectName": "service-registry",
             "args": "",
-            "envFile": "${workspaceFolder}/.env"
+            "envFile": "${workspaceFolder}/.env",
+            "vmArgs": " -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=51136 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dspring.jmx.enabled=true -Djava.rmi.server.hostname=localhost -Dspring.application.admin.enabled=true -Dspring.boot.project.name=service-registry"
         },
         {
             "type": "java",
@@ -39,6 +40,16 @@
             "cwd": "${workspaceFolder}",
             "mainClass": "com.minewaku.chatter.profile.start.StartApplication",
             "projectName": "profile-start",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-StartApplication<message-start>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.minewaku.chatter.message.start.StartApplication",
+            "projectName": "message-start",
             "args": "",
             "envFile": "${workspaceFolder}/.env"
         }

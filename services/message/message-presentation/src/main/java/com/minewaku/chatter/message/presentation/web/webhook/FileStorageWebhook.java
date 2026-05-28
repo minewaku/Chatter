@@ -2,6 +2,7 @@ package com.minewaku.chatter.message.presentation.web.webhook;
 
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -21,7 +22,10 @@ import lombok.extern.log4j.Log4j2;
 @Log4j2
 public class FileStorageWebhook {
 
+	@Qualifier("handleUploadAttachmentNotificationUseCase")
 	private final HandleUploadAttachmentNotificationUseCase handleUploadAttachmentNotificationUseCase;
+	
+	@Qualifier("handleUploadGuildIconNotificationUseCase")
 	private final HandleUploadGuildIconNotificationUseCase handleUploadGuildIconNotificationUseCase;
 
 	public FileStorageWebhook(

@@ -12,6 +12,4 @@ public class IntegrationEvent {
 		this.aggregateType = aggregateType;
 		this.eventType = eventType;
 	}
-
-	
 }

@@ -45,7 +45,7 @@ public class HandleUploadAttachmentNotificationApplicationService implements Han
             result.fileSize()
         );
 
-        IntegrationEventWrapper<AttachmentFileStorageUploadedIntegrationEvent> wrapper = new IntegrationEventWrapper<>(eventId, null, event);
+        IntegrationEventWrapper<AttachmentFileStorageUploadedIntegrationEvent> wrapper = new IntegrationEventWrapper<>(eventId, "", event);
 		integrationEventPublisher.publish(wrapper);
         return null;
     }

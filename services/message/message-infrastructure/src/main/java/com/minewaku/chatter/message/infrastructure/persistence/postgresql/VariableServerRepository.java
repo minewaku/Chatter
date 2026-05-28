@@ -15,7 +15,6 @@ public class VariableServerRepository {
 
     @Cacheable(value = "server_config", key = "'serverId'")
     public int getServerId() {
-        //RECHECK: 
         String sql = "SELECT (current_setting('port')::int - 5432) AS server_id";
         return jdbcTemplate.queryForObject(sql, Integer.class);
     }

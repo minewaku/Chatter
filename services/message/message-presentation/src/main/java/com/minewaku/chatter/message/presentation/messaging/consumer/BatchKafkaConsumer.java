@@ -24,7 +24,7 @@ public class BatchKafkaConsumer {
     private final ObjectMapper objectMapper;
     private final FileStorageUploadedIntegrationEventsBatchSubscriber fileStorageUploadedIntegrationEventsBatchSubscriber;
 
-    //RECHECK: CONFIG MAX MESSAGES PER BATCH
+    //RECHECK: IMPLEMENT SPECIFIC CONSUMER FOR FILESTORAGEUPLOADEDEVENT INSTEAD OF USING GENERIC CONSUMER, TO AVOID UNNECESSARY DESERIALIZATION AND ERROR HANDLING FOR OTHER EVENT TYPES
     @KafkaListener(
         topics = "dev.private.event.message.file.fileStorageUploaded", 
         groupId = "dev-com.minewaku.message.file.chatter.event.fileStorageUploaded",
@@ -55,7 +55,4 @@ public class BatchKafkaConsumer {
             throw new RuntimeException(e);
         }
     }
-
-
-
 }

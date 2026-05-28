@@ -1,5 +1,6 @@
 package com.minewaku.chatter.message.presentation.web.api.controller;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
@@ -92,7 +93,7 @@ public class GuildController {
             @PathVariable Long guildId) {
 
 
-        Map<String, Object> params = Map.of("userId", jwt.getSubject());
+        Map<String, Object> params = new HashMap<>(Map.of("userId", jwt.getSubject()));
 		Namespace namespace = Namespace.GUILD_ICON;
 		GenerateUploadSignatureUseCase.Command command = new GenerateUploadSignatureUseCase.Command(namespace, params);
 		generateUploadSignatureUseCase.handle(command);

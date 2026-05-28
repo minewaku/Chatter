@@ -25,9 +25,11 @@ public class JoinGuildByInviteApplicationService implements JoinGuildByInviteUse
         Invite invite = inviteRepository.findByCode(command.inviteCode())
             .orElseThrow(() -> new EntityNotFoundException("Invite not found with code: " + command.inviteCode()));
 
-        RecipientId newMemberRecipientId = new RecipientId(invite.getGuildId(), command.userId());
-        Recipient newMemberRecipient = Recipient.createNew(newMemberRecipientId);
-        recipientRepository.save(newMemberRecipient);
+        if(!invite.validateExpiration()) {
+            RecipientId newMemberRecipientId = new RecipientId(invite.getGuildId(), command.userId());
+            Recipient newMemberRecipient = Recipient.createNew(newMemberRecipientId);
+            recipientRepository.save(newMemberRecipient);
+        }
 
         return null;
     }

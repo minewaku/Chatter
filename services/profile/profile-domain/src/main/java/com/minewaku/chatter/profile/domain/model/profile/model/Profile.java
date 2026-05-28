@@ -12,6 +12,8 @@ import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Embedded;
 import org.springframework.data.relational.core.mapping.Table;
 
+import com.minewaku.chatter.profile.domain.model.profile.event.AvatarReplacedDomainEvent;
+import com.minewaku.chatter.profile.domain.model.profile.event.BannerReplacedDomainEvent;
 import com.minewaku.chatter.profile.domain.sharedkernel.event.DomainEvent;
 import com.minewaku.chatter.profile.domain.sharedkernel.value.AuditMetadata;
 
@@ -130,6 +132,8 @@ public class Profile {
         if (this.enablement.isSoftDeleted()) {
             return false; 
         }
+        AvatarReplacedDomainEvent avatarEvent = new AvatarReplacedDomainEvent(avatarHash);
+        BannerReplacedDomainEvent bannerEvent = new BannerReplacedDomainEvent(bannerHash);
 
         this.username = username;
         this.bio = null;
@@ -139,7 +143,8 @@ public class Profile {
         this.enablement = enablement;
         this.auditMetadata = this.auditMetadata.markUpdated();
 
-        //publish event
+        domainEvents.add(avatarEvent);
+        domainEvents.add(bannerEvent);
         return true;
     }
 
@@ -149,10 +154,14 @@ public class Profile {
         if (Objects.equals(this.avatarHash, avatarHash)) {
             return false; 
         }
+
+        if (this.avatarHash != null) {
+            this.domainEvents.add(new AvatarReplacedDomainEvent(
+                this.avatarHash
+            ));
+        }
+
         this.avatarHash = avatarHash;
-
-        
-
         return true;
     }
 
@@ -161,6 +170,13 @@ public class Profile {
         if (Objects.equals(this.bannerHash, bannerHash)) {
             return false;
         }
+
+        if (this.bannerHash != null) {
+            this.domainEvents.add(new BannerReplacedDomainEvent(
+                this.bannerHash
+            ));
+        }
+
         this.bannerHash = bannerHash;
         return true;
     }
@@ -172,7 +188,7 @@ public class Profile {
         }
         this.displayName = newDisplayName;
         return true;
-    }
+    }    
 
     public boolean changeBio(Bio newBio) {
         this.enablement.validateAccessible();

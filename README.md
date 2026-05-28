@@ -25,7 +25,7 @@
 -
 
 
-## Access PosgresQL CLI
+## Access redis CLI
 ```bash
 psql -h localhost -p 5440 -U admin -d chatter
 redis-cli -h localhost -p 6387 --user vault -a XIqnIWD0DRb7Axwg
@@ -36,6 +36,12 @@ psql -h localhost -p 5441 -U admin -d chatter
 redis-cli -h localhost -p 6388 --user vault -a FcDSikLxXFLaf6KN
 ```
 
+```bash
+psql -h localhost -p 5442 -U admin -d chatter
+redis-cli -h localhost -p 6389 --user vault -a VDPduQr6lFGx9rrp
+AUTH vault VDPduQr6lFGx9rrp
+```
+
 ## Access PosgresQL CLI
 ```bash
 psql -h localhost -p 5440 -U admin -d chatter
@@ -44,13 +50,15 @@ psql -h localhost -p 5442 -U admin -d chatter
 psql -h localhost -p 5442 -U vault -d chatter
 
 redis-cli -h 127.0.0.1 -p 6387 --user vault -a XIqnIWD0DRb7Axwg
+redis-cli -h localhost -p 6380 --user vault --pass coFY4E7Nultq6lxM
+redis-cli -h localhost -p 6387 --user vault --pass XIqnIWD0DRb7Axwg
 ```
 
 ## Access ScyllaDB CLI
 ```bash
 cqlsh localhost 9052 -u cassandra -p cassandra
 cqlsh localhost 9052 -u cassandra -p cassandra -f /scripts/init-roles.cql
-cqlsh 172.18.0.9 9052 -u cassandra -p cassandra -f /scripts/init-roles.cql
+cqlsh 172.18.0.2 9052 -u cassandra -p cassandra -f /scripts/init-roles.cql
 docker exec -it message-scylla-chatter nodetool status
 ```
 

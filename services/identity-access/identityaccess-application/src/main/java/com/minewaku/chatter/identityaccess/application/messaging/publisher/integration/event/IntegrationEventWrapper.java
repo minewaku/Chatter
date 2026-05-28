@@ -18,7 +18,7 @@ public class IntegrationEventWrapper<T extends IntegrationEvent> {
 
     public IntegrationEventWrapper(String id, String aggregateId, T event) {
         this.id = id;
-        this.aggregateId = aggregateId;
+        this.aggregateId = aggregateId == null ? "None" : aggregateId;
         this.aggregateType = event.getAggregateType();
         this.eventType = event.getEventType();
         this.event = event;

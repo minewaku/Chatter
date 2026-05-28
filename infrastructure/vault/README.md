@@ -94,6 +94,7 @@ vault write database/roles/identityaccess-postgresql-approle \
   db_name="identityaccess-postgresql" \
   creation_statements=@./vault/tmp/creation_statements/postgresql-role-orm.sql \
   revocation_statements=@./vault/tmp/revocation_statements/postgresql-revoke-orm.sql \
+  renewal_statements=@./vault/tmp/renewal_statements/postgresql-renew-orm.sql \
   default_ttl=1h \
   max_ttl=24h
 ```
@@ -122,6 +123,7 @@ vault write database/roles/profile-postgresql-approle \
   db_name="profile-postgresql" \
   creation_statements=@./vault/tmp/creation_statements/postgresql-role-orm.sql \
   revocation_statements=@./vault/tmp/revocation_statements/postgresql-revoke-orm.sql \
+  renewal_statements=@./vault/tmp/renewal_statements/postgresql-renew-orm.sql \
   default_ttl=1h \
   max_ttl=24h
 ```
@@ -137,7 +139,7 @@ vault kv put secret/apigateway - < ./vault/tmp/secrets/apigateway-secrets.json
 
 **Add static secrets:**
 ```bash
-vault kv put secret/message-secrets - < ./vault/tmp/secrets/message-secrets.json
+vault kv put secret/message - < ./vault/tmp/secrets/message-secrets.json
 ```
 
 **Create PostgreSQL dynamic database config:**
@@ -157,6 +159,7 @@ vault write database/roles/message-postgresql-approle \
   db_name="message-postgresql" \
   creation_statements=@./vault/tmp/creation_statements/postgresql-role-orm.sql \
   revocation_statements=@./vault/tmp/revocation_statements/postgresql-revoke-orm.sql \
+  renewal_statements=@./vault/tmp/renewal_statements/postgresql-renew-orm.sql \
   default_ttl=1h \
   max_ttl=24h
 ```

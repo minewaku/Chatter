@@ -10,6 +10,8 @@ import org.springframework.data.relational.core.mapping.Embedded;
 import org.springframework.data.relational.core.mapping.Table;
 
 import com.minewaku.chatter.message.domain.model.guild.model.GuildId;
+import com.minewaku.chatter.message.domain.model.invite.exception.InviteExpiredException;
+import com.minewaku.chatter.message.domain.model.invite.exception.InviteUsedUpException;
 import com.minewaku.chatter.message.domain.model.recipient.model.UserId;
 import com.minewaku.chatter.message.domain.sharedkernel.value.BaseEntity;
 
@@ -120,5 +122,19 @@ public class Invite extends BaseEntity<InviteId> implements Persistable<InviteId
     @Override
     public boolean isNew() {
         return true;
+    }
+
+    public boolean validateExpiration() {
+        // Kiểm tra điều kiện hết hạn về mặt thời gian
+        if (expiredAt != null && Instant.now().isAfter(expiredAt)) {
+            throw new InviteExpiredException("invite expired at: " + expiredAt);
+        }
+        
+        // Kiểm tra điều kiện hết lượt sử dụng
+        if (maxUses > 0 && uses >= maxUses) {
+            throw new InviteUsedUpException("invite used up at: " + Instant.now());
+        }
+
+        return false;
     }
 }

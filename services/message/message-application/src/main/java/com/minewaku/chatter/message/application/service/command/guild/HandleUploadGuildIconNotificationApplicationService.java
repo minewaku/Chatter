@@ -45,7 +45,7 @@ public class HandleUploadGuildIconNotificationApplicationService implements Hand
             result.fileSize()
         );
 
-        IntegrationEventWrapper<GuildIconFileStorageUploadedIntegrationEvent> wrapper = new IntegrationEventWrapper<>(eventId, null, event);
+        IntegrationEventWrapper<GuildIconFileStorageUploadedIntegrationEvent> wrapper = new IntegrationEventWrapper<>(eventId, "", event);
 		integrationEventPublisher.publish(wrapper);
         return null;
     }

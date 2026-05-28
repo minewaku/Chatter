@@ -25,7 +25,7 @@ public class KafkaRouter {
     private final ObjectMapper objectMapper;
 
     // Các hằng số Topic
-    private static final String DLQ_TOPIC = "DEAD_LETTER_QUEUE";
+    private static final String DLQ_TOPIC = "dev.internal.event.message.dlq";
     private static final String ATTACHMENT_FILE_UPLOADED_WEBHOOK_NOTIFICATION = "dev.private.event.message.attachment.attachmentFileStorageUploaded";
     private static final String GUILD_ICON_FILE_UPLOADED_WEBHOOK_NOTIFICATION = "dev.private.event.message.guild.guildIconStorageUploaded";
 

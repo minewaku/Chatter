@@ -26,7 +26,7 @@ public class SingleKafkaConsumer {
         groupId = "dev-com.minewaku.message.chatter.outbox",
         containerFactory = "singleFactory"
     )
-    public void consumeUserEvents(
+    public void consumeAssetEvents(
             @Payload String payload, 
             @Header(value = "eventType", required = false) String eventType) {
             
@@ -51,4 +51,5 @@ public class SingleKafkaConsumer {
             throw new RuntimeException(e);
         }
     }
+
 }

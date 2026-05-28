@@ -15,7 +15,7 @@ import io.github.resilience4j.retry.annotation.Retry;
 public class UpdateProfileApplicationService implements UpdateProfileUseCase {
 
     private final ProfileRepository profileRepository;
-
+    
     public UpdateProfileApplicationService(
                 ProfileRepository profileRepository) {
 

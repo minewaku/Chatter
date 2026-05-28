@@ -10,7 +10,10 @@ import com.minewaku.chatter.identityaccess.application.messaging.publisher.integ
 import com.minewaku.chatter.identityaccess.application.messaging.publisher.integration.event.IntegrationEventWrapper;
 import com.minewaku.chatter.identityaccess.infrastructure.persistence.postgresql.entity.JdbcOutboxEntity;
 
+import lombok.extern.slf4j.Slf4j;
+
 @Component
+@Slf4j
 public class JdbcOutboxMapper {
 
     private final ObjectMapper objectMapper;
@@ -24,7 +27,8 @@ public class JdbcOutboxMapper {
             return null;
         }
         JsonNode payloadNode = objectMapper.valueToTree(wrapper.getEvent());
-
+        log.info("Mapping IntegrationEventWrapper to JdbcOutboxEntity: id={}, aggregateType={}, aggregateId={}, eventType={}, event={}", 
+            wrapper.getId(), wrapper.getAggregateType(), wrapper.getAggregateId(), wrapper.getEventType(), wrapper.getEvent());
         return JdbcOutboxEntity.builder()
                 .id(UUID.fromString(wrapper.getId()))
                 .aggregateType(wrapper.getAggregateType())

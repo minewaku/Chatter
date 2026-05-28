@@ -29,15 +29,18 @@ public class OutboxKafkaRouter {
     // https://javierholguera.com/2024/08/20/naming-kafka-objects-i-topics/
     // https://javierholguera.com/2024/09/12/naming-kafka-objects-ii-producers-and-consumers/
     // https://javierholguera.com/2024/09/25/naming-kafka-objects-iii-kafka-connectors/
-    private static final String DLQ_TOPIC = "DEAD_LETTER_QUEUE";
-    private static final String TOPIC_USER_EVENT = "dev.shared.event.profile.user";
+    private static final String DLQ_TOPIC = "dev.internal.event.profile.dlq";
     private static final String INTERNAL_TOPIC = "dev.internal.event.profile.outbox";
+    private static final String AVATAR_UPLOAD_INTERNAL_TOPIC = "dev.private.event.profile.file.avatarFileStorageUploaded";
+    private static final String BANNER_UPLOAD_INTERNAL_TOPIC = "dev.private.event.profile.file.bannerFileStorageUploaded";
 
     private static final Map<String, List<String>> TOPIC_ROUTING = Map.of(
-            "UserRegistered",  List.of(TOPIC_USER_EVENT),
-            "UserSoftDeleted", List.of(TOPIC_USER_EVENT, INTERNAL_TOPIC),
-            "EnablementUpdated", List.of(TOPIC_USER_EVENT),
-            "ConfirmationTokenCreated", List.of(INTERNAL_TOPIC)
+            "AvatarFileStorageUploaded", List.of(AVATAR_UPLOAD_INTERNAL_TOPIC),
+            "BannerFileStorageUploaded", List.of(BANNER_UPLOAD_INTERNAL_TOPIC),
+            "AssetDeleted", List.of(INTERNAL_TOPIC),
+            "AssetDetached", List.of(INTERNAL_TOPIC),
+            "DeleteFileStorage", List.of(INTERNAL_TOPIC)
+            
     );
 
     @Bean

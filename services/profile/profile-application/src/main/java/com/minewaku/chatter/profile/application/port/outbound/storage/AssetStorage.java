@@ -4,15 +4,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
 
-import com.minewaku.chatter.profile.domain.model.file.model.AssetDimension;
 import com.minewaku.chatter.profile.domain.model.file.model.Namespace;
 
 public interface AssetStorage {
     
     UploadSignature generateUploadSignature(Namespace namespace, Map<String, Object> params);
-    void delete(Namespace namespace, String fileHash, Map<String, Object> params);
+    void delete(Namespace namespace, String fileHash);
     UploadResult handleUploadNotification(Map<String, String> headers, Map<String, Object> body);
-    void commitUpload(Namespace namespace, String fileHash, Map<String, Object> params);
+    void commitUpload(Namespace namespace, String fileHash);
 
     //RECHECK: NO MORE NEED FOR INPUT STREAM SINCE WE ARE USING PRESIGNED URL INSTEAD
     public interface StorableFile {
@@ -28,9 +27,10 @@ public interface AssetStorage {
 
     public record UploadResult (
         String fileHash,
-        Namespace namespace,
+        String namespace,
         Map<String, Object> context,
-        AssetDimension dimension,
+        Integer width,
+        Integer height,
         Integer fileSize
     ) {}
 }

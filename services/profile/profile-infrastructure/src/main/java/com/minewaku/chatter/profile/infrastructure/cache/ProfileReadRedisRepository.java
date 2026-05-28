@@ -22,6 +22,12 @@ public class ProfileReadRedisRepository {
         redisTemplateProfileReadModel.opsForValue().set(key, profileReadModel);
     }
 
+    public void saveAll(Iterable<ProfileReadModel> profileReadModels) {
+        for (ProfileReadModel profileReadModel : profileReadModels) {
+            save(profileReadModel);
+        }
+    }
+
     public void deleteById(String id) {
         String key = Prefix.PROFILE.format(id);
         redisTemplateProfileReadModel.delete(key);

@@ -42,6 +42,7 @@ public class JdbcOutboxEntity implements Persistable<UUID>{
 
     @Column("payload")
     @NotNull(message = "payload cannot be null")
+    //recheck: change into String which holds json String instead so that the database don't need to parse every insert-only record
     private JsonNode payload;
     
     @Column("created_at")

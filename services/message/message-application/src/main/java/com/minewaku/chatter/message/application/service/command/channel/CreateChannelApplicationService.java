@@ -27,7 +27,7 @@ public class CreateChannelApplicationService implements CreateChannelUseCase {
     public Void handle(Command command) {
         RecipientId recipientId = new RecipientId(command.guildId(), command.requesterId());
 
-        //recheck
+        //recheck permission
         recipientRepository.findById(recipientId)
             .orElseThrow(() -> new EntityNotFoundException("Requester is not a member of the guild"));
 

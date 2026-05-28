@@ -29,7 +29,7 @@ public class OutboxKafkaRouter {
     // https://javierholguera.com/2024/08/20/naming-kafka-objects-i-topics/
     // https://javierholguera.com/2024/09/12/naming-kafka-objects-ii-producers-and-consumers/
     // https://javierholguera.com/2024/09/25/naming-kafka-objects-iii-kafka-connectors/
-    private static final String DLQ_TOPIC = "DEAD_LETTER_QUEUE";
+    private static final String DLQ_TOPIC = "dev.internal.event.identityaccess.dlq";
     private static final String TOPIC_USER_EVENT = "dev.shared.event.identityaccess.user";
     private static final String INTERNAL_TOPIC = "dev.internal.event.identityaccess.outbox";
 
@@ -54,6 +54,7 @@ public class OutboxKafkaRouter {
         String rawPayload = (String) message.getPayload();
 
         try {
+            //cdc message structure uses json
             JsonNode root = objectMapper.readTree(rawPayload);
             JsonNode afterNode = root.path("payload").path("after");
 

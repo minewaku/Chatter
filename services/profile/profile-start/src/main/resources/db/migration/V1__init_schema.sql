@@ -11,7 +11,6 @@ CREATE TABLE "profile" (
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
     deleted_at TIMESTAMP WITH TIME ZONE,
     
-    -- Giả định 2 trường audit này được kế thừa từ BaseEntity
     -- RECHECK: OVERLAP FEATURES WITH PREDEFINED FIELDS IN DOMAIN MODEL
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     modified_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -28,7 +27,10 @@ CREATE TABLE asset (
     file_hash VARCHAR(255) NOT NULL,
     width INTEGER NOT NULL,
     height INTEGER NOT NULL,
-    file_size INTEGER NOT NULL
+    file_size INTEGER NOT NULL,
+    ref_count INTEGER NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    modified_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX idx_asset_file_hash ON asset (file_hash);
 
@@ -38,7 +40,7 @@ CREATE TABLE outbox (
     aggregate_type VARCHAR(50) NOT NULL,
     aggregate_id VARCHAR(50) NOT NULL,
     event_type VARCHAR(128) NOT NULL,
-    payload JSONB NOT NULL,
+    payload TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX idx_outbox_created_at ON outbox (created_at ASC);
