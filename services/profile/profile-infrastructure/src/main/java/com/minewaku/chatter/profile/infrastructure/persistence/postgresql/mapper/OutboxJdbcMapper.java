@@ -23,6 +23,7 @@ public class OutboxJdbcMapper {
         if (wrapper == null) {
             return null;
         }
+        
         //writeValueAsString turn class into json string which really different than toString() format;
         String payloadNode;
         try {

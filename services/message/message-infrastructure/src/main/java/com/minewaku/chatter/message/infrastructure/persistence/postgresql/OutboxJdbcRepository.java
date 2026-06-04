@@ -8,9 +8,9 @@ import org.springframework.data.jdbc.repository.query.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.repository.ListCrudRepository;
 
-import com.minewaku.chatter.message.infrastructure.persistence.postgresql.entity.JdbcOutboxEntity;
+import com.minewaku.chatter.message.infrastructure.persistence.postgresql.entity.OutboxJdbcEntity;
 
-public interface OutboxJdbcRepository extends ListCrudRepository<JdbcOutboxEntity, UUID> {
+public interface OutboxJdbcRepository extends ListCrudRepository<OutboxJdbcEntity, UUID> {
 
     @Modifying
     @Query("DELETE FROM outbox WHERE created_at < :cutoffDateTime")

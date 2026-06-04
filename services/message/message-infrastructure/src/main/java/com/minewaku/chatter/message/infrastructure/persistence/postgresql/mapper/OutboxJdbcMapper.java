@@ -4,11 +4,11 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Component;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.minewaku.chatter.message.application.messaging.publisher.integration.event.IntegrationEvent;
 import com.minewaku.chatter.message.application.messaging.publisher.integration.event.IntegrationEventWrapper;
-import com.minewaku.chatter.message.infrastructure.persistence.postgresql.entity.JdbcOutboxEntity;
+import com.minewaku.chatter.message.infrastructure.persistence.postgresql.entity.OutboxJdbcEntity;
 
 @Component
 public class OutboxJdbcMapper {
@@ -19,13 +19,20 @@ public class OutboxJdbcMapper {
         this.objectMapper = objectMapper;
     }
 
-    public JdbcOutboxEntity integrationEventWrapperToEntity(IntegrationEventWrapper<? extends IntegrationEvent> wrapper) {
+    public OutboxJdbcEntity integrationEventWrapperToEntity(IntegrationEventWrapper<? extends IntegrationEvent> wrapper) {
         if (wrapper == null) {
             return null;
         }
-        JsonNode payloadNode = objectMapper.valueToTree(wrapper.getEvent());
+        
+        //writeValueAsString turn class into json string which really different than toString() format;
+        String payloadNode;
+        try {
+            payloadNode = objectMapper.writeValueAsString(wrapper.getEvent());
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to serialize event payload", e);
+        }
 
-        return JdbcOutboxEntity.builder()
+        return OutboxJdbcEntity.builder()
                 .id(UUID.fromString(wrapper.getId()))
                 .aggregateType(wrapper.getAggregateType())
                 .aggregateId(wrapper.getAggregateId())

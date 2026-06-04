@@ -30,7 +30,7 @@ public class SecurityConfig {
                         "/swagger-ui/**",
                         "/swagger-ui.html",
                         "/v3/api-docs/**",
-                        "/api/v1/messages/webhooks/**"
+                        "/api/v1/webhooks/cloudinary/**"
         };
 
         @Bean

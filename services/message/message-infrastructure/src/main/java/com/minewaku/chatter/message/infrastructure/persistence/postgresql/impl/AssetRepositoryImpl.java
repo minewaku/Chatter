@@ -1,7 +1,5 @@
 package com.minewaku.chatter.message.infrastructure.persistence.postgresql.impl;
 
-import java.util.List;
-
 import org.springframework.stereotype.Component;
 
 import com.minewaku.chatter.message.domain.model.asset.model.Asset;
@@ -26,8 +24,9 @@ public class AssetRepositoryImpl implements AssetRepository {
         assetJdbcRepository.saveAll(assets);
     }
 
-    @Override
-    public List<Asset> findAllByFileHashIn(Iterable<String> fileHashes) {
-        return assetJdbcRepository.findAllByFileHashIn(fileHashes);
-    }
+    //recheck
+    // @Override
+    // public List<Asset> findAllByFileHashIn(Iterable<String> fileHashes) {
+    //     return assetJdbcRepository.findAllByFileHashIn(fileHashes);
+    // }
 }

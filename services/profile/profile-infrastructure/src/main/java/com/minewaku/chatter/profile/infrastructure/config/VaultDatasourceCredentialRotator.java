@@ -22,7 +22,7 @@ public class VaultDatasourceCredentialRotator implements ApplicationListener<Sec
     @Override
     public void onApplicationEvent(SecretLeaseRotatedEvent event) {
 
-        if (event.getSource().getPath().contains("identityaccess-postgresql-approle")) {
+        if (event.getSource().getPath().contains("profile-postgresql-approle")) {
             Map<String, Object> secrets = event.getSecrets();
             String newUsername = (String) secrets.get("username");
             String newPassword = (String) secrets.get("password");

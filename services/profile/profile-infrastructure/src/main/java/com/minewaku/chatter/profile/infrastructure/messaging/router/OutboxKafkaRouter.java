@@ -38,7 +38,9 @@ public class OutboxKafkaRouter {
             "AvatarFileStorageUploaded", List.of(AVATAR_UPLOAD_INTERNAL_TOPIC),
             "BannerFileStorageUploaded", List.of(BANNER_UPLOAD_INTERNAL_TOPIC),
             "AssetDeleted", List.of(INTERNAL_TOPIC),
+            "AssetAttached", List.of(INTERNAL_TOPIC),
             "AssetDetached", List.of(INTERNAL_TOPIC),
+            "PersistFileStorage", List.of(INTERNAL_TOPIC),
             "DeleteFileStorage", List.of(INTERNAL_TOPIC)
             
     );

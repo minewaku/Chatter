@@ -4,6 +4,8 @@ import java.time.Duration;
 import java.time.Instant;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.PersistenceCreator;
+import org.springframework.data.annotation.Version;
 import org.springframework.data.domain.Persistable;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Embedded;
@@ -27,7 +29,7 @@ public class Invite extends BaseEntity<InviteId> implements Persistable<InviteId
     private static final Duration DEFAULT_DURATION = Duration.ofMinutes(30);
 
     @Id
-    @Embedded.Nullable
+    @Column("id")
     private InviteId id;
 
     @Embedded.Nullable
@@ -54,6 +56,10 @@ public class Invite extends BaseEntity<InviteId> implements Persistable<InviteId
     @Column("expired_at")
     private Instant expiredAt;
 
+    @Version
+    private Integer version;
+
+    @PersistenceCreator
     private Invite(
         @NonNull InviteId id,
         @NonNull Code code,
@@ -63,7 +69,8 @@ public class Invite extends BaseEntity<InviteId> implements Persistable<InviteId
         int uses,
         Duration duration,
         Instant createdAt,
-        Instant expiredAt
+        Instant expiredAt,
+        Integer version
     ) {
         this.id = id;
         this.code = code;
@@ -74,6 +81,7 @@ public class Invite extends BaseEntity<InviteId> implements Persistable<InviteId
         this.duration = duration;
         this.createdAt = createdAt;
         this.expiredAt = expiredAt;
+        this.version = version;
     }
 
     public static Invite createNew(
@@ -93,7 +101,8 @@ public class Invite extends BaseEntity<InviteId> implements Persistable<InviteId
             0, 
             duration != null ? duration : DEFAULT_DURATION, 
             Instant.now(), 
-            Instant.now().plus(duration));
+            Instant.now().plus(duration),
+            null);
     }
 
     public static Invite reconstitute(
@@ -105,7 +114,8 @@ public class Invite extends BaseEntity<InviteId> implements Persistable<InviteId
         int uses,
         Duration duration,
         Instant createdAt,
-        Instant expiredAt
+        Instant expiredAt,
+        Integer version
     ) {
         return new Invite(
             id,
@@ -116,7 +126,8 @@ public class Invite extends BaseEntity<InviteId> implements Persistable<InviteId
             uses, 
             duration, 
             createdAt, 
-            expiredAt);
+            expiredAt,
+            version);
     }
 
     @Override
@@ -125,12 +136,10 @@ public class Invite extends BaseEntity<InviteId> implements Persistable<InviteId
     }
 
     public boolean validateExpiration() {
-        // Kiểm tra điều kiện hết hạn về mặt thời gian
         if (expiredAt != null && Instant.now().isAfter(expiredAt)) {
             throw new InviteExpiredException("invite expired at: " + expiredAt);
         }
         
-        // Kiểm tra điều kiện hết lượt sử dụng
         if (maxUses > 0 && uses >= maxUses) {
             throw new InviteUsedUpException("invite used up at: " + Instant.now());
         }

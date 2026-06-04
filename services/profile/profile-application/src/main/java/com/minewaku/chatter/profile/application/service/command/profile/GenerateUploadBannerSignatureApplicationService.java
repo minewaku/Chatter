@@ -4,7 +4,7 @@ import org.springframework.stereotype.Service;
 
 import com.minewaku.chatter.profile.application.port.inbound.command.profile.usecase.GenerateUploadSignatureUseCase;
 import com.minewaku.chatter.profile.application.port.outbound.storage.AssetStorage;
-import com.minewaku.chatter.profile.domain.model.file.model.Namespace;
+import com.minewaku.chatter.profile.domain.model.asset.model.Namespace;
 
 import lombok.extern.log4j.Log4j2;
 

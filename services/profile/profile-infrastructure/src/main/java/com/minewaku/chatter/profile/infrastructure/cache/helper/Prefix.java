@@ -1,7 +1,7 @@
 package com.minewaku.chatter.profile.infrastructure.cache.helper;
 
 public enum Prefix {
-	PROFILE("profileS:");
+	PROFILE("profiles:");
 
 	private final String keyPrefix;
 

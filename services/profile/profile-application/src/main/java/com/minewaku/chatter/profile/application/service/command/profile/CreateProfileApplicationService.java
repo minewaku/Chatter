@@ -35,6 +35,4 @@ public class CreateProfileApplicationService implements CreateProfileUseCase {
         profileRepository.save(profile);
         return null;
     }
-
-    
 }

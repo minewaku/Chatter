@@ -2,6 +2,7 @@ package com.minewaku.chatter.message.domain.model.channel.model;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.PersistenceCreator;
+import org.springframework.data.annotation.Version;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Embedded;
 import org.springframework.data.relational.core.mapping.Table;
@@ -19,7 +20,7 @@ import lombok.ToString;
 public class Channel extends BaseEntity<ChannelId> {
     
     @Id
-    @Embedded.Nullable
+    @Column("id")
     private ChannelId id;
 
     @Embedded.Nullable
@@ -31,17 +32,22 @@ public class Channel extends BaseEntity<ChannelId> {
     @Column("description")
     private String description;
 
+    @Version
+    private Integer version;    
+
     @PersistenceCreator
     private Channel(
             @NonNull ChannelId id, 
             @NonNull GuildId guildId, 
             String name, 
-            String description) {
+            String description,
+            Integer version) {
         
         this.id = id;
         this.guildId = guildId;
         this.name = name;
         this.description = description;
+        this.version = version;
     }
 
     public static Channel createNew(
@@ -50,7 +56,7 @@ public class Channel extends BaseEntity<ChannelId> {
             String name, 
             String description) {
 
-        return new Channel(channelId, guildId, name, description);
+        return new Channel(channelId, guildId, name, description, null);
     }
 
     public boolean updateInfo(String name, String description) {

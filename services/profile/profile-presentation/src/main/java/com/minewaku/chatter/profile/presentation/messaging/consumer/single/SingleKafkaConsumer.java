@@ -6,6 +6,14 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.minewaku.chatter.profile.application.messaging.publisher.integration.event.AssetAttachedIntegrationEvent;
+import com.minewaku.chatter.profile.application.messaging.publisher.integration.event.AssetDetachedIntegrationEvent;
+import com.minewaku.chatter.profile.application.messaging.publisher.integration.event.DeleteFileStorageIntegrationEvent;
+import com.minewaku.chatter.profile.application.messaging.publisher.integration.event.PersistFileStorageIntegrationEvent;
+import com.minewaku.chatter.profile.application.messaging.subcriber.integration.AssetAttachedIntegrationEventSubscriber;
+import com.minewaku.chatter.profile.application.messaging.subcriber.integration.AssetDetachedIntegrationEventSubscriber;
+import com.minewaku.chatter.profile.application.messaging.subcriber.integration.DeleteFileStorageIntegrationEventSubscriber;
+import com.minewaku.chatter.profile.application.messaging.subcriber.integration.PersistFileStorageIntegrationEventSubscriber;
 import com.minewaku.chatter.profile.application.port.inbound.command.profile.usecase.CreateProfileUseCase;
 import com.minewaku.chatter.profile.application.port.inbound.command.security.usecase.SoftDeleteProfileUseCase;
 import com.minewaku.chatter.profile.application.port.inbound.command.security.usecase.UpdateEnablementUseCase;
@@ -17,29 +25,26 @@ import com.minewaku.chatter.profile.presentation.messaging.consumer.single.model
 import com.minewaku.chatter.profile.presentation.messaging.consumer.single.model.UserRegisteredEventDto;
 import com.minewaku.chatter.profile.presentation.messaging.consumer.single.model.UserSoftDeletedEventDto;
 
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
+@AllArgsConstructor
 public class SingleKafkaConsumer {
 
     private final CreateProfileUseCase createProfileUseCase;
     private final SoftDeleteProfileUseCase softDeleteProfileUseCase;
     private final UpdateEnablementUseCase updateEnablementUseCase;
-    
+
+    private final AssetAttachedIntegrationEventSubscriber assetAttachedIntegrationEventSubscriber;
+    private final AssetDetachedIntegrationEventSubscriber assetDetachedIntegrationEventSubscriber;
+
+    private final PersistFileStorageIntegrationEventSubscriber persistFileStorageIntegrationEventSubscriber;
+    private final DeleteFileStorageIntegrationEventSubscriber deleteFileStorageIntegrationEventSubscriber;
+
     private final ObjectMapper objectMapper;
 
-    public SingleKafkaConsumer(
-            CreateProfileUseCase createProfileUseCase, 
-            SoftDeleteProfileUseCase softDeleteProfileUseCase,
-            UpdateEnablementUseCase updateEnablementUseCase,
-            ObjectMapper objectMapper) {
-
-        this.createProfileUseCase = createProfileUseCase;
-        this.softDeleteProfileUseCase = softDeleteProfileUseCase;
-        this.updateEnablementUseCase = updateEnablementUseCase;
-        this.objectMapper = objectMapper;
-    }
 
     @KafkaListener(
         topics = "dev.shared.event.identityaccess.user", 
@@ -81,35 +86,43 @@ public class SingleKafkaConsumer {
         }
     }
 
-
-    // @KafkaListener(
-    //     topics = "dev.internal.event.profile.outbox", 
-    //     groupId = "dev-com.minewaku.profile.chatter.outbox",
-    //     containerFactory = "singleFactory"
-    // )
-    // public void consumeAssetEvents(
-    //         @Payload String payload, 
-    //         @Header(value = "eventType", required = false) String eventType) {
+    @KafkaListener(
+        topics = "dev.internal.event.profile.outbox", 
+        groupId = "dev-com.minewaku.profile.chatter.outbox",
+        containerFactory = "singleFactory"
+    )
+    public void consumeOutboxEvents(
+            @Payload String payload, 
+            @Header(value = "eventType", required = false) String eventType) {
                 
-    //     try {
-    //         if (eventType == null) {
-    //             return;
-    //         }
+        try {
+            if (eventType == null) return;
 
-    //         switch (eventType) {
-    //             case "AssetDetached": 
-    //                 AssetDetachedIntegrationEvent eventData = 
-    //                         objectMapper.readValue(payload, AssetDetachedIntegrationEvent.class);
-    //                 break;
-    //             default:
-    //                 log.debug("default skip: {}", eventType);
-    //         }
-
-    //     } catch (Exception e) {
-    //         log.error("Kafka error: {}", eventType, e);
-    //         throw new RuntimeException(e);
-    //     }
-    // }
+            switch (eventType) {
+                case "AssetAttached":
+                    AssetAttachedIntegrationEvent assetAttached = objectMapper.readValue(payload, AssetAttachedIntegrationEvent.class);
+                    assetAttachedIntegrationEventSubscriber.handle(assetAttached);
+                    break;
+                case "AssetDetached":
+                    AssetDetachedIntegrationEvent assetDetached = objectMapper.readValue(payload, AssetDetachedIntegrationEvent.class);
+                    assetDetachedIntegrationEventSubscriber.handle(assetDetached);
+                    break;
+                case "PersistFileStorage":
+                    PersistFileStorageIntegrationEvent persistFile = objectMapper.readValue(payload, PersistFileStorageIntegrationEvent.class);
+                    persistFileStorageIntegrationEventSubscriber.handle(persistFile);
+                    break;
+                case "DeleteFileStorage":
+                    DeleteFileStorageIntegrationEvent deleteFile = objectMapper.readValue(payload, DeleteFileStorageIntegrationEvent.class);
+                    deleteFileStorageIntegrationEventSubscriber.handle(deleteFile);
+                    break;
+                default:
+                    log.debug("default skip: {}", eventType);
+            }
+        } catch (Exception e) {
+            log.error("Kafka error: {}", eventType, e);
+            throw new RuntimeException(e);
+        }
+    }
 
     private void handleUserRegistered(String payload) throws Exception {
         UserRegisteredEventDto eventData = objectMapper.readValue(payload, UserRegisteredEventDto.class);

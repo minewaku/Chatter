@@ -1,10 +1,8 @@
 package com.minewaku.chatter.profile.application.port.outbound.storage;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.Map;
 
-import com.minewaku.chatter.profile.domain.model.file.model.Namespace;
+import com.minewaku.chatter.profile.domain.model.asset.model.Namespace;
 
 public interface AssetStorage {
     
@@ -12,12 +10,6 @@ public interface AssetStorage {
     void delete(Namespace namespace, String fileHash);
     UploadResult handleUploadNotification(Map<String, String> headers, Map<String, Object> body);
     void commitUpload(Namespace namespace, String fileHash);
-
-    //RECHECK: NO MORE NEED FOR INPUT STREAM SINCE WE ARE USING PRESIGNED URL INSTEAD
-    public interface StorableFile {
-        InputStream openStream() throws IOException; 
-        Namespace getNamespace();
-    }
 
     public record UploadSignature(
         String uploadUrl,
@@ -29,8 +21,8 @@ public interface AssetStorage {
         String fileHash,
         String namespace,
         Map<String, Object> context,
-        Integer width,
-        Integer height,
+        String contentType,
+        String fileName,
         Integer fileSize
     ) {}
 }

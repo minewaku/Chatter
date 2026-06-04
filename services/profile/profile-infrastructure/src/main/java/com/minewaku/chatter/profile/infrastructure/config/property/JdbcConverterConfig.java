@@ -9,7 +9,7 @@ import org.springframework.data.convert.WritingConverter;
 import org.springframework.data.jdbc.core.convert.JdbcCustomConversions;
 import org.springframework.data.jdbc.repository.config.AbstractJdbcConfiguration;
 
-import com.minewaku.chatter.profile.domain.model.file.model.AssetId;
+import com.minewaku.chatter.profile.domain.model.asset.model.AssetId;
 import com.minewaku.chatter.profile.domain.model.profile.model.ProfileId;
 
 @Configuration

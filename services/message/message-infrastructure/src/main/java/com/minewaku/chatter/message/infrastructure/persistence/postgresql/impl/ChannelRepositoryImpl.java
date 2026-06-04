@@ -1,6 +1,5 @@
 package com.minewaku.chatter.message.infrastructure.persistence.postgresql.impl;
 
-import java.util.List;
 import java.util.Optional;
 
 import org.springframework.stereotype.Component;
@@ -8,7 +7,6 @@ import org.springframework.stereotype.Component;
 import com.minewaku.chatter.message.domain.model.channel.model.Channel;
 import com.minewaku.chatter.message.domain.model.channel.model.ChannelId;
 import com.minewaku.chatter.message.domain.model.channel.repository.ChannelRepository;
-import com.minewaku.chatter.message.domain.model.recipient.model.UserId;
 import com.minewaku.chatter.message.infrastructure.persistence.postgresql.ChannelJdbcRepository;
 
 import lombok.AllArgsConstructor;
@@ -32,10 +30,5 @@ public class ChannelRepositoryImpl implements ChannelRepository{
     @Override
     public void deleteById(ChannelId channelId) {
         channelJdbcRepository.deleteById(channelId);
-    }
-
-    @Override
-    public List<Channel> findByUserId(UserId userId) {
-        return channelJdbcRepository.findByUserId(userId.getValue());
     }
 }

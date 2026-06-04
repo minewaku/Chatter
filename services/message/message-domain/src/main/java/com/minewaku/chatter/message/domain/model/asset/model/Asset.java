@@ -6,14 +6,14 @@ import java.util.List;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.PersistenceCreator;
 import org.springframework.data.annotation.Transient;
-import org.springframework.data.annotation.Version;
+import org.springframework.data.domain.Persistable;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Embedded;
 import org.springframework.data.relational.core.mapping.Table;
 
+import com.minewaku.chatter.message.domain.model.asset.event.AssetOrphanedDomainEvent;
 import com.minewaku.chatter.message.domain.sharedkernel.event.DomainEvent;
-import com.minewaku.chatter.message.domain.sharedkernel.exception.DomainValidationException;
-import com.minewaku.chatter.message.domain.sharedkernel.value.BaseEntity;
+import com.minewaku.chatter.message.domain.sharedkernel.value.AuditMetadata;
 
 import lombok.Getter;
 import lombok.NonNull;
@@ -22,65 +22,106 @@ import lombok.ToString;
 @Getter
 @Table("asset")
 @ToString
-public class Asset extends BaseEntity<AssetId> {
+public class Asset implements Persistable<AssetId> {
 
     @Id
-    @Embedded.Nullable
+    @Column("id")
     private AssetId id;
 
-    @Column("namespace")
-    private Namespace namespace;
+    @Embedded(onEmpty = Embedded.OnEmpty.USE_NULL)
+    private AssetIdentity identity;
 
-    @Column("file_hash")
-    private String fileHash; 
+    @Column("content_type")
+    private String contentType;
 
-    @Embedded.Nullable
-    private AssetDimension dimension;
+    @Column("file_name")
+    private String fileName;
 
     @Column("file_size")
     private Integer fileSize;
 
-    @Column("ref_count")    
-    private Integer refCount = 0;
+    @Column("ref_count")
+    private Integer refCount;
 
-    @Version
-    @Column("version")
-    private Long version;
+    @Embedded.Nullable
+    private AuditMetadata auditMetadata;
 
     @Transient
-    private final List<DomainEvent> domainEvents = new ArrayList<>();
+    private boolean isNew = false;
+
+    @Transient
+    private List<DomainEvent> domainEvents = new ArrayList<>();
 
     @PersistenceCreator
-    public Asset(
-                @NonNull AssetId attachmentId,
-                @NonNull Namespace namespace,
-                @NonNull String fileHash, 
-                @NonNull AssetDimension dimension,
+    private Asset(
+                @NonNull AssetId id,
+                @NonNull AssetIdentity identity,
+                @NonNull String contentType,
+                @NonNull String fileName,
                 @NonNull Integer fileSize,
-                Integer refCount,
-                Long version) {
+                @NonNull Integer refCount,
+                @NonNull AuditMetadata auditMetadata) {
 
-        this.id = attachmentId;
-        this.namespace = namespace;
-        this.fileHash = fileHash;
-        this.dimension = dimension;
+        this.id = id;
+        this.identity = identity;
+        this.contentType = contentType;
+        this.fileName = fileName;
         this.fileSize = fileSize;
-        
-        if (refCount < 0) {
-            throw new DomainValidationException("refCount cannot be negative");
-        }
-        this.refCount = refCount == null ? 1 : refCount;
-        this.version = version;
+        this.refCount = refCount;
+        this.auditMetadata = auditMetadata;
     }
 
-    public void increaseRefCount() {
-        this.refCount++;
+    public static Asset createNew(
+            @NonNull AssetId assetId,
+            @NonNull Namespace namespace,
+            @NonNull String fileName,
+            @NonNull String fileHash, 
+            @NonNull String contentType,
+            @NonNull Integer fileSize) {
+
+        Asset asset = new Asset(
+            assetId,
+            new AssetIdentity(namespace, fileHash),
+            contentType,
+            fileName,
+            fileSize,
+            1,
+            AuditMetadata.createNew()
+        );
+
+        asset.isNew = true;
+        return asset;
     }
 
-    public void decreaseRefCount() {
+    @Override
+    public boolean isNew() {
+        return this.isNew;
+    }
+
+    public void detached() {
         if (this.refCount > 0) {
-            this.refCount--;
+            this.refCount -= 1;
+            this.auditMetadata.markUpdated();
         }
+
+        if (this.refCount == 0) {
+            AssetOrphanedDomainEvent event = new AssetOrphanedDomainEvent(
+                this.id, 
+                this.identity.getFileHash(), 
+                this.identity.getNamespace()
+            );
+            this.domainEvents.add(event);
+        }
+    }
+
+    public void attached() {
+        this.refCount += 1;
+        if (this.auditMetadata != null) {
+            this.auditMetadata.markUpdated();
+        }
+    }
+
+    public boolean isOrphaned() {
+        return this.refCount == 0;
     }
 }
-

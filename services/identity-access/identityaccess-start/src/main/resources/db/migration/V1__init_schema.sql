@@ -50,7 +50,7 @@ CREATE TABLE outbox (
     aggregate_type VARCHAR(50) NOT NULL,
     aggregate_id VARCHAR(50) NOT NULL,
     event_type VARCHAR(128) NOT NULL,
-    payload JSONB NOT NULL,
+    payload TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX idx_outbox_created_at ON outbox (created_at ASC);

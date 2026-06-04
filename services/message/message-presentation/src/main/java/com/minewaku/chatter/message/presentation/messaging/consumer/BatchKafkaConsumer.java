@@ -10,8 +10,8 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.minewaku.chatter.message.application.messaging.publisher.integration.event.FileStorageUploadedIntegrationEvent;
-import com.minewaku.chatter.message.application.messaging.subcriber.integration.FileStorageUploadedIntegrationEventsBatchSubscriber;
+import com.minewaku.chatter.message.application.messaging.publisher.integration.event.AttachmentFileStorageUploadedIntegrationEvent;
+import com.minewaku.chatter.message.application.messaging.subcriber.integration.AttachmentFileStorageUploadedIntegrationEventBatchSubscriber;
 
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,16 +22,16 @@ import lombok.extern.slf4j.Slf4j;
 public class BatchKafkaConsumer {
     
     private final ObjectMapper objectMapper;
-    private final FileStorageUploadedIntegrationEventsBatchSubscriber fileStorageUploadedIntegrationEventsBatchSubscriber;
+    private final AttachmentFileStorageUploadedIntegrationEventBatchSubscriber attachmentFileStorageUploadedIntegrationEventBatchSubscriber;
 
     //RECHECK: IMPLEMENT SPECIFIC CONSUMER FOR FILESTORAGEUPLOADEDEVENT INSTEAD OF USING GENERIC CONSUMER, TO AVOID UNNECESSARY DESERIALIZATION AND ERROR HANDLING FOR OTHER EVENT TYPES
     @KafkaListener(
-        topics = "dev.private.event.message.file.fileStorageUploaded", 
-        groupId = "dev-com.minewaku.message.file.chatter.event.fileStorageUploaded",
+        topics = "dev.private.event.message.file.AttachmentFileStorageUploaded", 
+        groupId = "dev-com.minewaku.message.file.chatter.event.AttachmentFileStorageUploaded",
         containerFactory = "batchFactory"
     )
     public void consumeOutboxEventsBatch(List<ConsumerRecord<String, String>> records) {
-        List<FileStorageUploadedIntegrationEvent> events = new ArrayList<>();
+        List<AttachmentFileStorageUploadedIntegrationEvent> events = new ArrayList<>();
 
         try {
             for (ConsumerRecord<String, String> record : records) {
@@ -43,12 +43,12 @@ public class BatchKafkaConsumer {
                     continue;
                 }
 
-                FileStorageUploadedIntegrationEvent event = objectMapper.readValue(record.value(), FileStorageUploadedIntegrationEvent.class);
+                AttachmentFileStorageUploadedIntegrationEvent event = objectMapper.readValue(record.value(), AttachmentFileStorageUploadedIntegrationEvent.class);
                 events.add(event);
             }
 
             if (!events.isEmpty()) {
-                fileStorageUploadedIntegrationEventsBatchSubscriber.handle(events);
+                attachmentFileStorageUploadedIntegrationEventBatchSubscriber.handle(events);
             }
         } catch (Exception e) {
             log.error("Error processing batch of events", e);

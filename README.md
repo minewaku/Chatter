@@ -52,6 +52,7 @@ psql -h localhost -p 5442 -U vault -d chatter
 redis-cli -h 127.0.0.1 -p 6387 --user vault -a XIqnIWD0DRb7Axwg
 redis-cli -h localhost -p 6380 --user vault --pass coFY4E7Nultq6lxM
 redis-cli -h localhost -p 6387 --user vault --pass XIqnIWD0DRb7Axwg
+redis-cli -h localhost -p 6388 --user vault --pass FcDSikLxXFLaf6KN
 ```
 
 ## Access ScyllaDB CLI
@@ -108,3 +109,5 @@ Member
 Message
 
 
+net stop winnat
+net start winnat

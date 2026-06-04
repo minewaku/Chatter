@@ -5,9 +5,9 @@ AND durable_writes = true;
 USE chatter_keyspace;
 
 CREATE TABLE IF NOT EXISTS message (
+    id BIGINT,
     channel_id BIGINT,
     bucket INT,
-    message_id BIGINT,
     content TEXT,
     user_id BIGINT,
     reply_id BIGINT,

@@ -31,10 +31,9 @@ import lombok.AllArgsConstructor;
 public class ProfileCommandController {
 
 	@Qualifier("generateUploadAvatarSignatureUseCase")
-
 	private final GenerateUploadSignatureUseCase generateUploadAvatarSignatureUseCase;
-	@Qualifier("generateUploadBannerSignatureUseCase")
 
+	@Qualifier("generateUploadBannerSignatureUseCase")
 	private final GenerateUploadSignatureUseCase generateUploadBannerSignatureUseCase;
 
 	private final UpdateProfileUseCase updateProfileUseCase;
@@ -70,8 +69,8 @@ public class ProfileCommandController {
 				@RequestBody UpdateProfileRequest request) {
 
 		ProfileId profileId = new ProfileId(Long.parseLong(jwt.getSubject()));
-		DisplayName	displayName = new DisplayName(request.displayName());
-		Bio bio = new Bio(request.bio());
+		DisplayName	displayName = request.displayName() == null ? null : new DisplayName(request.displayName());
+		Bio bio = request.bio() == null ? null : new Bio(request.bio());
 		
 		UpdateProfileUseCase.Command command = new UpdateProfileUseCase.Command(
 			profileId,

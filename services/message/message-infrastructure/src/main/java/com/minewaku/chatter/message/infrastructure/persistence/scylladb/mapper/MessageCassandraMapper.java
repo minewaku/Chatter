@@ -6,17 +6,22 @@ import java.util.Optional;
 import org.springframework.stereotype.Component;
 
 import com.minewaku.chatter.message.domain.model.channel.model.ChannelId;
+import com.minewaku.chatter.message.domain.model.message.model.Attachment;
 import com.minewaku.chatter.message.domain.model.message.model.Message;
 import com.minewaku.chatter.message.domain.model.message.model.MessageId;
 import com.minewaku.chatter.message.domain.model.recipient.model.UserId;
+import com.minewaku.chatter.message.infrastructure.persistence.scylladb.BucketHelper;
+import com.minewaku.chatter.message.infrastructure.persistence.scylladb.entity.AttachmentCassandraEntity;
 import com.minewaku.chatter.message.infrastructure.persistence.scylladb.entity.MessageCassandraEntity;
 import com.minewaku.chatter.message.infrastructure.persistence.scylladb.entity.MessageCassandraKeyEntity;
 
+import lombok.AllArgsConstructor;
+
 @Component
+@AllArgsConstructor
 public class MessageCassandraMapper {
 
-    // Bucket theo tháng (đơn vị milliseconds) — có thể điều chỉnh theo yêu cầu
-    private static final long BUCKET_DURATION_MS = 1000L * 60 * 60 * 24 * 30;
+    private final BucketHelper bucketHelper;
 
     public MessageCassandraEntity domainToEntity(Message domain) {
         MessageCassandraKeyEntity key = buildKey(domain);
@@ -26,7 +31,14 @@ public class MessageCassandraMapper {
             domain.getContent(),
             domain.getUserId().getValue(),
             domain.getReplyId() != null ? domain.getReplyId().getValue() : null,
-            domain.getAssetHashes(),
+            domain.getAttachments().stream()
+                .map(attachment -> new AttachmentCassandraEntity(
+                    attachment.getFileHash(),
+                    attachment.getFilename(),
+                    attachment.getContentType(),
+                    attachment.getSize(),
+                    attachment.getPosition()))
+                .toList(),
             domain.getTimestamp().toEpochMilli()
         );
     }
@@ -38,10 +50,18 @@ public class MessageCassandraMapper {
             new MessageId(key.getMessageId()),
             new ChannelId(key.getChannelId()),
             new UserId(entity.getUserId()),
-            new MessageId(entity.getReplyId()),
-            entity.getAssetHashes(),
+            // Kiểm tra an toàn: entity.getReplyId() có thể null trong database
+            entity.getReplyId() != null ? new MessageId(entity.getReplyId()) : null,
             entity.getContent(),
-            toInstant(entity.getTimestamp())
+            toInstant(entity.getTimestamp()),
+            entity.getAttachments().stream()
+                .map(attachmentEntity -> new Attachment(
+                    attachmentEntity.getFileHash(),
+                    attachmentEntity.getFilename(),
+                    attachmentEntity.getContentType(),
+                    attachmentEntity.getSize(),
+                    attachmentEntity.getPosition()))
+                .toList()
         );
     }
 
@@ -49,21 +69,16 @@ public class MessageCassandraMapper {
         return entityOptional.map(this::entityToDomain);
     }
 
-
     // --- Private helpers ---
     private MessageCassandraKeyEntity buildKey(Message domain) {
-        long messageId = domain.getMessageId().getValue();
+        long messageId = domain.getId().getValue();
         long channelId = domain.getChannelId().getValue();
-        int bucket = toBucket(domain.getTimestamp());
+        int bucket = bucketHelper.calculateWeeklyBucket(domain.getTimestamp());
 
         return new MessageCassandraKeyEntity(channelId, bucket, messageId);
     }
 
-    private int toBucket(Instant timestamp) {
-        return (int) (timestamp.toEpochMilli() / BUCKET_DURATION_MS);
-    }
-
     private Instant toInstant(Long epochMilli) {
-        return Instant.ofEpochMilli(epochMilli);
+        return epochMilli != null ? Instant.ofEpochMilli(epochMilli) : null;
     }
 }

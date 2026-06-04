@@ -3,7 +3,6 @@ package com.minewaku.chatter.message.domain.model.recipient.model;
 
 
 import org.springframework.data.annotation.PersistenceCreator;
-import org.springframework.data.relational.core.mapping.Column;
 
 import com.minewaku.chatter.message.domain.sharedkernel.exception.DomainValidationException;
 import com.minewaku.chatter.message.domain.sharedkernel.value.Id;
@@ -18,7 +17,6 @@ import lombok.ToString;
 @EqualsAndHashCode
 public class UserId implements Id{
 	
-	@Column("user_id")
 	private final Long value;
 	
 	@PersistenceCreator

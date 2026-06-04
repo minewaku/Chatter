@@ -56,7 +56,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Jwt jwt = jwtDecoder.decode(jwtString);
                 JwtAuthenticationToken authentication = new JwtAuthenticationToken(jwt);
                 authentication.setAuthenticated(true);
-                SecurityContextHolder.getContext().setAuthentication(authentication);   
+                SecurityContextHolder.getContext().setAuthentication(authentication);  
+                log.info("Is the request body already consumed at JWT filter? " + request.getInputStream().isFinished());
             }
         } catch (MalformedJwtException e) {
             log.error("Failed to parse or validate JWT token: " + e.getMessage());

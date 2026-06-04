@@ -6,13 +6,16 @@ import com.minewaku.chatter.message.application.messaging.publisher.integration.
 import com.minewaku.chatter.message.application.messaging.publisher.integration.OutboxStore;
 import com.minewaku.chatter.message.application.messaging.publisher.integration.event.AttachmentFileStorageUploadedIntegrationEvent;
 import com.minewaku.chatter.message.application.messaging.publisher.integration.event.IntegrationEventWrapper;
-import com.minewaku.chatter.message.application.port.inbound.command.message.HandleUploadAttachmentNotificationUseCase;
+import com.minewaku.chatter.message.application.port.inbound.command.file.HandleUploadNotificationUseCase;
 import com.minewaku.chatter.message.application.port.outbound.storage.AssetStorage;
 import com.minewaku.chatter.message.domain.sharedkernel.service.UniqueStringIdGenerator;
 
+import io.github.resilience4j.retry.annotation.Retry;
+import lombok.extern.slf4j.Slf4j;
 
-@Service
-public class HandleUploadAttachmentNotificationApplicationService implements HandleUploadAttachmentNotificationUseCase {
+@Slf4j
+@Service("handleUploadAttachmentNotificationUseCase")
+public class HandleUploadAttachmentNotificationApplicationService implements HandleUploadNotificationUseCase {
 
     private final AssetStorage assetStorage;
     private final UniqueStringIdGenerator uniqueStringIdGenerator;
@@ -29,9 +32,9 @@ public class HandleUploadAttachmentNotificationApplicationService implements Han
     }
 
     @Override
-    //push all notifications from file storage webhook to message bus in order to batch process them later instead of handle every notification one by one
-    //gonna cost some extra outbox events but at least improves database performance (i think)
+    @Retry(name = "transientDataAccess")
     public Void handle(Command command) {
+        log.info("handling upload avatar notification for fileHash {}", command.headers().get("fileHash"));
 
         AssetStorage.UploadResult result = assetStorage.handleUploadNotification(command.headers(), command.body());
 
@@ -40,8 +43,7 @@ public class HandleUploadAttachmentNotificationApplicationService implements Han
             result.namespace().toString(),
             result.context(),
             result.fileHash(),
-            result.width(),
-            result.height(),
+            result.contentType(),
             result.fileSize()
         );
 

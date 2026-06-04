@@ -1,6 +1,6 @@
 package com.minewaku.chatter.message.infrastructure.config;
 
-import org.springframework.boot.autoconfigure.flyway.FlywayMigrationStrategy;
+import org.springframework.boot.flyway.autoconfigure.FlywayMigrationStrategy;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -10,7 +10,7 @@ public class FlywayConfig {
     @Bean
     FlywayMigrationStrategy cleanMigrateStrategy() {
         return flyway -> {
-            // flyway.clean();
+            flyway.clean();
             flyway.migrate();
         };
     }

@@ -16,18 +16,23 @@ import lombok.AllArgsConstructor;
 public class BucketHelper {
     
     private final TimeBasedIdGenerator timeBasedIdGenerator;
-
+    
     public int calculateWeeklyBucket(long messageId) {
         long timestampMillis = timeBasedIdGenerator.toTimeStamp(messageId);
-        
+        return calculateBucketFromTimestamp(timestampMillis);
+    }
+
+    public int calculateWeeklyBucket(Instant timestamp) {
+        return calculateBucketFromTimestamp(timestamp.toEpochMilli());
+    }
+
+    private int calculateBucketFromTimestamp(long timestampMillis) {
         ZonedDateTime dateTime = Instant.ofEpochMilli(timestampMillis)
                                       .atZone(ZoneId.systemDefault());
                                       
-        // Sử dụng WEEK_BASED_YEAR thay vì getYear() thông thường để tránh lỗi 
-        // vào những ngày cuối năm/đầu năm bị lệch tuần chuẩn ISO.
         int year = dateTime.get(IsoFields.WEEK_BASED_YEAR);
         int week = dateTime.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR);
         
-        return year * 100 + week; // Trả về định dạng yyyyWW (VD: 202605)
+        return year * 100 + week;
     }
 }

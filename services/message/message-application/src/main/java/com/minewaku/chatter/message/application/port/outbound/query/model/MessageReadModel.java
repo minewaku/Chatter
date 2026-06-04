@@ -1,16 +1,24 @@
 package com.minewaku.chatter.message.application.port.outbound.query.model;
 
+import java.time.Instant;
 import java.util.List;
 
 public record MessageReadModel(
+    Long id,
     Long channelId,
-    Long messageId,
-    String content,
     Long senderId,
     Long replyId,
-    List<String> assetHashes,
-    Long timestamp
-
+    String content,
+    Instant timestamp,
+    List<AttachmentReadModel> attachments
 ) {
     
+    public record AttachmentReadModel(
+        String fileHash,
+        String filename,
+        String contentType,
+        Long size,
+        Integer position
+    ) {
+    }
 }

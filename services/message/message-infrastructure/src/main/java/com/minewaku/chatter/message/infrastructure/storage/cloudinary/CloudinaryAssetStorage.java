@@ -1,5 +1,6 @@
 package com.minewaku.chatter.message.infrastructure.storage.cloudinary;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -11,11 +12,10 @@ import org.springframework.stereotype.Service;
 import com.cloudinary.Cloudinary;
 import com.minewaku.chatter.message.application.port.outbound.storage.AssetStorage;
 import com.minewaku.chatter.message.domain.model.asset.model.Namespace;
-import com.minewaku.chatter.message.domain.model.channel.model.ChannelId;
-import com.minewaku.chatter.message.domain.model.guild.model.GuildId;
-import com.minewaku.chatter.message.domain.model.message.model.MessageId;
+import com.minewaku.chatter.message.infrastructure.exception.FileStorageException;
 import com.minewaku.chatter.message.infrastructure.storage.cloudinary.property.CloudinaryProperties;
 
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.extern.log4j.Log4j2;
 
 @Service
@@ -30,22 +30,24 @@ public class CloudinaryAssetStorage implements AssetStorage {
     }
 
     @Override
-    public void delete(Namespace namespace, String fileHash, Map<String, Object> params) {
+    @Retry(name = "httpServer")
+    public void delete(Namespace namespace, String fileHash) {
         try {
             cloudinary.uploader().destroy(
-                buildPublicId(namespaceToTempFolder(namespace, params), fileHash),
+                buildPublicId(namespaceToPermanentFolder(namespace), fileHash),
                 Map.of()
             );
-        } catch(Exception e) {
-            throw new RuntimeException(e.getMessage(), e);
+        } catch(IOException e) {  
+            throw new FileStorageException(e.getMessage(), e);
         }
     }
 
     @Override
+    @Retry(name = "httpServer")
     public UploadSignature generateUploadSignature(Namespace namespace, Map<String, Object> params) {
         
         long timestamp = System.currentTimeMillis() / 1000L;
-        String folder = namespaceToTempFolder(namespace, params);
+        String folder = namespaceToTempFolder(namespace);
         String uploadPreset = namespaceToPreset(namespace);
 
         Map<String, Object> uploadParams = buildContext(namespace, params);
@@ -58,6 +60,7 @@ public class CloudinaryAssetStorage implements AssetStorage {
         paramsToSign.put("upload_preset", uploadPreset);
         paramsToSign.put("tags", namespace.name()); 
         paramsToSign.put("context", context);
+
 
         try {
             String apiSecret = cloudinary.config.apiSecret;
@@ -83,12 +86,13 @@ public class CloudinaryAssetStorage implements AssetStorage {
             );
 
         } catch (Exception e) {
-            throw new RuntimeException("Failed to generate Cloudinary upload signature", e);
+            throw new FileStorageException("Failed to generate Cloudinary upload signature", e);
         }
     }
     
     @Override
     @SuppressWarnings("unchecked")
+    //data mapping, hide technical details of cloudinary from upper layer
     public UploadResult handleUploadNotification(Map<String, String> headers, Map<String, Object> body) {
         String publicId = (String) body.get("public_id");
         String fileHash = extractHashFromPublicId(publicId);
@@ -98,31 +102,30 @@ public class CloudinaryAssetStorage implements AssetStorage {
         String namespace = Objects.requireNonNull(
             (String) customContext.get("namespace"), "missing namespace in context"
         );
-
-        int width = (int) body.get("width");
-        int height = (int) body.get("height");
+        
+        String contentType = (String) body.get("format");
         int fileSize = (int) body.get("bytes");
 
         Map<String, Object> contextMap = buildContext(Namespace.valueOf(namespace), customContext);
+
         return new UploadResult(
             fileHash,
             namespace,
             contextMap,
-            width,
-            height,
+            contentType,
             fileSize
         );
     }
 
     @Override
-    public void commitUpload(Namespace namespace, String fileHash, Map<String, Object> params) {
-        String permanentPublicId = getPermanentFolder(namespace, fileHash, params);
-        String tempPublicId = getTempFolder(namespace, fileHash, params);
+    public void commitUpload(Namespace namespace, String fileHash) {
+        String permanentPublicId = getPermanentFolder(namespace, fileHash);
+        String tempPublicId = getTempFolder(namespace, fileHash);
 
         try {
             cloudinary.uploader().rename(tempPublicId, permanentPublicId, Map.of("overwrite", true));
-        } catch(Exception e) {
-            throw new RuntimeException(e.getMessage(), e);
+        } catch(IOException e) {
+            throw new FileStorageException("Failed to commit upload", e);
         }
     }
 
@@ -131,76 +134,59 @@ public class CloudinaryAssetStorage implements AssetStorage {
     //BUILD FOLDER PATHS BASED ON NAMESPACE AND CONTEXT
     private String getTempFolder(
                 Namespace namespace,
-                String fileHash,
-                Map<String, Object> params) {
+                String fileHash) {
 
         return switch(namespace) {
-            case GUILD_ICON -> { 
-                GuildId guildId = new GuildId(Long.parseLong(Objects.requireNonNull(
-                    (String) params.get("guildId"), "missing guildId in " + params.keySet())));
-
-                yield "chatter/temp/guilds/" + String.valueOf(guildId.getValue()) + "/icon" + "/" + fileHash;
+            case ATTACHMENT -> { 
+                yield "chatter/temp/messages/attachments" + "/" + fileHash;
             }
-
-            case ATTACHMENT -> {
-                ChannelId channelId = new ChannelId(Long.parseLong(Objects.requireNonNull(
-                    (String) params.get("channelId"), "missing channelId in " + params.keySet())));
-                MessageId messageId = new MessageId(Long.parseLong(Objects.requireNonNull(
-                    (String) params.get("messageId"), "missing messageId in " + params.keySet())));
-
-                yield "chatter/temp/channels/" + String.valueOf(channelId.getValue()) + "/attachments" + "/" + String.valueOf(messageId.getValue()) + "/" + fileHash;
+            case GUILD_ICON -> {
+                yield "chatter/temp/guilds/icons" + "/" + fileHash;
             }
         };
     }
 
     private String getPermanentFolder(
                 Namespace namespace,
-                String fileHash,
-                Map<String, Object> params) {
+                String fileHash) {
 
         return switch(namespace) {
-            case GUILD_ICON -> { 
-                GuildId guildId = new GuildId(Long.parseLong(Objects.requireNonNull(
-                    (String) params.get("guildId"), "missing guildId in " + params.keySet())));
-
-                yield "chatter/permanent/guilds/" + String.valueOf(guildId.getValue()) + "/icon" + "/" + fileHash;
+            case ATTACHMENT -> { 
+                yield "chatter/permanent/messages/attachments" + "/" + fileHash;
             }
-
-            case ATTACHMENT -> {
-                ChannelId channelId = new ChannelId(Long.parseLong(Objects.requireNonNull(
-                    (String) params.get("channelId"), "missing channelId in " + params.keySet())));
-                MessageId messageId = new MessageId(Long.parseLong(Objects.requireNonNull(
-                    (String) params.get("messageId"), "missing messageId in " + params.keySet())));
-
-                yield "chatter/permanent/channels/" + String.valueOf(channelId.getValue()) + "/attachments" + "/" + String.valueOf(messageId.getValue()) + "/" + fileHash;
+            case GUILD_ICON -> {
+                yield "chatter/permanent/guilds/icons" + "/" + fileHash;
             }
         };
     }
 
     private String namespaceToTempFolder(
-                Namespace namespace,
-                Map<String, Object> params) {
+                Namespace namespace) {
 
         return switch(namespace) {
-            case GUILD_ICON -> { 
-                GuildId guildId = new GuildId(Long.parseLong(Objects.requireNonNull(
-                    (String) params.get("guildId"), "missing guildId in " + params.keySet())));
-
-                yield "chatter/temp/guilds/" + String.valueOf(guildId.getValue()) + "/icon";
+            case ATTACHMENT -> { 
+                yield "chatter/temp/messages/attachments";
             }
-
-            case ATTACHMENT -> {
-                ChannelId channelId = new ChannelId(Long.parseLong(Objects.requireNonNull(
-                    (String) params.get("channelId"), "missing channelId in " + params.keySet())));
-                MessageId messageId = new MessageId(Long.parseLong(Objects.requireNonNull(
-                    (String) params.get("messageId"), "missing messageId in " + params.keySet())));
-
-                yield "chatter/temp/channels/" + String.valueOf(channelId.getValue()) + "/attachments" + "/" + String.valueOf(messageId.getValue());
+            case GUILD_ICON -> {
+                yield "chatter/temp/guilds/icons";
             }
         };
     }
 
-    
+    private String namespaceToPermanentFolder(
+                Namespace namespace) {
+
+        return switch(namespace) {
+            case ATTACHMENT -> { 
+                yield "chatter/permanent/messages/attachments";
+            }
+            case GUILD_ICON -> {
+                yield "chatter/permanent/guilds/icons";
+            }
+        };
+    }
+
+
     //OTHER HELPER METHODS
     private String buildPublicId(String folder, String fileHash) {
         return folder + "/" + fileHash;
@@ -228,26 +214,16 @@ public class CloudinaryAssetStorage implements AssetStorage {
     //BUILD CONTEXT HELPER METHODS
     private Map<String, Object> buildContext(Namespace namespace, Map<String, Object> requestContext) {
         return switch(namespace) {
-            case ATTACHMENT -> buildAttachmentContext(requestContext);
-            case GUILD_ICON -> buildGuildIconContext(requestContext);
+            case ATTACHMENT -> buildProfileImageContext(requestContext);
+            case GUILD_ICON -> buildProfileImageContext(requestContext);
         };
     }
 
-    private Map<String, Object> buildAttachmentContext(Map<String, Object> requestContext) {
-        String channelId = (String) requestContext.get("channelId");
-        String messageId = (String) requestContext.get("messageId");
-
-        return Map.of(
-            "channelId", channelId,
-            "messageId", messageId
-        );
-    }
-    
-    private Map<String, Object> buildGuildIconContext(Map<String, Object> requestContext) {
-        String guildId = (String) requestContext.get("guildId");
+    private Map<String, Object> buildProfileImageContext(Map<String, Object> requestContext) {
+        String profileId = (String) requestContext.get("profileId");
 
         return new HashMap<>(Map.of(
-            "guildId", guildId
+            "profileId", profileId
         ));
     }
 }

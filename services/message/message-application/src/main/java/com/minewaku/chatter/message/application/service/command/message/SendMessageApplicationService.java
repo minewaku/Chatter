@@ -46,8 +46,8 @@ public class SendMessageApplicationService implements SendMessageUseCase {
             command.channelId(),
             command.senderId(),
             command.replyId(),
-            new ArrayList<>(),
-            command.content()
+            command.content(),
+            new ArrayList<>()
         );
 
         messageRepository.save(message);

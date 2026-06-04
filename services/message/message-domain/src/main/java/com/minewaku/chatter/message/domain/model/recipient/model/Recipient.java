@@ -4,18 +4,19 @@ import java.time.Instant;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.PersistenceCreator;
+import org.springframework.data.annotation.Version;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Embedded;
 import org.springframework.data.relational.core.mapping.Table;
 
 import com.minewaku.chatter.message.domain.sharedkernel.value.BaseEntity;
 
-import io.micrometer.common.lang.NonNull;
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.ToString;
 
 @Getter
-@Table("Recipient")
+@Table("recipient")
 @ToString
 public class Recipient extends BaseEntity<RecipientId> {
 
@@ -26,18 +27,23 @@ public class Recipient extends BaseEntity<RecipientId> {
     @Column("join_date")
     private Instant joinDate;
 
+    @Version
+    private Integer version;
+
     @PersistenceCreator
     private Recipient(
             @NonNull RecipientId id, 
-            @NonNull Instant joinDate) {
+            @NonNull Instant joinDate,
+            Integer version) {
                 
         this.id = id;
         this.joinDate = joinDate;
+        this.version = version;
     }
 
     static public Recipient createNew(
             @NonNull RecipientId id
     ) {
-        return new Recipient(id, Instant.now());
+        return new Recipient(id, Instant.now(), null);
     }
 }

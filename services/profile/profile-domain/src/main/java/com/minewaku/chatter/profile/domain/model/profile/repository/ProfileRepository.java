@@ -11,6 +11,6 @@ public interface ProfileRepository {
     void delete(Profile profile);
     void deleteById(ProfileId profileId);
     Optional<Profile> findById(ProfileId profileId);
-    List<Profile> findAllByIdInForUpdate(List<ProfileId> profileIds);
+    List<Profile> findAllByIds(List<ProfileId> profileIds);
     void saveAll(Iterable<Profile> profiles);
 }

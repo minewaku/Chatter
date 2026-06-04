@@ -1,7 +1,5 @@
 package com.minewaku.chatter.profile.application.messaging.publisher.integration.event;
 
-import java.util.Map;
-
 import lombok.Getter;
 import lombok.NonNull;
 

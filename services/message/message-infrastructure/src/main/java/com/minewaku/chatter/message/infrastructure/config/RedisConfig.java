@@ -2,7 +2,6 @@ package com.minewaku.chatter.message.infrastructure.config;
 
 import java.time.Duration;
 
-import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
@@ -13,6 +12,7 @@ import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactor
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
+import org.springframework.data.redis.support.collections.RedisProperties;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
@@ -24,11 +24,11 @@ public class RedisConfig {
     @Bean
     LettuceConnectionFactory redisConnectionFactory(RedisProperties redisProperties) {
         RedisStandaloneConfiguration config = new RedisStandaloneConfiguration(
-                redisProperties.getHost(),
-                redisProperties.getPort());
+                redisProperties.getProperty("host"),
+                Integer.parseInt(redisProperties.getProperty("port")));
 
-        config.setUsername(redisProperties.getUsername());
-        config.setPassword(redisProperties.getPassword());
+        config.setUsername(redisProperties.getProperty("username"));
+        config.setPassword(redisProperties.getProperty("password"));
 
         LettuceConnectionFactory factory = new LettuceConnectionFactory(config);
         return factory;

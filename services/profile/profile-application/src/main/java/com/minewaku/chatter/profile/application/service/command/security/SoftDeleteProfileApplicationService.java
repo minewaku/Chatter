@@ -13,7 +13,9 @@ import com.minewaku.chatter.profile.application.messaging.publisher.integration.
 import com.minewaku.chatter.profile.application.messaging.publisher.integration.event.AssetDetachedIntegrationEvent;
 import com.minewaku.chatter.profile.application.messaging.publisher.integration.event.IntegrationEventWrapper;
 import com.minewaku.chatter.profile.application.port.inbound.command.security.usecase.SoftDeleteProfileUseCase;
-import com.minewaku.chatter.profile.domain.model.file.repository.AssetRepository;
+import com.minewaku.chatter.profile.domain.model.asset.model.AssetIdentity;
+import com.minewaku.chatter.profile.domain.model.asset.model.Namespace;
+import com.minewaku.chatter.profile.domain.model.asset.repository.AssetRepository;
 import com.minewaku.chatter.profile.domain.model.profile.event.AvatarReplacedDomainEvent;
 import com.minewaku.chatter.profile.domain.model.profile.event.BannerReplacedDomainEvent;
 import com.minewaku.chatter.profile.domain.model.profile.model.Profile;
@@ -59,27 +61,29 @@ public class SoftDeleteProfileApplicationService implements SoftDeleteProfileUse
 			profileRepository.save(profile);
 
 			if(hashAvatar != null) {
-				assetRepository.deleteByFileHash(hashAvatar);
+				AssetIdentity assetIdentity = new AssetIdentity(Namespace.USER_AVATARS, hashAvatar);
+				assetRepository.deleteByAssetIdentity(assetIdentity);
 			}
 			if(hashBanner != null) {
-				assetRepository.deleteByFileHash(hashBanner);
+				AssetIdentity assetIdentity = new AssetIdentity(Namespace.USER_BANNERS, hashBanner);
+				assetRepository.deleteByAssetIdentity(assetIdentity);
 			}
 		}
 
-		List<IntegrationEventWrapper<AssetDetachedIntegrationEvent>> eventWrappers = new ArrayList();
+		List<IntegrationEventWrapper<AssetDetachedIntegrationEvent>> eventWrappers = new ArrayList<>();
 
 		List<AvatarReplacedDomainEvent> avatarEvents = avatarReplacedDomainEventFiltered(profile.getDomainEvents());
 		avatarEvents.forEach(event -> {
 
 			String eventId = uniqueStringIdGenerator.generate();
 			AssetDetachedIntegrationEvent integrationEvent = new AssetDetachedIntegrationEvent(
-				event.getHashFile(),
-				event.getNamespace()
+				event.getNamespace(),
+				event.getOldHashFile()
 			);
 
 			IntegrationEventWrapper<AssetDetachedIntegrationEvent> eventWrapper = new IntegrationEventWrapper<>(
 				eventId,
-				event.getHashFile(),
+				event.getOldHashFile(),
 				integrationEvent
 			);
 			eventWrappers.add(eventWrapper);
@@ -89,13 +93,13 @@ public class SoftDeleteProfileApplicationService implements SoftDeleteProfileUse
 		bannerEvents.forEach(event -> {
 			String eventId = uniqueStringIdGenerator.generate();
 			AssetDetachedIntegrationEvent integrationEvent = new AssetDetachedIntegrationEvent(
-				event.getHashFile(),
-				event.getNamespace()
+				event.getNamespace(),
+				event.getOldHashFile()
 			);
 
 			IntegrationEventWrapper<AssetDetachedIntegrationEvent> eventWrapper = new IntegrationEventWrapper<>(
 				eventId,
-				event.getHashFile(),
+				event.getOldHashFile(),
 				integrationEvent
 			);
 			eventWrappers.add(eventWrapper);

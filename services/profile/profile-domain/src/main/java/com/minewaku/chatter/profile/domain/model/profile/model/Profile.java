@@ -16,6 +16,7 @@ import com.minewaku.chatter.profile.domain.model.profile.event.AvatarReplacedDom
 import com.minewaku.chatter.profile.domain.model.profile.event.BannerReplacedDomainEvent;
 import com.minewaku.chatter.profile.domain.sharedkernel.event.DomainEvent;
 import com.minewaku.chatter.profile.domain.sharedkernel.value.AuditMetadata;
+import com.minewaku.chatter.profile.domain.sharedkernel.value.BaseEntity;
 
 import lombok.Getter;
 import lombok.NonNull;
@@ -24,7 +25,7 @@ import lombok.ToString;
 @Getter
 @Table("profile")
 @ToString
-public class Profile {
+public class Profile extends BaseEntity<ProfileId> {
 
     @Id
     private ProfileId id;
@@ -132,8 +133,8 @@ public class Profile {
         if (this.enablement.isSoftDeleted()) {
             return false; 
         }
-        AvatarReplacedDomainEvent avatarEvent = new AvatarReplacedDomainEvent(avatarHash);
-        BannerReplacedDomainEvent bannerEvent = new BannerReplacedDomainEvent(bannerHash);
+        AvatarReplacedDomainEvent avatarEvent = new AvatarReplacedDomainEvent(this.avatarHash, null);
+        BannerReplacedDomainEvent bannerEvent = new BannerReplacedDomainEvent(this.bannerHash, null);
 
         this.username = username;
         this.bio = null;
@@ -148,18 +149,16 @@ public class Profile {
         return true;
     }
 
-
     public boolean changeAvatar(String avatarHash) {
         this.enablement.validateAccessible();
         if (Objects.equals(this.avatarHash, avatarHash)) {
             return false; 
         }
 
-        if (this.avatarHash != null) {
-            this.domainEvents.add(new AvatarReplacedDomainEvent(
-                this.avatarHash
-            ));
-        }
+        this.domainEvents.add(new AvatarReplacedDomainEvent(
+            this.avatarHash,
+            avatarHash
+        ));
 
         this.avatarHash = avatarHash;
         return true;
@@ -171,11 +170,10 @@ public class Profile {
             return false;
         }
 
-        if (this.bannerHash != null) {
-            this.domainEvents.add(new BannerReplacedDomainEvent(
-                this.bannerHash
-            ));
-        }
+        this.domainEvents.add(new BannerReplacedDomainEvent(
+            this.bannerHash,
+            bannerHash
+        ));
 
         this.bannerHash = bannerHash;
         return true;

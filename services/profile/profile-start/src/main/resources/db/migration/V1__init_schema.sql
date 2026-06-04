@@ -25,14 +25,17 @@ CREATE TABLE asset (
     id BIGINT PRIMARY KEY,
     namespace VARCHAR(255) NOT NULL,
     file_hash VARCHAR(255) NOT NULL,
-    width INTEGER NOT NULL,
-    height INTEGER NOT NULL,
+    content_type VARCHAR(50) NOT NULL,
+    -- metadata TEXT,
     file_size INTEGER NOT NULL,
+    file_name VARCHAR(500) NOT NULL,
     ref_count INTEGER NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    modified_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    modified_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unq_namespace_hash UNIQUE (namespace, file_hash)
 );
 CREATE INDEX idx_asset_file_hash ON asset (file_hash);
+
 
 -- Bảng "outbox"
 CREATE TABLE outbox (

@@ -8,8 +8,6 @@ import com.minewaku.chatter.profile.application.port.outbound.query.ProfileReadR
 import com.minewaku.chatter.profile.application.port.outbound.query.model.ProfileReadModel;
 import com.minewaku.chatter.profile.domain.model.profile.model.ProfileId;
 
-import io.github.resilience4j.retry.annotation.Retry;
-
 @Service
 public class GetProfileApplicationService implements GetProfileUseCase {
 
@@ -20,7 +18,6 @@ public class GetProfileApplicationService implements GetProfileUseCase {
     }
 
     @Override
-    @Retry(name = "transientDataAccess")
     public ProfileReadModel handle(ProfileId request) {
         ProfileReadModel model = profileCacheRepository.findById(request)
             .orElseThrow(() -> new EntityNotFoundException("Profile not found"));

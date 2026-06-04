@@ -26,7 +26,7 @@ public class MessageCassandraEntity {
     private Long replyId;
 
     @Column("asset_hashes")
-    private List<String> assetHashes;
+    private List<AttachmentCassandraEntity> attachments;
 
     @Column("timestamp")
     private Long timestamp;
@@ -36,14 +36,14 @@ public class MessageCassandraEntity {
         @NonNull String content,
         @NonNull Long userId,
         @NonNull Long replyId,
-        @NonNull List<String> assetHashes,
+        @NonNull List<AttachmentCassandraEntity> attachments,
         @NonNull Long timestamp
     ) {
         this.key = key;
         this.content = content;
         this.userId = userId;
         this.replyId = replyId;
-        this.assetHashes = assetHashes;
+        this.attachments = attachments;
         this.timestamp = timestamp;
     }
 }

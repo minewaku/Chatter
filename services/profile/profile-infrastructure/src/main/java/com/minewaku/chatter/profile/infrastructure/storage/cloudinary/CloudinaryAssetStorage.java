@@ -1,5 +1,6 @@
 package com.minewaku.chatter.profile.infrastructure.storage.cloudinary;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -10,9 +11,11 @@ import org.springframework.stereotype.Service;
 
 import com.cloudinary.Cloudinary;
 import com.minewaku.chatter.profile.application.port.outbound.storage.AssetStorage;
-import com.minewaku.chatter.profile.domain.model.file.model.Namespace;
+import com.minewaku.chatter.profile.domain.model.asset.model.Namespace;
+import com.minewaku.chatter.profile.infrastructure.exception.FileStorageException;
 import com.minewaku.chatter.profile.infrastructure.storage.cloudinary.property.CloudinaryProperties;
 
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.extern.log4j.Log4j2;
 
 @Service
@@ -27,18 +30,20 @@ public class CloudinaryAssetStorage implements AssetStorage {
     }
 
     @Override
+    @Retry(name = "httpServer")
     public void delete(Namespace namespace, String fileHash) {
         try {
             cloudinary.uploader().destroy(
-                buildPublicId(namespaceToTempFolder(namespace), fileHash),
+                buildPublicId(namespaceToPermanentFolder(namespace), fileHash),
                 Map.of()
             );
-        } catch(Exception e) {  
-            throw new RuntimeException(e.getMessage(), e);
+        } catch(IOException e) {  
+            throw new FileStorageException(e.getMessage(), e);
         }
     }
 
     @Override
+    @Retry(name = "httpServer")
     public UploadSignature generateUploadSignature(Namespace namespace, Map<String, Object> params) {
         
         long timestamp = System.currentTimeMillis() / 1000L;
@@ -81,12 +86,13 @@ public class CloudinaryAssetStorage implements AssetStorage {
             );
 
         } catch (Exception e) {
-            throw new RuntimeException("Failed to generate Cloudinary upload signature", e);
+            throw new FileStorageException("Failed to generate Cloudinary upload signature", e);
         }
     }
     
     @Override
     @SuppressWarnings("unchecked")
+    //data mapping, hide technical details of cloudinary from upper layer
     public UploadResult handleUploadNotification(Map<String, String> headers, Map<String, Object> body) {
         String publicId = (String) body.get("public_id");
         String fileHash = extractHashFromPublicId(publicId);
@@ -97,8 +103,8 @@ public class CloudinaryAssetStorage implements AssetStorage {
             (String) customContext.get("namespace"), "missing namespace in context"
         );
         
-        int width = (int) body.get("width");
-        int height = (int) body.get("height");
+        String contentType = (String) body.get("format");
+        String fileName = (String) body.get("original_filename");
         int fileSize = (int) body.get("bytes");
 
         Map<String, Object> contextMap = buildContext(Namespace.valueOf(namespace), customContext);
@@ -107,8 +113,8 @@ public class CloudinaryAssetStorage implements AssetStorage {
             fileHash,
             namespace,
             contextMap,
-            width,
-            height,
+            contentType,
+            fileName,
             fileSize
         );
     }
@@ -120,8 +126,8 @@ public class CloudinaryAssetStorage implements AssetStorage {
 
         try {
             cloudinary.uploader().rename(tempPublicId, permanentPublicId, Map.of("overwrite", true));
-        } catch(Exception e) {
-            throw new RuntimeException(e.getMessage(), e);
+        } catch(IOException e) {
+            throw new FileStorageException("Failed to commit upload", e);
         }
     }
 
@@ -165,6 +171,19 @@ public class CloudinaryAssetStorage implements AssetStorage {
             }
             case USER_BANNERS -> {
                 yield "chatter/temp/profile/banners";
+            }
+        };
+    }
+
+    private String namespaceToPermanentFolder(
+                Namespace namespace) {
+
+        return switch(namespace) {
+            case USER_AVATARS -> { 
+                yield "chatter/permanent/profile/avatars";
+            }
+            case USER_BANNERS -> {
+                yield "chatter/permanent/profile/banners";
             }
         };
     }

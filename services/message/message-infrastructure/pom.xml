@@ -123,16 +123,22 @@
       -->
 
       <!-- https://mvnrepository.com/artifact/org.flywaydb/flyway-core -->
-      <dependency>
-              <groupId>org.flywaydb</groupId>
-              <artifactId>flyway-core</artifactId>
-          </dependency>
+      <!-- <dependency>
+          <groupId>org.flywaydb</groupId>
+          <artifactId>flyway-core</artifactId>
+      </dependency> -->
 
       <!-- https://mvnrepository.com/artifact/org.flywaydb/flyway-database-postgresql -->
-      <dependency>
+      <!-- <dependency>
           <groupId>org.flywaydb</groupId>
           <artifactId>flyway-database-postgresql</artifactId>
           <scope>runtime</scope>
+      </dependency> -->
+
+      <!-- Source: https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-flyway -->
+      <dependency>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-flyway</artifactId>
       </dependency>
 
       <!-- Source: https://mvnrepository.com/artifact/org.cognitor.cassandra/cassandra-migration-spring-boot-starter -->
@@ -147,12 +153,11 @@
       <!-- 
         *** JSON HELPER PACKAGES ***
       -->
-      
-      <!-- Jackson (parse event JSON) -->
-      <!-- 2.19.2 -->
+      <!-- recheck: use jackson 2 instead of 3 due to it's still too new -->
+      <!-- Source: https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-core -->
       <dependency>
           <groupId>com.fasterxml.jackson.core</groupId>
-          <artifactId>jackson-databind</artifactId>
+          <artifactId>jackson-core</artifactId>
       </dependency>
 
       <!-- include JSR-310 (Java 8 Date and Time) support -->

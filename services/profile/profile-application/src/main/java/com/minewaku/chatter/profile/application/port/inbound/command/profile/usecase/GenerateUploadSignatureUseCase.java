@@ -7,7 +7,7 @@ import com.minewaku.chatter.profile.application.port.outbound.storage.AssetStora
 
 public interface GenerateUploadSignatureUseCase extends UseCaseHandler<GenerateUploadSignatureUseCase.Command, AssetStorage.UploadSignature> {
     
-    public record Command(Map<String, Object> params) {
-
-    }
+    public record Command(
+        Map<String, Object> params
+    ) {}
 }

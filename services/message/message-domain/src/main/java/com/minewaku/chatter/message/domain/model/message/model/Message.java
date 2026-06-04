@@ -11,76 +11,107 @@ import lombok.NonNull;
 
 @Getter
 public class Message {
-    private MessageId messageId;
-    private UserId userId;
+    private MessageId id;
     private ChannelId channelId;
+    private UserId userId;
+    //recheck: inside this MessageId the column is named id instead of replyId
     private MessageId replyId;
-    private List<String> assetHashes;
     private String content;
     private Instant timestamp;
 
+    private List<Attachment> attachments;
+
     private Message(
-            @NonNull MessageId messageId, 
+            @NonNull MessageId id, 
             @NonNull ChannelId channelId, 
             @NonNull UserId userId,
             @NonNull MessageId replyId,
-            @NonNull List<String> assetHashes, 
             @NonNull String content, 
-            @NonNull Instant timestamp) {
+            @NonNull Instant timestamp,
+            @NonNull List<Attachment> attachments) {
 
-        this.messageId = messageId;
+        this.id = id;
         this.channelId = channelId;
         this.userId = userId;
         this.replyId = replyId;
-        this.assetHashes = assetHashes;
         this.content = content;
         this.timestamp = timestamp;
+        this.attachments = attachments;
     }
 
     public static Message createNew(
-            @NonNull MessageId messageId,
+            @NonNull MessageId id,
             @NonNull ChannelId channelId, 
             @NonNull UserId userId,
             MessageId replyId,
-            @NonNull List<String> assetHashes,
-            @NonNull String content
+            @NonNull String content,
+            @NonNull List<Attachment> attachments
     ) {
         return new Message(
-            messageId,
+            id,
             channelId,
             userId,
-            null,
-            assetHashes,
+            replyId,
             content,
-            Instant.now()
+            Instant.now(),
+            attachments
         );
     }
 
     public static Message reconstitute (
-            @NonNull MessageId messageId, 
+            @NonNull MessageId id, 
             @NonNull ChannelId channelId, 
             @NonNull UserId userId,
             @NonNull MessageId replyId,
-            @NonNull List<String> assetHashes, 
             @NonNull String content, 
-            @NonNull Instant timestamp
+            @NonNull Instant timestamp,
+            @NonNull List<Attachment> attachments
     ) {
         return new Message(
-            messageId,
+            id,
             channelId,
             userId,
             replyId,
-            assetHashes,
             content,
-            timestamp
+            timestamp,
+            attachments
         );
     }
 
-    public boolean addAssetHash(String assetHash) {
-        if (assetHashes.contains(assetHash)) {
+    public boolean addAttachment(String assetHash, String filename, String contentType, Long size) {
+        if (assetHash == null || assetHash.trim().isEmpty()) {
             return false;
         }
-        assetHashes.add(assetHash);
+        boolean isDuplicate = attachments.stream()
+                .anyMatch(attachment -> attachment.getFileHash().equals(assetHash));
+
+        if (isDuplicate) {
+            return false;
+        }
+
+        int newPosition = attachments.size();
+        attachments.add(new Attachment(assetHash, filename, contentType, size, newPosition));
+        
+        return true;
+    }
+
+    public boolean removeAttachment(String assetHash) {
+        if (assetHash == null || assetHash.trim().isEmpty()) {
+            return false;
+        }
+        boolean isRemoved = attachments.removeIf(attachment -> attachment.getFileHash().equals(assetHash));
+
+        if (!isRemoved) {
+            return false;
+        }
+
+        for (int i = 0; i < attachments.size(); i++) {
+            Attachment current = attachments.get(i);
+            if (current.getPosition() != i) {
+                attachments.set(i, new Attachment(current.getFileHash(), current.getFilename(), current.getContentType(), current.getSize(), i));
+            }
+        }
+
         return true;
     }
 }

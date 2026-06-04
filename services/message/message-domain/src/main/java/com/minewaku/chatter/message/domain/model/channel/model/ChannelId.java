@@ -1,7 +1,6 @@
 package com.minewaku.chatter.message.domain.model.channel.model;
 
 import org.springframework.data.annotation.PersistenceCreator;
-import org.springframework.data.relational.core.mapping.Column;
 
 import com.minewaku.chatter.message.domain.sharedkernel.exception.DomainValidationException;
 import com.minewaku.chatter.message.domain.sharedkernel.value.Id;
@@ -16,7 +15,6 @@ import lombok.ToString;
 @EqualsAndHashCode
 public class ChannelId implements Id {
 	
-	@Column("channel_id")
 	private final Long value;
 	
 	@PersistenceCreator

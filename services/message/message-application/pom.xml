@@ -17,6 +17,44 @@
             <artifactId>message-domain</artifactId>
             <version>${project.version}</version>
         </dependency>
+
+
+
+        <!-- 
+          *** TRANSACTION MANAGEMENT PACKAGES ***
+        -->
+
+        <!-- Source: https://mvnrepository.com/artifact/org.springframework/spring-tx -->
+        <dependency>
+          <groupId>org.springframework</groupId>
+          <artifactId>spring-tx</artifactId>
+        </dependency>
+
+
+
+        <!-- 
+          *** FAULT TOLERANCE PACKAGES ***
+        -->
+
+        <!-- recheck: change to spring boot 3 -->
+        <!-- Source: https://mvnrepository.com/artifact/io.github.resilience4j/resilience4j-spring-boot4 -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-spring-boot4</artifactId>
+            <version>2.4.0</version>
+        </dependency>
+
+
+
+        <!-- 
+          *** CACHE PACKAGES ***
+        -->
+
+        <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-cache -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-cache</artifactId>
+        </dependency>
     </dependencies>
 
 </project>

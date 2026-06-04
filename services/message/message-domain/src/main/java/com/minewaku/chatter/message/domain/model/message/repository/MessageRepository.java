@@ -14,4 +14,8 @@ public interface MessageRepository {
     void save(Message message);
     void saveAll(Set<Message> messages);
     void deleteByIdInChannel(ChannelId channelId, MessageId messageId);
+    List<Message> findMessagesBeforeByChannelId(ChannelId channelId, MessageId before, int limit);
+    List<Message> findMessagesAfterByChannelId(ChannelId channelId, MessageId after, int limit);
+    List<Message> findMessagesAroundByChannelId(ChannelId channelId, MessageId around, int limit);
+    List<Message> findLatestMessagesByChannelId(ChannelId channelId, int limit);
 }

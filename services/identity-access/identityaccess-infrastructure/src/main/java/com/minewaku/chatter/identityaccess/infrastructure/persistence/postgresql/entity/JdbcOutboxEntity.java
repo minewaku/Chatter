@@ -9,8 +9,6 @@ import org.springframework.data.domain.Persistable;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
-import com.fasterxml.jackson.databind.JsonNode;
-
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -42,7 +40,7 @@ public class JdbcOutboxEntity implements Persistable<UUID>{
 
     @Column("payload")
     @NotNull(message = "payload cannot be null")
-    private JsonNode payload;
+    private String payload;
     
     @Column("created_at")
     private Instant createdAt;

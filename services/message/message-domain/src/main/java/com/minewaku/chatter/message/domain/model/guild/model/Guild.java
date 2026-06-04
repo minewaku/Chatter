@@ -2,11 +2,12 @@ package com.minewaku.chatter.message.domain.model.guild.model;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.PersistenceCreator;
+import org.springframework.data.annotation.Version;
 import org.springframework.data.relational.core.mapping.Column;
-import org.springframework.data.relational.core.mapping.Embedded;
 import org.springframework.data.relational.core.mapping.Table;
 
 import com.minewaku.chatter.message.domain.model.recipient.model.UserId;
+import com.minewaku.chatter.message.domain.sharedkernel.exception.DomainValidationException;
 import com.minewaku.chatter.message.domain.sharedkernel.value.BaseEntity;
 
 import lombok.Getter;
@@ -19,11 +20,10 @@ import lombok.ToString;
 public class Guild extends BaseEntity<GuildId> {
     
     @Id
-    @Embedded.Nullable
+    @Column("id")
     private GuildId id;
 
-    @Embedded.Nullable
-    private UserId ownerId;
+    private UserId userId;
 
     @Column("name")
     private String name;
@@ -34,32 +34,39 @@ public class Guild extends BaseEntity<GuildId> {
     @Column("icon_hash")
     private String iconHash;
 
+    @Version
+    private Integer version;
+
     @PersistenceCreator
     private Guild(
             @NonNull GuildId id, 
-            @NonNull UserId ownerId, 
+            @NonNull UserId userId, 
             @NonNull String name, 
             String description,
-            String iconHash) {
+            String iconHash,
+            Integer version) {
         
         this.id = id;
-        this.ownerId = ownerId;
+        this.userId = userId;
         this.name = name;
         this.description = description;
         this.iconHash = iconHash;
+        this.version = version;
     }
 
     public static Guild createNew(
-            @NonNull GuildId guildId, 
-            @NonNull UserId creatorId, 
+            @NonNull GuildId id, 
+            @NonNull UserId userId, 
             @NonNull String name, 
             String description) {
 
-        return new Guild(guildId, creatorId, name, description, null);
+        return new Guild(id, userId, name, description, null, null);
     }
 
     public boolean updateInfo(String name, String description) {
         boolean result = false;
+        if(name == null || name.trim().isEmpty()) throw new DomainValidationException("name must not be empty or null");
+
         if(name != null && !this.name.equals(name)) {
             this.name = name;
             result = true;

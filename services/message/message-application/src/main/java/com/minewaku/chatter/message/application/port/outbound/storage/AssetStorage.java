@@ -7,9 +7,9 @@ import com.minewaku.chatter.message.domain.model.asset.model.Namespace;
 public interface AssetStorage {
     
     UploadSignature generateUploadSignature(Namespace namespace, Map<String, Object> params);
-    void delete(Namespace namespace, String fileHash, Map<String, Object> params);
+    void delete(Namespace namespace, String fileHash);
     UploadResult handleUploadNotification(Map<String, String> headers, Map<String, Object> body);
-    void commitUpload(Namespace namespace, String fileHash, Map<String, Object> params);
+    void commitUpload(Namespace namespace, String fileHash);
 
     public record UploadSignature(
         String uploadUrl,
@@ -21,8 +21,7 @@ public interface AssetStorage {
         String fileHash,
         String namespace,
         Map<String, Object> context,
-        Integer width,
-        Integer height,
+        String contentType,
         Integer fileSize
     ) {}
 }

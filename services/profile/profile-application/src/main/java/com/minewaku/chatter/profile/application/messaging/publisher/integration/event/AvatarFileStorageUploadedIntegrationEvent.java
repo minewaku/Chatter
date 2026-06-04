@@ -15,16 +15,16 @@ public class AvatarFileStorageUploadedIntegrationEvent extends IntegrationEvent 
     private final String fileHash;
     private final String namespace;
     private final Map<String, Object> context;
-    private final Integer width;
-    private final Integer height;
+    private final String contentType;
+    private final String fileName;
     private final Integer fileSize;
 
     public AvatarFileStorageUploadedIntegrationEvent(
                 @NonNull String namespace, 
                 Map<String, Object> context, 
                 @NonNull String fileHash,
-                Integer width,
-                Integer height,
+                @NonNull String contentType,
+                @NonNull String fileName,
                 Integer fileSize) {
 
         super(AGGREGATE_TYPE, EVENT_TYPE);
@@ -32,8 +32,8 @@ public class AvatarFileStorageUploadedIntegrationEvent extends IntegrationEvent 
         this.namespace = namespace;
         this.context = context == null ? new HashMap<>() : context;
         this.fileHash = fileHash;
-        this.width = width;
-        this.height = height;
+        this.contentType = contentType;
+        this.fileName = fileName;
         this.fileSize = fileSize;
     }
     

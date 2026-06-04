@@ -10,6 +10,7 @@ import com.minewaku.chatter.profile.application.port.inbound.command.file.usecas
 import com.minewaku.chatter.profile.application.port.outbound.storage.AssetStorage;
 import com.minewaku.chatter.profile.domain.sharedkernel.service.UniqueStringIdGenerator;
 
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.extern.slf4j.Slf4j;
 
 
@@ -32,8 +33,7 @@ public class HandleUploadBannerNotificationApplicationService implements HandleU
     }
 
     @Override
-    //push all notifications from file storage webhook to message bus in order to batch process them later instead of handle every notification one by one
-    //gonna cost some extra outbox events but at least improves database performance (i think)
+    @Retry(name = "transientDataAccess")
     public Void handle(Command command) {
         log.info("handling upload banner notification for fileHash {}", command.headers().get("fileHash"));
 
@@ -44,8 +44,8 @@ public class HandleUploadBannerNotificationApplicationService implements HandleU
             result.namespace().toString(),
             result.context(),
             result.fileHash(),
-            result.width(),
-            result.height(),
+            result.contentType(),
+            result.fileName(),
             result.fileSize()
         );
 

@@ -36,11 +36,13 @@ public class ProfileRepositoryImpl implements ProfileRepository {
     @Override
     public void delete(Profile profile) {
         profileJdbcRepository.delete(profile);
+        profileReadRedisRepository.deleteById(profile.getId().toString());
     }
 
     @Override
     public void deleteById(ProfileId profileId) {
         profileJdbcRepository.deleteById(profileId);
+        profileReadRedisRepository.deleteById(profileId.getValue().toString());
     }
 
     @Override
@@ -49,7 +51,7 @@ public class ProfileRepositoryImpl implements ProfileRepository {
     }
 
     @Override
-    public List<Profile> findAllByIdInForUpdate(List<ProfileId> profileIds) {
+    public List<Profile> findAllByIds(List<ProfileId> profileIds) {
         if (profileIds == null || profileIds.isEmpty()) {
             return Collections.emptyList();
         }

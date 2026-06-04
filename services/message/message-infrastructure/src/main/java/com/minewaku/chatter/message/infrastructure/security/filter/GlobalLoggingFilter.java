@@ -23,7 +23,7 @@ public class GlobalLoggingFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         // Wrap the request and response to allow reading the body multiple times
-        ContentCachingRequestWrapper wrappedRequest = new ContentCachingRequestWrapper(request);
+        ContentCachingRequestWrapper wrappedRequest = new ContentCachingRequestWrapper(request, 10 * 1024);
         ContentCachingResponseWrapper wrappedResponse = new ContentCachingResponseWrapper(response);
 
         try {
