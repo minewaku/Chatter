@@ -91,7 +91,7 @@ public class MessageController {
     public ResponseEntity<List<MessageReadModel>> getMessages(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable Long guildId,
-            @PathVariable Long channelId,
+        @PathVariable Long channelId,
             @RequestParam(required = false) Long around,
             @RequestParam(required = false) Long before,
             @RequestParam(required = false) Long after,
