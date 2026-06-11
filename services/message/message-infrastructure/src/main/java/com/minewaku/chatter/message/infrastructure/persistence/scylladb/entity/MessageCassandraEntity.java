@@ -1,5 +1,6 @@
 package com.minewaku.chatter.message.infrastructure.persistence.scylladb.entity;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.data.cassandra.core.mapping.Column;
@@ -25,7 +26,7 @@ public class MessageCassandraEntity {
     @Column("reply_id")
     private Long replyId;
 
-    @Column("asset_hashes")
+    @Column("attachments")
     private List<AttachmentCassandraEntity> attachments;
 
     @Column("timestamp")
@@ -35,15 +36,15 @@ public class MessageCassandraEntity {
         @NonNull MessageCassandraKeyEntity key,
         @NonNull String content,
         @NonNull Long userId,
-        @NonNull Long replyId,
-        @NonNull List<AttachmentCassandraEntity> attachments,
+        Long replyId,
+        List<AttachmentCassandraEntity> attachments,
         @NonNull Long timestamp
     ) {
         this.key = key;
         this.content = content;
         this.userId = userId;
         this.replyId = replyId;
-        this.attachments = attachments;
+        this.attachments = attachments != null ? attachments : new ArrayList<>();
         this.timestamp = timestamp;
     }
 }

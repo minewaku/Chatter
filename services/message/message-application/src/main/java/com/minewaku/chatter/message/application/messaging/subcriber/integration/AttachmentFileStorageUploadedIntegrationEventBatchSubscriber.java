@@ -1,15 +1,28 @@
 package com.minewaku.chatter.message.application.messaging.subcriber.integration;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.minewaku.chatter.message.application.messaging.publisher.integration.IntegrationEventPublisher;
 import com.minewaku.chatter.message.application.messaging.publisher.integration.OutboxStore;
+import com.minewaku.chatter.message.application.messaging.publisher.integration.event.AssetAttachedIntegrationEvent;
 import com.minewaku.chatter.message.application.messaging.publisher.integration.event.AttachmentFileStorageUploadedIntegrationEvent;
+import com.minewaku.chatter.message.application.messaging.publisher.integration.event.IntegrationEventWrapper;
 import com.minewaku.chatter.message.application.messaging.subcriber.core.IntegrationEventBatchSubscriber;
+import com.minewaku.chatter.message.domain.model.channel.model.ChannelId;
+import com.minewaku.chatter.message.domain.model.message.event.AttachmentAddedDomainEvent;
+import com.minewaku.chatter.message.domain.model.message.model.Message;
+import com.minewaku.chatter.message.domain.model.message.model.MessageId;
 import com.minewaku.chatter.message.domain.model.message.repository.MessageRepository;
+import com.minewaku.chatter.message.domain.sharedkernel.event.DomainEvent;
 import com.minewaku.chatter.message.domain.sharedkernel.service.UniqueStringIdGenerator;
 
 import lombok.extern.slf4j.Slf4j;
@@ -29,14 +42,107 @@ public class AttachmentFileStorageUploadedIntegrationEventBatchSubscriber implem
     ) {
         this.messageRepository = messageRepository;
         this.uniqueStringIdGenerator = uniqueStringIdGenerator;
-        this.integrationEventPublisher = new IntegrationEventPublisher(outboxStore);
+        this.integrationEventPublisher = new IntegrationEventPublisher(outboxStore); 
     }
 
     @Override
     @Transactional
     public void handle(List<AttachmentFileStorageUploadedIntegrationEvent> events) {
-        events.stream().forEach(event -> {
-            log.info("Test log for AttachmentFileStorageUploadedIntegrationEvent: {}", event);
-        });
+        if (events == null || events.isEmpty()) return;
+
+        Map<String, Map<String, List<AttachmentFileStorageUploadedIntegrationEvent>>> groupedEvents = new HashMap<>();
+
+        for (AttachmentFileStorageUploadedIntegrationEvent event : events) {
+            Map<String, Object> context = event.getContext();
+            String channelIdStr = (String) context.get("channelId");
+            String messageIdStr = (String) context.get("messageId");
+
+            if (channelIdStr == null || messageIdStr == null) {
+                log.warn("Skip event. FileHash: {}", event.getFileHash());
+                continue;
+            }
+
+            groupedEvents
+                .computeIfAbsent(channelIdStr, k -> new HashMap<>())
+                .computeIfAbsent(messageIdStr, k -> new ArrayList<>())
+                .add(event);
+        }
+
+        Set<Message> messagesToSave = new HashSet<>();
+        List<IntegrationEventWrapper<?>> eventsToPublish = new ArrayList<>();
+
+        for (var channelEntry : groupedEvents.entrySet()) {
+            ChannelId channelId = new ChannelId(Long.parseLong(channelEntry.getKey()));
+            Map<String, List<AttachmentFileStorageUploadedIntegrationEvent>> messagesInChannel = channelEntry.getValue();
+
+            Set<MessageId> messageIds = messagesInChannel.keySet().stream()
+                    .map(id -> new MessageId(Long.parseLong(id)))
+                    .collect(Collectors.toSet());
+
+            Map<MessageId, Message> messageMap = messageRepository
+                    .findAllByIdInChannel(channelId, messageIds)
+                    .stream()
+                    .collect(Collectors.toMap(Message::getId, msg -> msg));
+
+            for (var messageEntry : messagesInChannel.entrySet()) {
+                MessageId messageId = new MessageId(Long.parseLong(messageEntry.getKey()));
+                Message message = messageMap.get(messageId);
+
+                if (message == null) {
+                    log.warn("Cant find message id {} in channel {}. skip.", messageId, channelId);
+                    continue;
+                }
+
+                // 2. Apply mutations
+                for (AttachmentFileStorageUploadedIntegrationEvent event : messageEntry.getValue()) {
+                    String fileName = event.getFileName();
+                    Long fileSize = event.getFileSize() != null ? event.getFileSize().longValue() : 0L;
+
+                    message.addAttachment(
+                            event.getFileHash(),
+                            fileName,
+                            event.getContentType(),
+                            fileSize
+                    );
+                }
+
+                List<AttachmentAddedDomainEvent> attachmentAddedEvents =
+                        attachmentAddedDomainEventsFiltered(message.getDomainEvents());
+
+                if (attachmentAddedEvents.isEmpty()) continue;
+
+                messagesToSave.add(message);
+
+                for (AttachmentAddedDomainEvent domainEvent : attachmentAddedEvents) {
+                    eventsToPublish.add(new IntegrationEventWrapper<>(
+                            uniqueStringIdGenerator.generate(),
+                            domainEvent.getFileHash(),
+                            new AssetAttachedIntegrationEvent(
+                                    domainEvent.getNamespace(),
+                                    domainEvent.getFileHash(),
+                                    domainEvent.getContentType(),
+                                    domainEvent.getFileName(),
+                                    domainEvent.getFileSize().intValue()
+                            )
+                    ));
+                }
+            }
+        }
+
+        if (!messagesToSave.isEmpty()) {
+            messageRepository.saveAll(messagesToSave);
+        }
+
+        if (!eventsToPublish.isEmpty()) {
+            integrationEventPublisher.publish(eventsToPublish);
+        }
+    }
+
+    private List<AttachmentAddedDomainEvent> attachmentAddedDomainEventsFiltered(
+            List<DomainEvent> domainEvents) {
+        return domainEvents.stream()
+                .filter(e -> e instanceof AttachmentAddedDomainEvent)
+                .map(e -> (AttachmentAddedDomainEvent) e)
+                .toList();
     }
 }

@@ -2,7 +2,7 @@ package com.minewaku.chatter.message.application.service.command.message;
 
 import org.springframework.stereotype.Service;
 
-import com.minewaku.chatter.message.application.port.inbound.command.file.GenerateUploadSignatureUseCase;
+import com.minewaku.chatter.message.application.port.inbound.command.asset.GenerateUploadSignatureUseCase;
 import com.minewaku.chatter.message.application.port.outbound.storage.AssetStorage;
 import com.minewaku.chatter.message.domain.model.asset.model.Namespace;
 

@@ -4,7 +4,6 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.PersistenceCreator;
 import org.springframework.data.annotation.Version;
 import org.springframework.data.relational.core.mapping.Column;
-import org.springframework.data.relational.core.mapping.Embedded;
 import org.springframework.data.relational.core.mapping.Table;
 
 import com.minewaku.chatter.message.domain.model.guild.model.GuildId;
@@ -23,7 +22,7 @@ public class Channel extends BaseEntity<ChannelId> {
     @Column("id")
     private ChannelId id;
 
-    @Embedded.Nullable
+    @Column("guild_id")
     private GuildId guildId;
 
     @Column("name")

@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
@@ -18,6 +19,7 @@ import com.minewaku.chatter.message.domain.model.message.repository.MessageRepos
 import com.minewaku.chatter.message.infrastructure.persistence.scylladb.BucketHelper;
 import com.minewaku.chatter.message.infrastructure.persistence.scylladb.ChannelBucketCassandraRepository;
 import com.minewaku.chatter.message.infrastructure.persistence.scylladb.MessageCassandraRepository;
+import com.minewaku.chatter.message.infrastructure.persistence.scylladb.entity.ChannelBucketCassandraEntity;
 import com.minewaku.chatter.message.infrastructure.persistence.scylladb.entity.MessageCassandraEntity;
 import com.minewaku.chatter.message.infrastructure.persistence.scylladb.entity.MessageCassandraKeyEntity;
 import com.minewaku.chatter.message.infrastructure.persistence.scylladb.mapper.MessageCassandraMapper;
@@ -46,14 +48,34 @@ public class MessageRepositoryImpl implements MessageRepository {
 
     @Override
     public List<Message> findAllByIdInChannel(ChannelId channelId, Set<MessageId> messageIds) {
-        List<MessageCassandraKeyEntity> keys = messageIds.stream()
-            .map(messageId -> {
-                int bucket = bucketHelper.calculateWeeklyBucket(messageId.getValue());
-                return new MessageCassandraKeyEntity(channelId.getValue(), bucket, messageId.getValue());
-            })
-            .toList();
+        if (messageIds == null || messageIds.isEmpty()) {
+            return List.of();
+        }
 
-        return messageCassandraRepository.findAllById(keys).stream()
+        Map<Integer, List<Long>> groupedIdsByBucket = messageIds.stream()
+            .map(MessageId::getValue)
+            .collect(Collectors.groupingBy(
+                id -> bucketHelper.calculateWeeklyBucket(id),
+                Collectors.toList()
+            ));
+
+        List<MessageCassandraEntity> entities = new ArrayList<>();
+
+        for (Map.Entry<Integer, List<Long>> entry : groupedIdsByBucket.entrySet()) {
+            int bucket = entry.getKey();
+            List<Long> idsInBucket = entry.getValue();
+
+            List<MessageCassandraEntity> partitionResult = messageCassandraRepository
+                .findByKeyChannelIdAndKeyBucketAndKeyIdIn(
+                    channelId.getValue(), 
+                    bucket, 
+                    idsInBucket
+                );
+                
+            entities.addAll(partitionResult);
+        }
+
+        return entities.stream()
             .map(messageMapper::entityToDomain)
             .toList();
     }
@@ -123,7 +145,9 @@ public class MessageRepositoryImpl implements MessageRepository {
         remainingLimit -= messagesInFirstBucket.size();
 
         if (remainingLimit > 0) {
-            Set<Integer> allBuckets = channelBucketCassandraRepository.findBucketsByChannelId(rawChannelId);
+            Set<Integer> allBuckets = channelBucketCassandraRepository.findById(rawChannelId)
+                .map(ChannelBucketCassandraEntity::getBuckets)
+                .orElse(Collections.emptySet());
             
             if (allBuckets != null && !allBuckets.isEmpty()) {
                 List<Integer> pastBuckets = allBuckets.stream()
@@ -143,7 +167,7 @@ public class MessageRepositoryImpl implements MessageRepository {
             }
         }
 
-        resultEntities.sort((m1, m2) -> Long.compare(m2.getKey().getMessageId(), m1.getKey().getMessageId()));
+        resultEntities.sort((m1, m2) -> Long.compare(m2.getKey().getId(), m1.getKey().getId()));
 
         return resultEntities.stream()
                 .map(messageMapper::entityToDomain)
@@ -166,7 +190,9 @@ public class MessageRepositoryImpl implements MessageRepository {
         remainingLimit -= messagesInFirstBucket.size();
 
         if (remainingLimit > 0) {
-            Set<Integer> allBuckets = channelBucketCassandraRepository.findBucketsByChannelId(rawChannelId);
+            Set<Integer> allBuckets = channelBucketCassandraRepository.findById(rawChannelId)
+                .map(ChannelBucketCassandraEntity::getBuckets)
+                .orElse(Collections.emptySet());
             
             if (allBuckets != null && !allBuckets.isEmpty()) {
                 List<Integer> futureBuckets = allBuckets.stream()
@@ -187,7 +213,7 @@ public class MessageRepositoryImpl implements MessageRepository {
         }
 
 
-        resultEntities.sort((m1, m2) -> Long.compare(m2.getKey().getMessageId(), m1.getKey().getMessageId()));
+        resultEntities.sort((m1, m2) -> Long.compare(m2.getKey().getId(), m1.getKey().getId()));
         return resultEntities.stream()
                 .map(messageMapper::entityToDomain)
                 .toList();
@@ -229,7 +255,9 @@ public class MessageRepositoryImpl implements MessageRepository {
         List<MessageCassandraEntity> resultEntities = new ArrayList<>();
         int remainingLimit = limit;
 
-        Set<Integer> allBuckets = channelBucketCassandraRepository.findBucketsByChannelId(rawChannelId);
+        Set<Integer> allBuckets = channelBucketCassandraRepository.findById(rawChannelId)
+            .map(ChannelBucketCassandraEntity::getBuckets)
+            .orElse(Collections.emptySet());
         
         if (allBuckets != null && !allBuckets.isEmpty()) {
             List<Integer> sortedBuckets = allBuckets.stream()
@@ -247,7 +275,7 @@ public class MessageRepositoryImpl implements MessageRepository {
             }
         }
 
-        resultEntities.sort((m1, m2) -> Long.compare(m2.getKey().getMessageId(), m1.getKey().getMessageId()));
+        resultEntities.sort((m1, m2) -> Long.compare(m2.getKey().getId(), m1.getKey().getId()));
         return resultEntities.stream().map(messageMapper::entityToDomain).toList();
     }
 }

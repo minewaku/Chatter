@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.minewaku.chatter.message.application.port.inbound.command.file.GenerateUploadSignatureUseCase;
+import com.minewaku.chatter.message.application.port.inbound.command.asset.GenerateUploadSignatureUseCase;
 import com.minewaku.chatter.message.application.port.inbound.command.message.DeleteMessageUseCase;
 import com.minewaku.chatter.message.application.port.inbound.command.message.SendMessageUseCase;
 import com.minewaku.chatter.message.application.port.inbound.query.GetChannelMessagesUseCase;
@@ -75,9 +75,9 @@ public class MessageController {
             @PathVariable Long messageId
     ) {
         Map<String, Object> params = new HashMap<>(Map.of("userId", jwt.getSubject()));
-        params.put("guildId", guildId);
-        params.put("channelId", channelId);
-        params.put("messageId", messageId);
+        params.put("guildId", String.valueOf(guildId));
+        params.put("channelId", String.valueOf(channelId));
+        params.put("messageId", String.valueOf(messageId));
 		GenerateUploadSignatureUseCase.Command command = new GenerateUploadSignatureUseCase.Command(
             params
         );

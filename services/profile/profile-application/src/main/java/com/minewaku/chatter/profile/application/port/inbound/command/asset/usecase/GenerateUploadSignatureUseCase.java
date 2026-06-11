@@ -1,4 +1,4 @@
-package com.minewaku.chatter.profile.application.port.inbound.command.profile.usecase;
+package com.minewaku.chatter.profile.application.port.inbound.command.asset.usecase;
 
 import java.util.Map;
 

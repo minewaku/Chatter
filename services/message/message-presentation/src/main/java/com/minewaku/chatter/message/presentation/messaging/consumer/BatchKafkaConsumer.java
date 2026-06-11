@@ -26,8 +26,8 @@ public class BatchKafkaConsumer {
 
     //RECHECK: IMPLEMENT SPECIFIC CONSUMER FOR FILESTORAGEUPLOADEDEVENT INSTEAD OF USING GENERIC CONSUMER, TO AVOID UNNECESSARY DESERIALIZATION AND ERROR HANDLING FOR OTHER EVENT TYPES
     @KafkaListener(
-        topics = "dev.private.event.message.file.AttachmentFileStorageUploaded", 
-        groupId = "dev-com.minewaku.message.file.chatter.event.AttachmentFileStorageUploaded",
+        topics = "dev.private.event.message.file.attachmentFileStorageUploaded", 
+        groupId = "dev-com.minewaku.message.file.chatter.event.attachmentFileStorageUploaded",
         containerFactory = "batchFactory"
     )
     public void consumeOutboxEventsBatch(List<ConsumerRecord<String, String>> records) {
@@ -38,7 +38,7 @@ public class BatchKafkaConsumer {
                 Header header = record.headers().lastHeader("eventType");
                 
                 if (header == null || header.value() == null || 
-                    !"FileStorageUploaded".equals(new String(header.value(), StandardCharsets.UTF_8))) {
+                    !"AttachmentFileStorageUploaded".equals(new String(header.value(), StandardCharsets.UTF_8))) {
                     log.error("wrong event type in topic {}, expected FileStorageUploaded but got {}", record.topic(), header == null ? "null" : new String(header.value(), StandardCharsets.UTF_8));
                     continue;
                 }

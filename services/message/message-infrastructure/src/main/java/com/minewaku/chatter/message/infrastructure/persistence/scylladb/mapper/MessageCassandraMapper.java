@@ -36,8 +36,7 @@ public class MessageCassandraMapper {
                     attachment.getFileHash(),
                     attachment.getFilename(),
                     attachment.getContentType(),
-                    attachment.getSize(),
-                    attachment.getPosition()))
+                    attachment.getSize()))
                 .toList(),
             domain.getTimestamp().toEpochMilli()
         );
@@ -47,10 +46,9 @@ public class MessageCassandraMapper {
         MessageCassandraKeyEntity key = entity.getKey();
 
         return Message.reconstitute(
-            new MessageId(key.getMessageId()),
+            new MessageId(key.getId()),
             new ChannelId(key.getChannelId()),
             new UserId(entity.getUserId()),
-            // Kiểm tra an toàn: entity.getReplyId() có thể null trong database
             entity.getReplyId() != null ? new MessageId(entity.getReplyId()) : null,
             entity.getContent(),
             toInstant(entity.getTimestamp()),
@@ -59,8 +57,7 @@ public class MessageCassandraMapper {
                     attachmentEntity.getFileHash(),
                     attachmentEntity.getFilename(),
                     attachmentEntity.getContentType(),
-                    attachmentEntity.getSize(),
-                    attachmentEntity.getPosition()))
+                    attachmentEntity.getSize()))
                 .toList()
         );
     }

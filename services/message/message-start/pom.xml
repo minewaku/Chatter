@@ -27,7 +27,6 @@
 
 
         <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter -->
-        <!-- 3.5.11 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
@@ -40,21 +39,24 @@
         </dependency>
         
         <!-- https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-starter-netflix-eureka-client -->
-        <!-- 4.3.0 -->
         <dependency>
           <groupId>org.springframework.cloud</groupId>
           <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
         </dependency>
 
+        <!-- Source: https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-restclient -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-restclient</artifactId>
+        </dependency>
+
         <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-devtools -->
-        <!-- 3.5.11 -->
         <dependency>
           <groupId>org.springframework.boot</groupId>
           <artifactId>spring-boot-devtools</artifactId>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-actuator -->
-        <!-- 3.5.11 -->
         <dependency>
           <groupId>org.springframework.boot</groupId>
           <artifactId>spring-boot-starter-actuator</artifactId>
@@ -65,7 +67,6 @@
         <!--
           ENV RELATED PACKAGES
         -->
-        
         <!-- https://mvnrepository.com/artifact/me.paulschwarz/springboot3-dotenv -->
         <dependency>
             <groupId>me.paulschwarz</groupId>
@@ -79,7 +80,6 @@
         <plugin>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-maven-plugin</artifactId>
-            <version>${spring-boot.version}</version>
 
             <executions>
                 <execution>

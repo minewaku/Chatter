@@ -16,6 +16,7 @@ public class AttachmentFileStorageUploadedIntegrationEvent extends IntegrationEv
     private final String namespace;
     private final Map<String, Object> context;
     private final String contentType;
+    private final String fileName;
     private final Integer fileSize;
 
     public AttachmentFileStorageUploadedIntegrationEvent(
@@ -23,6 +24,7 @@ public class AttachmentFileStorageUploadedIntegrationEvent extends IntegrationEv
                 Map<String, Object> context, 
                 @NonNull String fileHash,
                 @NonNull String contentType,
+                @NonNull String fileName,
                 Integer fileSize) {
 
         super(AGGREGATE_TYPE, EVENT_TYPE);
@@ -31,6 +33,7 @@ public class AttachmentFileStorageUploadedIntegrationEvent extends IntegrationEv
         this.context = context == null ? new HashMap<>() : context;
         this.fileHash = fileHash;
         this.contentType = contentType;
+        this.fileName = fileName;
         this.fileSize = fileSize;
     }
     

@@ -10,7 +10,18 @@
           <version>1.0-SNAPSHOT</version>
     </parent>
 
+
     <artifactId>message-infrastructure</artifactId>
+
+
+    <properties>
+    	<jsonwebtoken.version>0.13.0</jsonwebtoken.version>
+      <debezium.version>3.1.3.Final</debezium.version>
+      <cloudinary.version>1.39.0</cloudinary.version>
+      <java-uuid-generator.version>5.0.0</java-uuid-generator.version>
+      <cassandra-jdbc-wrapper.version>5.0.0</cassandra-jdbc-wrapper.version>
+    </properties>
+
 
     <dependencies>
       <dependency>
@@ -27,66 +38,58 @@
 
 
 
-      <!--  https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-web  -->
-      <!-- 4.3.0 -->
+      <!-- Source: https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-webmvc -->
       <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-web</artifactId>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-webmvc</artifactId>
       </dependency>
 
       <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-validation -->
-      <!-- 3.5.11 -->
       <dependency>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-validation</artifactId>
       </dependency>
 
       <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-data-redis -->
-      <!-- 3.5.11 -->
       <dependency>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-data-redis</artifactId>
       </dependency>
 
       <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-log4j2 -->
-      <!-- 3.5.11 -->
       <dependency>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-log4j2</artifactId>
       </dependency>
 
       <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-security -->
-      <!-- 3.5.11 -->
       <dependency>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-security</artifactId>
       </dependency>
 
-      <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-oauth2-resource-server -->
-      <!-- 3.5.11 -->
+      <!-- Source: https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-oauth2-resource-server -->
       <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
       </dependency>
 
       <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-integration -->
-      <!-- 3.5.11 -->
       <dependency>
           <groupId>org.springframework.boot</groupId>
           <artifactId>spring-boot-starter-integration</artifactId>
       </dependency>
       
-      <!-- https://mvnrepository.com/artifact/org.springframework.kafka/spring-kafka -->
-      <!-- 3.3.8 -->
+      <!-- Source: https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-kafka -->
       <dependency>
-          <groupId>org.springframework.kafka</groupId>
-          <artifactId>spring-kafka</artifactId>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-kafka</artifactId>
       </dependency>
 
-      <!-- Source: https://mvnrepository.com/artifact/org.springframework.data/spring-data-cassandra -->
+      <!-- Source: https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-data-cassandra -->
       <dependency>
-          <groupId>org.springframework.data</groupId>
-          <artifactId>spring-data-cassandra</artifactId>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-data-cassandra</artifactId>
       </dependency>
 
 
@@ -94,9 +97,7 @@
       <!-- 
         *** VAULT PACKAGES ***
       -->
-      
       <!-- https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-starter-vault-config -->
-      <!-- 4.3.0 -->
       <dependency>
           <groupId>org.springframework.cloud</groupId>
           <artifactId>spring-cloud-starter-vault-config</artifactId>
@@ -110,7 +111,6 @@
       </dependency>
       
       <!-- https://mvnrepository.com/artifact/org.springframework.vault/spring-vault-core -->
-      <!-- 3.2.0 -->
       <dependency>
           <groupId>org.springframework.vault</groupId>
           <artifactId>spring-vault-core</artifactId>
@@ -121,49 +121,38 @@
       <!-- 
         *** DATABASE MIGRATION PACKAGES ***
       -->
-
-      <!-- https://mvnrepository.com/artifact/org.flywaydb/flyway-core -->
-      <!-- <dependency>
-          <groupId>org.flywaydb</groupId>
-          <artifactId>flyway-core</artifactId>
-      </dependency> -->
-
-      <!-- https://mvnrepository.com/artifact/org.flywaydb/flyway-database-postgresql -->
-      <!-- <dependency>
-          <groupId>org.flywaydb</groupId>
-          <artifactId>flyway-database-postgresql</artifactId>
-          <scope>runtime</scope>
-      </dependency> -->
-
-      <!-- Source: https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-flyway -->
+      <!-- Source: https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-flyway -->
       <dependency>
           <groupId>org.springframework.boot</groupId>
-          <artifactId>spring-boot-flyway</artifactId>
+          <artifactId>spring-boot-starter-flyway</artifactId>
       </dependency>
 
-      <!-- Source: https://mvnrepository.com/artifact/org.cognitor.cassandra/cassandra-migration-spring-boot-starter -->
+      <!-- Source: https://mvnrepository.com/artifact/org.flywaydb/flyway-database-postgresql -->
       <dependency>
-          <groupId>org.cognitor.cassandra</groupId>
-          <artifactId>cassandra-migration-spring-boot-starter</artifactId>
-          <version>${cassandra-migration.version}</version>
+          <groupId>org.flywaydb</groupId>
+          <artifactId>flyway-database-postgresql</artifactId>
+      </dependency>
+
+      <!-- Source: https://mvnrepository.com/artifact/org.flywaydb/flyway-database-cassandra -->
+      <dependency>
+          <groupId>org.flywaydb</groupId>
+          <artifactId>flyway-database-cassandra</artifactId>
+      </dependency>
+
+      <!-- Source: https://mvnrepository.com/artifact/com.ing.data/cassandra-jdbc-wrapper -->
+      <dependency>
+          <groupId>com.ing.data</groupId>
+          <artifactId>cassandra-jdbc-wrapper</artifactId>
+          <version>${cassandra-jdbc-wrapper.version}</version>
+          <scope>runtime</scope>
       </dependency>
 
 
 
-      <!-- 
-        *** JSON HELPER PACKAGES ***
-      -->
-      <!-- recheck: use jackson 2 instead of 3 due to it's still too new -->
-      <!-- Source: https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-core -->
+      <!-- Source: https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-jackson -->
       <dependency>
-          <groupId>com.fasterxml.jackson.core</groupId>
-          <artifactId>jackson-core</artifactId>
-      </dependency>
-
-      <!-- include JSR-310 (Java 8 Date and Time) support -->
-      <dependency>
-        <groupId>com.fasterxml.jackson.datatype</groupId>
-        <artifactId>jackson-datatype-jsr310</artifactId>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-jackson</artifactId>
       </dependency>
 
 
@@ -171,30 +160,26 @@
       <!-- 
         *** TOKEN RELATED PACKAGES ***
       -->
-        
       <!-- https://mvnrepository.com/artifact/io.jsonwebtoken/jjwt-api -->
-      <!-- 0.12.7 -->
       <dependency>
           <groupId>io.jsonwebtoken</groupId>
           <artifactId>jjwt-api</artifactId>
-          <version>0.12.7</version>
+          <version>${jsonwebtoken.version}</version>
       </dependency>
       
       <!-- https://mvnrepository.com/artifact/io.jsonwebtoken/jjwt-impl -->
-      <!-- 0.12.7 -->
       <dependency>
           <groupId>io.jsonwebtoken</groupId>
           <artifactId>jjwt-impl</artifactId>
-          <version>0.12.7</version>
+          <version>${jsonwebtoken.version}</version>
           <scope>runtime</scope>
       </dependency>
 
       <!-- https://mvnrepository.com/artifact/io.jsonwebtoken/jjwt-jackson -->
-      <!-- 0.12.7 -->
       <dependency>
           <groupId>io.jsonwebtoken</groupId>
           <artifactId>jjwt-jackson</artifactId>
-          <version>0.12.7</version>
+          <version>${jsonwebtoken.version}</version>
           <scope>runtime</scope>
       </dependency>
 
@@ -203,60 +188,64 @@
       <!-- 
         *** DEBEZIUM RELLATED PACKAGES ***
       -->
-      
+      <!-- Source: https://mvnrepository.com/artifact/io.debezium/debezium-embedded -->
+      <dependency>
+          <groupId>io.debezium</groupId>
+          <artifactId>debezium-embedded</artifactId>
+          <version>${debezium.version}</version>
+      </dependency>
+
       <!-- https://mvnrepository.com/artifact/io.debezium/debezium-api -->
       <dependency>
           <groupId>io.debezium</groupId>
           <artifactId>debezium-api</artifactId>
-          <version>3.1.3.Final</version>
+          <version>${debezium.version}</version>
       </dependency>
 
       <!-- https://mvnrepository.com/artifact/io.debezium/debezium-scripting -->
       <dependency>
           <groupId>io.debezium</groupId>
           <artifactId>debezium-scripting</artifactId>
-          <version>3.1.3.Final</version>
+          <version>${debezium.version}</version>
       </dependency>
 
       <!-- https://mvnrepository.com/artifact/io.debezium/debezium-connector-postgres -->
       <dependency>
         <groupId>io.debezium</groupId>
         <artifactId>debezium-connector-postgres</artifactId>
-        <version>3.1.3.Final</version>
+        <version>${debezium.version}</version>
       </dependency>
 
       <!-- https://mvnrepository.com/artifact/org.springframework.integration/spring-integration-debezium -->
-      <!-- 6.5.1 -->
       <dependency>
           <groupId>org.springframework.integration</groupId>
           <artifactId>spring-integration-debezium</artifactId>
       </dependency>
       
-      <!-- https://mvnrepository.com/artifact/org.codehaus.groovy/groovy -->
+      <!-- Source: https://mvnrepository.com/artifact/org.apache.groovy/groovy -->
       <dependency>
-          <groupId>org.codehaus.groovy</groupId>
+          <groupId>org.apache.groovy</groupId>
           <artifactId>groovy</artifactId>
-          <version>3.0.25</version>
+          <scope>compile</scope>
       </dependency>
       
-      <!-- https://mvnrepository.com/artifact/org.codehaus.groovy/groovy-jsr223 -->
+      <!-- Source: https://mvnrepository.com/artifact/org.apache.groovy/groovy-jsr223 -->
       <dependency>
-          <groupId>org.codehaus.groovy</groupId>
+          <groupId>org.apache.groovy</groupId>
           <artifactId>groovy-jsr223</artifactId>
-          <version>3.0.25</version>
+          <scope>compile</scope>
       </dependency>
-
+      
 
 
       <!-- 
         *** UUID GENERATOR PACKAGES ***
       -->
-
       <!-- https://mvnrepository.com/artifact/com.fasterxml.uuid/java-uuid-generator -->
       <dependency>
         <groupId>com.fasterxml.uuid</groupId>
         <artifactId>java-uuid-generator</artifactId>
-        <version>5.0.0</version>
+        <version>${java-uuid-generator.version}</version>
         <scope>compile</scope>
       </dependency>
 
@@ -265,12 +254,11 @@
       <!--
         CLOUDINARY PACKAGES
       -->
-
       <!-- https://mvnrepository.com/artifact/com.cloudinary/cloudinary-http44 -->
       <dependency>
         <groupId>com.cloudinary</groupId>
         <artifactId>cloudinary-http44</artifactId>
-        <version>1.38.0</version>
+        <version>${cloudinary.version}</version>
       </dependency>
 
 
@@ -278,7 +266,6 @@
       <!--
         DATABASE DRIVER
       -->
-
       <dependency>
         <groupId>org.postgresql</groupId>
         <artifactId>postgresql</artifactId>

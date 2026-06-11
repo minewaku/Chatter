@@ -20,16 +20,16 @@ public class MessageCassandraKeyEntity implements Serializable {
     @PrimaryKeyColumn(name = "bucket", type = PrimaryKeyType.PARTITIONED, ordinal = 1)
     private int bucket;
 
-    @PrimaryKeyColumn(name = "message_id", type = PrimaryKeyType.CLUSTERED, ordering = Ordering.DESCENDING, ordinal = 2)
-    private Long messageId; 
+    @PrimaryKeyColumn(name = "id", type = PrimaryKeyType.CLUSTERED, ordering = Ordering.DESCENDING, ordinal = 2)
+    private Long id; 
 
     public MessageCassandraKeyEntity(
             @NonNull Long channelId, 
             int bucket, 
-            @NonNull Long messageId) {
+            @NonNull Long id) {
                 
         this.channelId = channelId;
         this.bucket = bucket;
-        this.messageId = messageId;
+        this.id = id;
     }
 }

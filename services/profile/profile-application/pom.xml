@@ -20,7 +20,6 @@
         <!-- 
           *** TRANSACTION MANAGEMENT PACKAGES ***
         -->
-
         <!-- Source: https://mvnrepository.com/artifact/org.springframework/spring-tx -->
         <dependency>
           <groupId>org.springframework</groupId>
@@ -32,12 +31,10 @@
         <!-- 
           *** FAULT TOLERANCE PACKAGES ***
         -->
-
         <!-- https://mvnrepository.com/artifact/io.github.resilience4j/resilience4j-spring-boot3 -->
         <dependency>
           <groupId>io.github.resilience4j</groupId>
           <artifactId>resilience4j-spring-boot3</artifactId>
-          <version>2.3.0</version>
         </dependency>
 
 
@@ -45,13 +42,11 @@
         <!-- 
           *** CACHE PACKAGES ***
         -->
-
         <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-cache -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-cache</artifactId>
         </dependency>
-
   </dependencies>
   
 </project>

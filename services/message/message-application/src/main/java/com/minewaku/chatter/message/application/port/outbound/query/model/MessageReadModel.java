@@ -17,8 +17,7 @@ public record MessageReadModel(
         String fileHash,
         String filename,
         String contentType,
-        Long size,
-        Integer position
+        Long size
     ) {
     }
 }

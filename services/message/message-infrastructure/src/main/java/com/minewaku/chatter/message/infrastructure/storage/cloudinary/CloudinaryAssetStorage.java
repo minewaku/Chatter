@@ -104,6 +104,7 @@ public class CloudinaryAssetStorage implements AssetStorage {
         );
         
         String contentType = (String) body.get("format");
+        String fileName = (String) body.get("original_filename");
         int fileSize = (int) body.get("bytes");
 
         Map<String, Object> contextMap = buildContext(Namespace.valueOf(namespace), customContext);
@@ -113,6 +114,7 @@ public class CloudinaryAssetStorage implements AssetStorage {
             namespace,
             contextMap,
             contentType,
+            fileName,
             fileSize
         );
     }
@@ -214,16 +216,28 @@ public class CloudinaryAssetStorage implements AssetStorage {
     //BUILD CONTEXT HELPER METHODS
     private Map<String, Object> buildContext(Namespace namespace, Map<String, Object> requestContext) {
         return switch(namespace) {
-            case ATTACHMENT -> buildProfileImageContext(requestContext);
-            case GUILD_ICON -> buildProfileImageContext(requestContext);
+            case ATTACHMENT -> buildAttachmentContext(requestContext);
+            case GUILD_ICON -> buildGuildIconContext(requestContext);
         };
     }
 
-    private Map<String, Object> buildProfileImageContext(Map<String, Object> requestContext) {
-        String profileId = (String) requestContext.get("profileId");
+    private Map<String, Object> buildGuildIconContext(Map<String, Object> requestContext) {
+        String guildId = (String) requestContext.get("guildId");
 
         return new HashMap<>(Map.of(
-            "profileId", profileId
+            "guildId", guildId
+        ));
+    }
+
+    private Map<String, Object> buildAttachmentContext(Map<String, Object> requestContext) {
+        String guildId = (String) requestContext.get("guildId");
+        String channelId = (String) requestContext.get("channelId");
+        String messageId = (String) requestContext.get("messageId");
+
+        return new HashMap<>(Map.of(
+            "guildId", guildId,
+            "channelId", channelId,
+            "messageId", messageId
         ));
     }
 }

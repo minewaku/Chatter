@@ -26,7 +26,6 @@ CREATE TABLE asset (
     namespace VARCHAR(255) NOT NULL,
     file_hash VARCHAR(255) NOT NULL,
     content_type VARCHAR(50) NOT NULL,
-    -- metadata TEXT,
     file_size INTEGER NOT NULL,
     file_name VARCHAR(500) NOT NULL,
     ref_count INTEGER NOT NULL,

@@ -74,9 +74,9 @@ public class Asset implements Persistable<AssetId> {
     public static Asset createNew(
             @NonNull AssetId assetId,
             @NonNull Namespace namespace,
-            @NonNull String fileName,
             @NonNull String fileHash, 
             @NonNull String contentType,
+            @NonNull String fileName,
             @NonNull Integer fileSize) {
 
         Asset asset = new Asset(

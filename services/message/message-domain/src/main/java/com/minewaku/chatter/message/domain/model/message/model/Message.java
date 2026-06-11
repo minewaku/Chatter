@@ -1,10 +1,13 @@
 package com.minewaku.chatter.message.domain.model.message.model;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.minewaku.chatter.message.domain.model.channel.model.ChannelId;
+import com.minewaku.chatter.message.domain.model.message.event.AttachmentAddedDomainEvent;
 import com.minewaku.chatter.message.domain.model.recipient.model.UserId;
+import com.minewaku.chatter.message.domain.sharedkernel.event.DomainEvent;
 
 import lombok.Getter;
 import lombok.NonNull;
@@ -14,21 +17,21 @@ public class Message {
     private MessageId id;
     private ChannelId channelId;
     private UserId userId;
-    //recheck: inside this MessageId the column is named id instead of replyId
     private MessageId replyId;
     private String content;
     private Instant timestamp;
 
     private List<Attachment> attachments;
+    private List<DomainEvent> domainEvents = new ArrayList<>();
 
     private Message(
             @NonNull MessageId id, 
             @NonNull ChannelId channelId, 
             @NonNull UserId userId,
-            @NonNull MessageId replyId,
+            MessageId replyId,
             @NonNull String content, 
             @NonNull Instant timestamp,
-            @NonNull List<Attachment> attachments) {
+            List<Attachment> attachments) {
 
         this.id = id;
         this.channelId = channelId;
@@ -36,7 +39,7 @@ public class Message {
         this.replyId = replyId;
         this.content = content;
         this.timestamp = timestamp;
-        this.attachments = attachments;
+        this.attachments = attachments != null ? new ArrayList<>(attachments) : new ArrayList<>();
     }
 
     public static Message createNew(
@@ -45,7 +48,7 @@ public class Message {
             @NonNull UserId userId,
             MessageId replyId,
             @NonNull String content,
-            @NonNull List<Attachment> attachments
+            List<Attachment> attachments
     ) {
         return new Message(
             id,
@@ -62,10 +65,10 @@ public class Message {
             @NonNull MessageId id, 
             @NonNull ChannelId channelId, 
             @NonNull UserId userId,
-            @NonNull MessageId replyId,
+            MessageId replyId,
             @NonNull String content, 
             @NonNull Instant timestamp,
-            @NonNull List<Attachment> attachments
+            List<Attachment> attachments
     ) {
         return new Message(
             id,
@@ -78,10 +81,16 @@ public class Message {
         );
     }
 
-    public boolean addAttachment(String assetHash, String filename, String contentType, Long size) {
+    public boolean addAttachment(
+            String assetHash,
+            String filename,
+            String contentType,
+            Long size
+    ) {
         if (assetHash == null || assetHash.trim().isEmpty()) {
             return false;
         }
+
         boolean isDuplicate = attachments.stream()
                 .anyMatch(attachment -> attachment.getFileHash().equals(assetHash));
 
@@ -89,9 +98,10 @@ public class Message {
             return false;
         }
 
-        int newPosition = attachments.size();
-        attachments.add(new Attachment(assetHash, filename, contentType, size, newPosition));
-        
+        attachments.add(new Attachment(assetHash, filename, contentType, size));
+        domainEvents.add(new AttachmentAddedDomainEvent(
+                assetHash, contentType, filename, size));
+
         return true;
     }
 
@@ -99,19 +109,7 @@ public class Message {
         if (assetHash == null || assetHash.trim().isEmpty()) {
             return false;
         }
-        boolean isRemoved = attachments.removeIf(attachment -> attachment.getFileHash().equals(assetHash));
-
-        if (!isRemoved) {
-            return false;
-        }
-
-        for (int i = 0; i < attachments.size(); i++) {
-            Attachment current = attachments.get(i);
-            if (current.getPosition() != i) {
-                attachments.set(i, new Attachment(current.getFileHash(), current.getFilename(), current.getContentType(), current.getSize(), i));
-            }
-        }
-
-        return true;
+        
+        return attachments.removeIf(attachment -> attachment.getFileHash().equals(assetHash));
     }
 }

@@ -1,8 +1,8 @@
-package com.minewaku.chatter.profile.application.port.inbound.command.file.usecase;
+package com.minewaku.chatter.message.application.port.inbound.command.asset;
 
 import java.util.Map;
 
-import com.minewaku.chatter.profile.application.port.inbound.shared.handler.UseCaseHandler;
+import com.minewaku.chatter.message.application.port.inbound.shared.UseCaseHandler;
 
 public interface HandleUploadNotificationUseCase extends UseCaseHandler<HandleUploadNotificationUseCase.Command, Void> {
 

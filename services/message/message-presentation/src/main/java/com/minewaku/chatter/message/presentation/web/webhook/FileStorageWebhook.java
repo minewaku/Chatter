@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.minewaku.chatter.message.application.port.inbound.command.file.HandleUploadNotificationUseCase;
+import com.minewaku.chatter.message.application.port.inbound.command.asset.HandleUploadNotificationUseCase;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;

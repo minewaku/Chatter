@@ -4,10 +4,22 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
+	<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-parent -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.0.6</version>
+        <relativePath/>
+    </parent>
+
+
     <groupId>com.minewaku.chatter</groupId>
     <artifactId>message</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
+    <name>Chatter Message Parent Project</name>
+  	<description>Chatter Message Parent Project</description>
+
 
     <modules>
         <module>message-domain</module>
@@ -17,24 +29,15 @@
         <module>message-presentation</module>
     </modules>
 
-    <name>Chatter Message Parent Project</name>
-  	<description>Chatter Message Parent Project</description>
 
-
-<!-- recheck: sync versions to other services -->
     <properties>
-		<maven.compiler.source>21</maven.compiler.source>
-		<maven.compiler.target>21</maven.compiler.target>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<!-- <spring-boot.version>3.5.13</spring-boot.version> -->
+		<maven.compiler.release>21</maven.compiler.release>
 		<spring-boot.version>4.0.6</spring-boot.version>
-		<spring-cloud.version>2025.1.0</spring-cloud.version>
+		<spring-cloud.version>2025.1.1</spring-cloud.version>
 		<lombok.version>1.18.38</lombok.version>
 		<spring-dotenv.version>5.1.0</spring-dotenv.version>
-		<cassandra-migration.version>2.4.0</cassandra-migration.version>
-
-		<maven-compiler.plugin>3.15.0</maven-compiler.plugin>
 	</properties>
+
 
     <dependencyManagement>
     	<dependencies>
@@ -68,9 +71,7 @@
     	<!-- 
 			*** LOMBOK PACKAGES ***
 		-->
-		
 		<!-- https://mvnrepository.com/artifact/org.projectlombok/lombok -->
-		<!-- 1.18.38 -->
 	    <dependency>
 	        <groupId>org.projectlombok</groupId>
 	        <artifactId>lombok</artifactId>
@@ -84,10 +85,8 @@
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-compiler-plugin</artifactId>
-					<version>${maven-compiler.plugin}</version>
 					<configuration>
-						<source>${maven.compiler.source}</source>
-						<target>${maven.compiler.target}</target>
+						<release>${java.version}</release>	
 
 						<compilerArgs>
                         	<arg>-parameters</arg>
@@ -97,7 +96,6 @@
 							<path>
 								<groupId>org.projectlombok</groupId>
 								<artifactId>lombok</artifactId>
-								<version>${lombok.version}</version>
 							</path>
 						</annotationProcessorPaths>
 					</configuration>

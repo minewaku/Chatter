@@ -22,6 +22,7 @@ public interface AssetStorage {
         String namespace,
         Map<String, Object> context,
         String contentType,
+        String fileName,
         Integer fileSize
     ) {}
 }

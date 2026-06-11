@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.minewaku.chatter.message.application.port.inbound.command.file.GenerateUploadSignatureUseCase;
+import com.minewaku.chatter.message.application.port.inbound.command.asset.GenerateUploadSignatureUseCase;
 import com.minewaku.chatter.message.application.port.inbound.command.guild.CreateGuildUseCase;
 import com.minewaku.chatter.message.application.port.inbound.command.guild.CreateInviteUseCase;
 import com.minewaku.chatter.message.application.port.inbound.command.guild.DeleteGuildUseCase;
@@ -97,7 +97,7 @@ public class GuildController {
             @PathVariable Long guildId) {
 
         Map<String, Object> params = new HashMap<>(Map.of("userId", jwt.getSubject()));
-        params.put("guildId", guildId);
+        params.put("guildId", String.valueOf(guildId));
 		GenerateUploadSignatureUseCase.Command command = new GenerateUploadSignatureUseCase.Command(params);
 		generateUploadGuildIconSignatureUseCase.handle(command);
 

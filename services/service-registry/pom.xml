@@ -1,47 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" 
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	
-	<groupId>com.minewaku.chatter</groupId>
-	<artifactId>service-registry</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
-
-	<name>service-registry</name>
-	<description>Chatter Service Registry Parent Project</description>
-	
-	<url/>
-	
-	<licenses>
-		<license/>
-	</licenses>
-	
-	<developers>
-		<developer/>
-	</developers>
-	
-	<scm>
-		<connection/>
-		<developerConnection/>
-		<tag/>
-		<url/>
-	</scm>
-
-	<properties>
-		<maven.compiler.source>21</maven.compiler.source>
-		<maven.compiler.target>21</maven.compiler.target>
-		<spring-cloud.version>2025.0.0</spring-cloud.version>
-		<lombok.version>1.18.38</lombok.version>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-	</properties>
 	
 
 	<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-parent -->
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.5.13</version>
-		<relativePath/> <!-- lookup parent from repository -->
+		<version>3.5.14</version>
+		<relativePath/>
 	</parent>
+	
+
+	<groupId>com.minewaku.chatter</groupId>
+	<artifactId>service-registry</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>service-registry</name>
+	<description>Chatter Service Registry Parent Project</description>
+	
+
+    <properties>
+		<maven.compiler.release>21</maven.compiler.release>
+		<spring-boot.version>3.5.14</spring-boot.version>
+		<spring-cloud.version>2025.0.0</spring-cloud.version>
+	</properties>
 
 	
 	<dependencyManagement>
@@ -59,14 +43,12 @@
 
 	<dependencies>
 		<!-- https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-starter-netflix-eureka-server -->	
-		<!-- 4.3.0 --> 
 		<dependency>
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-starter-netflix-eureka-server</artifactId>
 		</dependency>
 
 		<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-test -->
-		<!-- 3.5.4 -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
@@ -74,14 +56,12 @@
 		</dependency>
 		
 		<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-devtools -->
-        <!-- 3.5.11 -->
         <dependency>
           <groupId>org.springframework.boot</groupId>
           <artifactId>spring-boot-devtools</artifactId>
         </dependency>
 
 		<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-actuator -->
-		<!-- 3.5.4 -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
@@ -94,36 +74,32 @@
 		-->
 		
 		<!-- https://mvnrepository.com/artifact/org.projectlombok/lombok -->
-		<!-- 1.18.38 -->
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
 			<scope>provided</scope>
 		</dependency>
-
 	</dependencies>
 
 	
 	<build>
 		<plugins>
-			<plugin>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-maven-plugin</artifactId>
-			</plugin>
-			
+
+			<!-- Define all the stuff for the compilation process -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 	            <artifactId>maven-compiler-plugin</artifactId>
 	            <configuration>
-	                <source>${maven.complier.source}</source>
-	                <target>${maven.complier.target}</target>
+					<release>${java.version}</release>
+
+					<compilerArgs>
+						<arg>-parameters</arg>
+					</compilerArgs>
 	                
 	                <annotationProcessorPaths>
-	                    <!-- Lombok -->
 	                    <path>
 	                        <groupId>org.projectlombok</groupId>
 	                        <artifactId>lombok</artifactId>
-	                        <version>${lombok.version}</version>
 	                    </path>
 	                </annotationProcessorPaths>
 	            </configuration>

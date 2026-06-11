@@ -2,13 +2,13 @@ package com.minewaku.chatter.profile.application.service.command.profile;
 
 import org.springframework.stereotype.Service;
 
-import com.minewaku.chatter.profile.application.port.inbound.command.profile.usecase.GenerateUploadSignatureUseCase;
+import com.minewaku.chatter.profile.application.port.inbound.command.asset.usecase.GenerateUploadSignatureUseCase;
 import com.minewaku.chatter.profile.application.port.outbound.storage.AssetStorage;
 import com.minewaku.chatter.profile.domain.model.asset.model.Namespace;
 
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 
-@Log4j2
+@Slf4j
 @Service("generateUploadAvatarSignatureUseCase")
 public class GenerateUploadAvatarSignatureApplicationService implements GenerateUploadSignatureUseCase {
 

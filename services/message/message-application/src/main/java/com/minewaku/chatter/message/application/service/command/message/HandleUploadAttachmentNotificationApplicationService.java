@@ -6,7 +6,7 @@ import com.minewaku.chatter.message.application.messaging.publisher.integration.
 import com.minewaku.chatter.message.application.messaging.publisher.integration.OutboxStore;
 import com.minewaku.chatter.message.application.messaging.publisher.integration.event.AttachmentFileStorageUploadedIntegrationEvent;
 import com.minewaku.chatter.message.application.messaging.publisher.integration.event.IntegrationEventWrapper;
-import com.minewaku.chatter.message.application.port.inbound.command.file.HandleUploadNotificationUseCase;
+import com.minewaku.chatter.message.application.port.inbound.command.asset.HandleUploadNotificationUseCase;
 import com.minewaku.chatter.message.application.port.outbound.storage.AssetStorage;
 import com.minewaku.chatter.message.domain.sharedkernel.service.UniqueStringIdGenerator;
 
@@ -44,6 +44,7 @@ public class HandleUploadAttachmentNotificationApplicationService implements Han
             result.context(),
             result.fileHash(),
             result.contentType(),
+            result.fileName(),
             result.fileSize()
         );
 

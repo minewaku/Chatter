@@ -6,7 +6,6 @@ import org.springframework.stereotype.Component;
 
 import com.minewaku.chatter.message.application.messaging.publisher.integration.MessageBroker;
 import com.minewaku.chatter.message.application.messaging.publisher.integration.event.IntegrationEventWrapper;
-import com.minewaku.chatter.message.infrastructure.messaging.router.KafkaRouter;
 
 import lombok.RequiredArgsConstructor;
 
@@ -14,17 +13,17 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class KafkaMessageBroker implements MessageBroker {
 
-    private final KafkaRouter kafkaRouter;
+    // private final KafkaRouter kafkaRouter;
 
     @Override
     public void dispatch(IntegrationEventWrapper<?> event) {
-        kafkaRouter.routeAndSend(event);
+        // kafkaRouter.routeAndSend(event);
     }
 
     @Override
     public void dispatch(List<? extends IntegrationEventWrapper<?>> events) {
         for (IntegrationEventWrapper<?> event : events) {
-            this.dispatch(event);
+            // this.dispatch(event);
         }
     }
 }

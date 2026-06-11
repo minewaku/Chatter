@@ -38,7 +38,7 @@ public class Invite extends BaseEntity<InviteId> implements Persistable<InviteId
     @Embedded.Nullable
     private GuildId guildId;
 
-    @Embedded.Nullable
+    @Column("inviter_id")
     private UserId inviterId;
 
     @Column("max_uses")

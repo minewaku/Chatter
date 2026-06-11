@@ -6,7 +6,7 @@ import com.minewaku.chatter.profile.application.messaging.publisher.integration.
 import com.minewaku.chatter.profile.application.messaging.publisher.integration.OutboxStore;
 import com.minewaku.chatter.profile.application.messaging.publisher.integration.event.BannerFileStorageUploadedIntegrationEvent;
 import com.minewaku.chatter.profile.application.messaging.publisher.integration.event.IntegrationEventWrapper;
-import com.minewaku.chatter.profile.application.port.inbound.command.file.usecase.HandleUploadNotificationUseCase;
+import com.minewaku.chatter.profile.application.port.inbound.command.asset.usecase.HandleUploadNotificationUseCase;
 import com.minewaku.chatter.profile.application.port.outbound.storage.AssetStorage;
 import com.minewaku.chatter.profile.domain.sharedkernel.service.UniqueStringIdGenerator;
 

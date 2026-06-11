@@ -8,7 +8,15 @@
     	<version>0.0.1-SNAPSHOT</version>
   	</parent>
   
+
   	<artifactId>identityaccess-presentation</artifactId>
+
+
+	<properties>
+		<springdoc.version>2.8.17</springdoc.version>
+		<yauaa.version>8.1.1</yauaa.version>
+	</properties>	
+
 
 	<dependencies>
         <dependency>
@@ -20,21 +28,18 @@
 
     
 		<!--  https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-web  -->
-		<!-- 4.3.0 -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
 
 		<!-- https://mvnrepository.com/artifact/org.springframework.kafka/spring-kafka -->
-        <!-- 3.3.8 -->
         <dependency>
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka</artifactId>
         </dependency>
 
 		<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-oauth2-resource-server -->
-		<!-- 3.5.11 -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
@@ -45,12 +50,11 @@
         <!-- 
 			*** DOCS GENERATOR PACKAGES ***
 		-->
-		
 		<!-- https://mvnrepository.com/artifact/org.springdoc/springdoc-openapi-starter-webmvc-ui -->
 		<dependency>
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-			<version>2.8.0</version>
+			<version>${springdoc.version}</version>
 		</dependency>
 
 
@@ -58,13 +62,11 @@
         <!-- 
 			*** REQUEST HEADER PARSER PACKAGES ***
 		-->
-
 		<!-- Source: https://mvnrepository.com/artifact/nl.basjes.parse.useragent/yauaa -->
 		<dependency>
 			<groupId>nl.basjes.parse.useragent</groupId>
 			<artifactId>yauaa</artifactId>
-			<version>7.32.0</version>
-			<scope>compile</scope>
+			<version>${yauaa.version}</version>
 		</dependency>
     </dependencies>
     

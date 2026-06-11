@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.minewaku.chatter.profile.application.port.inbound.command.profile.usecase.GenerateUploadSignatureUseCase;
+import com.minewaku.chatter.profile.application.port.inbound.command.asset.usecase.GenerateUploadSignatureUseCase;
 import com.minewaku.chatter.profile.application.port.inbound.command.profile.usecase.UpdateProfileUseCase;
 import com.minewaku.chatter.profile.application.port.outbound.storage.AssetStorage;
 import com.minewaku.chatter.profile.domain.model.profile.model.Bio;

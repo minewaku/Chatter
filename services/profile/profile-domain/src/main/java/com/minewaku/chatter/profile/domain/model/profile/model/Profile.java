@@ -60,7 +60,7 @@ public class Profile extends BaseEntity<ProfileId> {
     /*
     * PRIVATE CONSTRUCTOR
     */
-    private Profile(
+    private Profile (
                 @NonNull ProfileId id, 
                 @NonNull Username username,     
                 DisplayName displayName,
@@ -204,21 +204,5 @@ public class Profile extends BaseEntity<ProfileId> {
         this.enablement = newEnablement;
         this.auditMetadata = this.auditMetadata.markUpdated();
         return true;
-    }
-
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o)
-            return true;
-        if (!(o instanceof Profile))
-            return false;
-        Profile other = (Profile) o;
-        return id.equals(other.id);
-    }
-
-    @Override
-    public int hashCode() {
-        return id.hashCode();
     }
 }

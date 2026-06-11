@@ -59,7 +59,8 @@ redis-cli -h localhost -p 6388 --user vault --pass FcDSikLxXFLaf6KN
 ```bash
 cqlsh localhost 9052 -u cassandra -p cassandra
 cqlsh localhost 9052 -u cassandra -p cassandra -f /scripts/init-roles.cql
-cqlsh 172.18.0.2 9052 -u cassandra -p cassandra -f /scripts/init-roles.cql
+cqlsh 172.18.0.3 9052 -u cassandra -p cassandra -f /scripts/init-roles.cql
+cqlsh 172.18.0.2 9052 -u cassandra -p cassandra
 docker exec -it message-scylla-chatter nodetool status
 ```
 

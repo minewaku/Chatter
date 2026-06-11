@@ -16,8 +16,8 @@ import jakarta.validation.constraints.NotEmpty;
 @ConfigurationProperties(prefix = "app.rate-limit", ignoreUnknownFields = false)
 public class RateLimitConfig {
 
-    @NotEmpty(message = "rules must not be empty")
     @Valid
+    @NotEmpty(message = "rules must not be empty")
     private List<RateLimitPolicy> rules;
 
     public List<RateLimitPolicy> getRules() {

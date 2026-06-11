@@ -22,3 +22,5 @@ kafka-topics --create --bootstrap-server kafka-chatter:5003 --replication-factor
 
 kafka-topics --create --bootstrap-server kafka-chatter:5003 --replication-factor 1 --partitions 3 --topic dev.internal.event.message.outbox --if-not-exists
 kafka-topics --create --bootstrap-server kafka-chatter:5003 --replication-factor 1 --partitions 3 --topic dev.internal.event.message.dlq --if-not-exists
+kafka-topics --create --bootstrap-server kafka-chatter:5003 --replication-factor 1 --partitions 3 --topic dev.private.event.message.file.guildIconFileStorageUploaded --if-not-exists
+kafka-topics --create --bootstrap-server kafka-chatter:5003 --replication-factor 1 --partitions 3 --topic dev.private.event.message.file.attachmentFileStorageUploaded --if-not-exists

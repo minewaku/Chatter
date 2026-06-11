@@ -16,6 +16,7 @@ public class GuildIconFileStorageUploadedIntegrationEvent extends IntegrationEve
     private final String namespace;
     private final Map<String, Object> context;
     private final String contentType;
+    private final String fileName;
     private final Integer fileSize;
 
     public GuildIconFileStorageUploadedIntegrationEvent(
@@ -23,7 +24,8 @@ public class GuildIconFileStorageUploadedIntegrationEvent extends IntegrationEve
                 Map<String, Object> context, 
                 @NonNull String fileHash,
                 @NonNull String contentType,
-                Integer fileSize) {
+                Integer fileSize,
+                @NonNull String fileName) {
 
         super(AGGREGATE_TYPE, EVENT_TYPE);
 
@@ -31,6 +33,7 @@ public class GuildIconFileStorageUploadedIntegrationEvent extends IntegrationEve
         this.context = context == null ? new HashMap<>() : context;
         this.fileHash = fileHash;
         this.contentType = contentType;
+        this.fileName = fileName;
         this.fileSize = fileSize;
     }
     

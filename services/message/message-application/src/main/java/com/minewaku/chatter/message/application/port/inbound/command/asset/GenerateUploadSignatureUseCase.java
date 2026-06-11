@@ -1,4 +1,4 @@
-package com.minewaku.chatter.message.application.port.inbound.command.file;
+package com.minewaku.chatter.message.application.port.inbound.command.asset;
 
 import java.util.Map;
 

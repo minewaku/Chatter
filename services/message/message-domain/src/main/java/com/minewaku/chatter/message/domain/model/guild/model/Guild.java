@@ -1,12 +1,19 @@
 package com.minewaku.chatter.message.domain.model.guild.model;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.PersistenceCreator;
+import org.springframework.data.annotation.Transient;
 import org.springframework.data.annotation.Version;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
+import com.minewaku.chatter.message.domain.model.guild.event.GuildIconReplacedDomainEvent;
 import com.minewaku.chatter.message.domain.model.recipient.model.UserId;
+import com.minewaku.chatter.message.domain.sharedkernel.event.DomainEvent;
 import com.minewaku.chatter.message.domain.sharedkernel.exception.DomainValidationException;
 import com.minewaku.chatter.message.domain.sharedkernel.value.BaseEntity;
 
@@ -23,6 +30,7 @@ public class Guild extends BaseEntity<GuildId> {
     @Column("id")
     private GuildId id;
 
+    @Column("user_id")
     private UserId userId;
 
     @Column("name")
@@ -36,6 +44,9 @@ public class Guild extends BaseEntity<GuildId> {
 
     @Version
     private Integer version;
+
+    @Transient
+    private List<DomainEvent> domainEvents = new ArrayList<>();
 
     @PersistenceCreator
     private Guild(
@@ -80,9 +91,15 @@ public class Guild extends BaseEntity<GuildId> {
     }
 
     public boolean changeIcon(String iconHash) {
-        if(this.iconHash.equals(iconHash)) {
+        if (Objects.equals(this.iconHash, iconHash)) {
             return false;
         }
+
+        this.domainEvents.add(new GuildIconReplacedDomainEvent (
+            this.iconHash,
+            iconHash
+        ));
+
         this.iconHash = iconHash;
         return true;
     }

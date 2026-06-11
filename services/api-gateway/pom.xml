@@ -1,48 +1,35 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" 
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-  
-	<groupId>com.minewaku.chatter</groupId>
-	<artifactId>apigateway</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
-  
-	<name>Chatter API Gateway Parent Project</name>
-	<description>Chatter API Gateway Parent Project</description>
-	
-	<url/>
-	
-	<licenses>
-		<license/>
-	</licenses>
-	
-	<developers>
-		<developer/>
-	</developers>
-	
-	<scm>
-		<connection/>
-		<developerConnection/>
-		<tag/>
-		<url/>
-	</scm>
 
-	<properties>
-		<maven.compiler.source>17</maven.compiler.source>
-		<maven.compiler.target>17</maven.compiler.target>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<spring-cloud.version>2025.0.0</spring-cloud.version>
-		<lombok.version>1.18.38</lombok.version>
-		<spring-dotenv.version>5.1.0</spring-dotenv.version>
-	</properties>
-	
 
 	<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-parent -->
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.5.13</version>
-		<relativePath/> <!-- lookup parent from repository -->
+		<version>3.5.14</version>
+		<relativePath/>
 	</parent>
+
+
+	<groupId>com.minewaku.chatter</groupId>
+	<artifactId>apigateway</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>Chatter API Gateway Parent Project</name>
+	<description>Chatter API Gateway Parent Project</description>
+
+
+	<properties>
+		<maven.compiler.release>21</maven.compiler.release>
+		<spring-boot.version>3.5.14</spring-boot.version>
+		<spring-cloud.version>2025.0.0</spring-cloud.version>
+		<spring-dotenv.version>5.1.0</spring-dotenv.version>
+
+		<bucket4j.version>8.10.1</bucket4j.version>
+		<jsonwebtoken.version>0.13.0</jsonwebtoken.version>
+	</properties>
 
 
 	<dependencyManagement>
@@ -68,7 +55,6 @@
 
 	<dependencies>
 		<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter -->
-		<!-- 3.5.11 -->
 		<dependency>
 		    <groupId>org.springframework.boot</groupId>
 		    <artifactId>spring-boot-starter</artifactId>
@@ -81,14 +67,12 @@
 		</dependency>
 	
 		<!-- https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-starter-gateway-server-webflux -->
-		<!-- 4.3.0 -->
 		<dependency>
 		    <groupId>org.springframework.cloud</groupId>
 		    <artifactId>spring-cloud-starter-gateway-server-webflux</artifactId>
 		</dependency>
 		
 		<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-data-redis-reactive -->
-		<!-- 4.3.0 -->
 		<dependency>
 		    <groupId>org.springframework.boot</groupId>
 		    <artifactId>spring-boot-starter-data-redis-reactive</artifactId>
@@ -96,90 +80,73 @@
 		</dependency>
 		
 		<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-security -->
-		<!-- 4.3.0 -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-security</artifactId>
 		</dependency>
 		
 		<!-- https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-starter-netflix-eureka-client -->
-		<!-- 4.3.0 -->
 		<dependency>
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
 		</dependency>
 		
-		
 		<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-log4j2 -->
-		<!-- 3.5.11 -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-log4j2</artifactId>
 		</dependency>
 
 		<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-oauth2-resource-server -->
-		<!-- 3.5.11 -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
 		</dependency>
 
 		<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-devtools -->
-		<!-- 3.5.11 -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-devtools</artifactId>
 		</dependency>
 		
-		
 		<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-actuator -->
-		<!-- 3.5.11 -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
 		
-		
 		<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-validation -->
-		<!-- 3.5.11 -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-validation</artifactId>
 		</dependency>
 		
-		
 		<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-test -->
-		<!-- 3.5.11 -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
 		
-		
 		<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-data-redis -->
-		<!-- 3.5.11 -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-redis</artifactId>
 		</dependency>
 
 		<!-- https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-starter-vault-config -->
-		<!-- 4.3.0 -->
 		<dependency>
 		    <groupId>org.springframework.cloud</groupId>
 		    <artifactId>spring-cloud-starter-vault-config</artifactId>
 		</dependency>
 
 		<!-- https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-vault-config-databases -->
-		<!-- 4.3.0 -->
 		<dependency>
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-vault-config-databases</artifactId>
 		</dependency>
 		
 		<!-- https://mvnrepository.com/artifact/org.springframework.vault/spring-vault-core -->
-		<!-- 3.2.0 -->
 		<dependency>
 		    <groupId>org.springframework.vault</groupId>
 		    <artifactId>spring-vault-core</artifactId>
@@ -190,32 +157,26 @@
 		<!-- 
 			*** TOKEN RELATED PACKAGES ***
 		-->
-		
 		<!-- https://mvnrepository.com/artifact/io.jsonwebtoken/jjwt-api -->
-		<!-- 0.12.6 -->
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>
 			<artifactId>jjwt-api</artifactId>
-			<version>0.12.6</version>
+			<version>${jsonwebtoken.version}</version>
 		</dependency>
 		
-		
 		<!-- https://mvnrepository.com/artifact/io.jsonwebtoken/jjwt-impl -->
-		<!-- 0.12.6 -->
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>
 			<artifactId>jjwt-impl</artifactId>
-			<version>0.12.6</version>
+			<version>${jsonwebtoken.version}</version>
 			<scope>runtime</scope>
 		</dependency>
 		
-		
 		<!-- https://mvnrepository.com/artifact/io.jsonwebtoken/jjwt-jackson -->
-		<!-- 0.12.6 -->
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>
 			<artifactId>jjwt-jackson</artifactId>
-			<version>0.12.6</version>
+			<version>${jsonwebtoken.version}</version>
 			<scope>runtime</scope>
 		</dependency>
 		
@@ -224,29 +185,29 @@
 		<!-- 
 			*** FAULT TOLERANCE PACKAGES ***
 		-->
-
 		<!-- Source: https://mvnrepository.com/artifact/io.github.resilience4j/resilience4j-spring-boot3 -->
 		<dependency>
 			<groupId>io.github.resilience4j</groupId>
 			<artifactId>resilience4j-spring-boot3</artifactId>
 		</dependency>
-		
-		
+
+
+
+		<!-- 
+			*** ALSO A FAULT TOLERANCE PACKAGE BUT ONLY SPECIFIC TO RATE LIMITING ***
+		-->
 		<!-- https://mvnrepository.com/artifact/com.bucket4j/bucket4j-core -->
-		<!-- 8.6.0 -->
 		<dependency>
 			<groupId>com.bucket4j</groupId>
 			<artifactId>bucket4j-core</artifactId>
-			<version>8.6.0</version>
+			<version>${bucket4j.version}</version>
 		</dependency>
-		
-		
+
 		<!-- https://mvnrepository.com/artifact/com.bucket4j/bucket4j-redis -->
-		<!-- 8.6.0 -->
 		<dependency>
 			<groupId>com.bucket4j</groupId>
 			<artifactId>bucket4j-redis</artifactId>
-			<version>8.6.0</version>
+			<version>${bucket4j.version}</version>
 		</dependency>
 		
 		
@@ -254,9 +215,7 @@
 		<!-- 
 			*** LOMBOK PACKAGES ***
 		-->
-		
 		<!-- https://mvnrepository.com/artifact/org.projectlombok/lombok -->
-		<!-- 1.18.38 -->
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
@@ -268,44 +227,43 @@
         <!--
           ENV RELATED PACKAGES
         -->
-        
         <!-- https://mvnrepository.com/artifact/me.paulschwarz/springboot3-dotenv -->
         <dependency>
             <groupId>me.paulschwarz</groupId>
             <artifactId>springboot3-dotenv</artifactId>
         </dependency>
-		
-		
-		
-		<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-configuration-processor -->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-configuration-processor</artifactId>
-			<optional>true</optional>
-		</dependency>
 
+
+        <!--
+		  CONFIGURATION PROCESSOR (for @ConfigurationProperties)
+        -->
+		<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-configuration-processor -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
 	</dependencies>
 	
+
 	<build>
 		<plugins>
-			<plugin>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-maven-plugin</artifactId>
-			</plugin>
 			
+			<!-- Define all the stuff for the compilation process -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 	            <artifactId>maven-compiler-plugin</artifactId>
 	            <configuration>
-	                <source>${maven.complier.source}</source>
-	                <target>${maven.complier.target}</target>
-	                
+					<release>${java.version}</release>
+
+					<compilerArgs>
+                        <arg>-parameters</arg>
+                    </compilerArgs>
+
 	                <annotationProcessorPaths>
-	                    <!-- Lombok -->
 	                    <path>
 	                        <groupId>org.projectlombok</groupId>
 	                        <artifactId>lombok</artifactId>
-	                        <version>${lombok.version}</version>
 	                    </path>
 	                </annotationProcessorPaths>
 	            </configuration>

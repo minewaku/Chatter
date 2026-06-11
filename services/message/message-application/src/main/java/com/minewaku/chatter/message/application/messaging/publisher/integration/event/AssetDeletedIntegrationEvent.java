@@ -5,7 +5,7 @@ import lombok.NonNull;
 public class AssetDeletedIntegrationEvent extends IntegrationEvent {
 
     public static final String AGGREGATE_TYPE = "Asset";
-    public static final String EVENT_TYPE = "AssetDeleted";
+    public static final String EVENT_TYPE = "AssetUploaded";
 
     @NonNull
     private final Long id;

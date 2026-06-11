@@ -44,8 +44,7 @@ public class MessageReadMapper {
                 attachment.getFileHash(),
                 attachment.getFilename(),
                 attachment.getContentType(),
-                attachment.getSize(),
-                attachment.getPosition()
+                attachment.getSize()
         );
     }
 } 
