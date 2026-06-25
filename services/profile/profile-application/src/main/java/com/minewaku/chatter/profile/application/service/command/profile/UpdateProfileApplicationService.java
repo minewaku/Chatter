@@ -5,9 +5,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.minewaku.chatter.profile.application.exception.EntityNotFoundException;
+import com.minewaku.chatter.profile.application.messaging.publisher.integration.IntegrationEventPublisher;
+import com.minewaku.chatter.profile.application.messaging.publisher.integration.OutboxStore;
+import com.minewaku.chatter.profile.application.messaging.publisher.integration.event.IntegrationEventWrapper;
+import com.minewaku.chatter.profile.application.messaging.publisher.integration.event.ProfileUpdatedIntegrationEvent;
 import com.minewaku.chatter.profile.application.port.inbound.command.profile.usecase.UpdateProfileUseCase;
 import com.minewaku.chatter.profile.domain.model.profile.model.Profile;
 import com.minewaku.chatter.profile.domain.model.profile.repository.ProfileRepository;
+import com.minewaku.chatter.profile.domain.sharedkernel.service.UniqueStringIdGenerator;
 
 import io.github.resilience4j.retry.annotation.Retry;
 
@@ -15,11 +20,17 @@ import io.github.resilience4j.retry.annotation.Retry;
 public class UpdateProfileApplicationService implements UpdateProfileUseCase {
 
     private final ProfileRepository profileRepository;
+    private final UniqueStringIdGenerator uniqueStringIdGenerator;
+    private final IntegrationEventPublisher integrationEventPublisher;
     
     public UpdateProfileApplicationService(
-                ProfileRepository profileRepository) {
+                ProfileRepository profileRepository,
+                UniqueStringIdGenerator uniqueStringIdGenerator,
+                OutboxStore outboxStore) {
 
         this.profileRepository = profileRepository;
+        this.uniqueStringIdGenerator = uniqueStringIdGenerator;
+        this.integrationEventPublisher = new IntegrationEventPublisher(outboxStore);
     }
 
     @Override
@@ -43,7 +54,17 @@ public class UpdateProfileApplicationService implements UpdateProfileUseCase {
                 profileRepository.save(profile);
             }
 
+        IntegrationEventWrapper<ProfileUpdatedIntegrationEvent> eventWrapper = new IntegrationEventWrapper<ProfileUpdatedIntegrationEvent>(
+            uniqueStringIdGenerator.generate(),
+            profile.getId().getValue().toString(),
+            new ProfileUpdatedIntegrationEvent(
+                profile.getId().getValue(),
+                profile.getDisplayName() != null ? profile.getDisplayName().getValue() : null,
+                profile.getBio() != null ? profile.getBio().getValue() : null
+            )
+        );
         profileRepository.save(profile);
+        integrationEventPublisher.publish(eventWrapper);
         return null;
     }
     

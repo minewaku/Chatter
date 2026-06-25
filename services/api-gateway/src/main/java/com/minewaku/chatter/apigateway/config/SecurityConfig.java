@@ -29,13 +29,20 @@ public class SecurityConfig {
             "/api/v*/webhooks/cloudinary/**",
             "/api/v*/auth/authenticate",
             "/api/v*/auth/verification/**",
-            "/api/v*/auth/register"
+            "/api/v*/auth/register",
+            "/api/v1/ws/guilds/**",
+            "/api/v1/ws/channels/**",
+            "/api/v1/ws/profiles/**",
     };
 
-    @Bean
+@Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(Arrays.asList("https://chatter.minewaku.id.vn"));
+        config.setAllowedOriginPatterns(Arrays.asList(
+        "https://chatter.minewaku.id.vn", 
+            "http://localhost:*", 
+            "http://127.0.0.1:*"
+        ));
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(Arrays.asList("*"));
         config.setAllowCredentials(true);

@@ -41,6 +41,10 @@ public class AuthenticationRoute {
 		)
 
 		//PROFILE
+		.route("profile websocket", r -> r
+			.path("/api/v*/ws/profiles/**")
+			.uri("lb:ws://PROFILE")
+		)
 		.route("avatar webhook", r -> r
 			.path("/api/v*/webhooks/cloudinary/avatars/**")
 			.uri("lb://PROFILE")
@@ -65,6 +69,14 @@ public class AuthenticationRoute {
 		)
 
 		//MESSSAGE
+		.route("message websocket", r -> r
+			.path("/api/v*/ws/guilds/**")
+			.uri("lb:ws://MESSAGE")
+		)
+		.route("message websocket", r -> r
+			.path("/api/v*/ws/channels/**")
+			.uri("lb:ws://MESSAGE")
+		)
 		.route("attachment webhook", r -> r
 			.path("/api/v*/webhooks/cloudinary/attachments/**")
 			.uri("lb://MESSAGE")

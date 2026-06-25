@@ -37,5 +37,10 @@ public class RecipientRepositoryImpl implements RecipientRepository {
     public Optional<Recipient> findById(RecipientId recipientId) {
         return recipientJdbcRepository.findById(recipientId);
     }
+
+    @Override
+    public boolean existsById(RecipientId recipientId) {
+        return recipientJdbcRepository.existsById(recipientId);
+    }
     
 }

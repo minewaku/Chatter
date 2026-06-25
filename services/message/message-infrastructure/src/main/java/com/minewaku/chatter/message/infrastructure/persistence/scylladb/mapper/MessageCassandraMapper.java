@@ -6,6 +6,7 @@ import java.util.Optional;
 import org.springframework.stereotype.Component;
 
 import com.minewaku.chatter.message.domain.model.channel.model.ChannelId;
+import com.minewaku.chatter.message.domain.model.guild.model.GuildId;
 import com.minewaku.chatter.message.domain.model.message.model.Attachment;
 import com.minewaku.chatter.message.domain.model.message.model.Message;
 import com.minewaku.chatter.message.domain.model.message.model.MessageId;

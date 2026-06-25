@@ -15,7 +15,7 @@ public class AttachmentFileStorageUploadedIntegrationEvent extends IntegrationEv
     private final String fileHash;
     private final String namespace;
     private final Map<String, Object> context;
-    private final String contentType;
+    private final String contentType; //sẽ chứa channelId, guildId, messageId
     private final String fileName;
     private final Integer fileSize;
 

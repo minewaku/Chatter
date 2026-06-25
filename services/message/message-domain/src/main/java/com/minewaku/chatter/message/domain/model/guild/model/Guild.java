@@ -96,6 +96,7 @@ public class Guild extends BaseEntity<GuildId> {
         }
 
         this.domainEvents.add(new GuildIconReplacedDomainEvent (
+            this.getId().getValue(),
             this.iconHash,
             iconHash
         ));

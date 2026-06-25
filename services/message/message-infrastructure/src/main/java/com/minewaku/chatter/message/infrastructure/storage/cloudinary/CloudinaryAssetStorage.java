@@ -15,12 +15,14 @@ import com.minewaku.chatter.message.domain.model.asset.model.Namespace;
 import com.minewaku.chatter.message.infrastructure.exception.FileStorageException;
 import com.minewaku.chatter.message.infrastructure.storage.cloudinary.property.CloudinaryProperties;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import lombok.extern.log4j.Log4j2;
 
 @Service
 @Log4j2
 @EnableConfigurationProperties(CloudinaryProperties.class)
+//recheck: implement circuit breaker for cloudinary api call, to avoid cascading failure
 public class CloudinaryAssetStorage implements AssetStorage {
 
     private final Cloudinary cloudinary;
@@ -30,6 +32,7 @@ public class CloudinaryAssetStorage implements AssetStorage {
     }
 
     @Override
+    @CircuitBreaker(name = "cloudinary")
     @Retry(name = "httpServer")
     public void delete(Namespace namespace, String fileHash) {
         try {
@@ -43,6 +46,7 @@ public class CloudinaryAssetStorage implements AssetStorage {
     }
 
     @Override
+    @CircuitBreaker(name = "cloudinary")
     @Retry(name = "httpServer")
     public UploadSignature generateUploadSignature(Namespace namespace, Map<String, Object> params) {
         
@@ -120,6 +124,8 @@ public class CloudinaryAssetStorage implements AssetStorage {
     }
 
     @Override
+    @CircuitBreaker(name = "cloudinary")
+    @Retry(name = "httpServer")
     public void commitUpload(Namespace namespace, String fileHash) {
         String permanentPublicId = getPermanentFolder(namespace, fileHash);
         String tempPublicId = getTempFolder(namespace, fileHash);

@@ -1,5 +1,6 @@
 package com.minewaku.chatter.profile.application.messaging.subcriber.integration;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -12,6 +13,7 @@ import com.minewaku.chatter.profile.application.messaging.publisher.integration.
 import com.minewaku.chatter.profile.application.messaging.publisher.integration.event.IntegrationEventWrapper;
 import com.minewaku.chatter.profile.application.messaging.publisher.integration.event.PersistFileStorageIntegrationEvent;
 import com.minewaku.chatter.profile.application.messaging.subcriber.core.IntegrationEventSubscriber;
+import com.minewaku.chatter.profile.application.port.outbound.repository.ProcessedEventRepository;
 import com.minewaku.chatter.profile.domain.model.asset.model.Asset;
 import com.minewaku.chatter.profile.domain.model.asset.model.AssetId;
 import com.minewaku.chatter.profile.domain.model.asset.model.AssetIdentity;
@@ -21,24 +23,29 @@ import com.minewaku.chatter.profile.domain.sharedkernel.service.TimeBasedIdGener
 import com.minewaku.chatter.profile.domain.sharedkernel.service.UniqueStringIdGenerator;
 
 import io.github.resilience4j.retry.annotation.Retry;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Component
 public class AssetAttachedIntegrationEventSubscriber implements IntegrationEventSubscriber<AssetAttachedIntegrationEvent> {
     
     private final AssetRepository assetRepository;
     private final TimeBasedIdGenerator timeBasedIdGenerator;
     private final UniqueStringIdGenerator uniqueStringIdGenerator;
+    private final ProcessedEventRepository processedEventRepository;
     private final IntegrationEventPublisher integrationEventPublisher;
 
     public AssetAttachedIntegrationEventSubscriber(
         AssetRepository assetRepository,
         TimeBasedIdGenerator timeBasedIdGenerator,
         UniqueStringIdGenerator uniqueStringIdGenerator,
+        ProcessedEventRepository processedEventRepository,
         OutboxStore outboxStore
     ) {
         this.assetRepository = assetRepository;
         this.timeBasedIdGenerator = timeBasedIdGenerator;
         this.uniqueStringIdGenerator = uniqueStringIdGenerator;
+        this.processedEventRepository = processedEventRepository;
         this.integrationEventPublisher = new IntegrationEventPublisher(outboxStore);
     }
 
@@ -46,6 +53,11 @@ public class AssetAttachedIntegrationEventSubscriber implements IntegrationEvent
     @Retry(name = "transientDataAccess")
     @Transactional
     public void handle(AssetAttachedIntegrationEvent event) {
+        if(processedEventRepository.existsById(event.getEventId())) {
+            log.info("Event with ID {} has already been processed. Skipping.", event.getEventId());
+            return;
+        }
+
         AssetIdentity assetIdentity = new AssetIdentity(Namespace.fromValue(event.getNamespace()), event.getFileHash());
         Optional<Asset> assetOpt = assetRepository.findByAssetIdentity(assetIdentity);
         
@@ -84,5 +96,9 @@ public class AssetAttachedIntegrationEventSubscriber implements IntegrationEvent
 
             integrationEventPublisher.publish(List.of(eventWrapper));
         }
+
+        processedEventRepository.save(
+            event.getEventId(), 
+            Instant.now());
     }
 }

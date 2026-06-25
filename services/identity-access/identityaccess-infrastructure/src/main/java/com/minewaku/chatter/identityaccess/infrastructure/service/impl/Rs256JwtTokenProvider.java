@@ -16,7 +16,7 @@ import io.jsonwebtoken.Jwts;
 @Service
 public class Rs256JwtTokenProvider implements AccessTokenGenerator {
 
-	private static final long ACCESS_TOKEN_EXPIRATION = 900000; // 15 minutes (in milliseconds)
+	private static final long ACCESS_TOKEN_EXPIRATION = 90000000; // 15 minutes (in milliseconds)
 
 	private final RsaKeyProvider rsaKeyProvider;
 

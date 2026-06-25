@@ -9,13 +9,16 @@ import lombok.Getter;
 public class GuildIconReplacedDomainEvent extends DomainEvent {
 
     private final String namespace = Namespace.GUILD_ICON.name();
+    private final Long guildId;
     private final String oldHashFile;
     private final String newHashFile;
 
     public GuildIconReplacedDomainEvent(
+            Long guildId,
             String oldHashFile,
             String newHashFile) {
 
+        this.guildId = guildId;
         this.oldHashFile = oldHashFile;
         this.newHashFile = newHashFile;
     }

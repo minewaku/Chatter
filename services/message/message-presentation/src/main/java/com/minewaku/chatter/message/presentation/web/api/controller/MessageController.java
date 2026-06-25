@@ -44,7 +44,7 @@ public class MessageController {
     private final DeleteMessageUseCase deleteMessageUseCase;
     private final GetChannelMessagesUseCase getChannelMessagesUseCase;
 
-    @Qualifier("UploadAttachmentNotificationUseCase")
+    @Qualifier("generateUploadAttachmentSignatureUseCase")
     private final GenerateUploadSignatureUseCase generateUploadAttachmentSignatureUseCase;
 
     @PostMapping("/{guildId}/channels/{channelId}/messages")

@@ -7,8 +7,10 @@ import java.util.List;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.header.Header;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.minewaku.chatter.profile.application.messaging.publisher.integration.event.AvatarFileStorageUploadedIntegrationEvent;
 import com.minewaku.chatter.profile.application.messaging.publisher.integration.event.BannerFileStorageUploadedIntegrationEvent;
@@ -24,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 public class BatchKafkaConsumer {
 
     private final ObjectMapper objectMapper;
+    private final SimpMessagingTemplate messagingTemplate;
     private final AvatarFileStorageUploadedIntegrationEventBatchSubscriber avatarFileStorageUploadedIntegrationEventBatchSubscriber;
     private final BannerFileStorageUploadedIntegrationEventBatchSubscriber bannerFileStorageUploadedIntegrationEventBatchSubscriber;
 
@@ -84,6 +87,34 @@ public class BatchKafkaConsumer {
 
             if (!events.isEmpty()) {
                 bannerFileStorageUploadedIntegrationEventBatchSubscriber.handle(events);
+            }
+        } catch (Exception e) {
+            log.error("Error processing batch of events", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+
+    @KafkaListener(
+        topics = "dev.private.event.socket.profile", 
+        groupId = "dev-com.minewaku.profile.chatter.event.socket",
+        containerFactory = "batchFactory"
+    )
+    public void consumeGuildOutboxSocketEventsBatch(List<ConsumerRecord<String, String>> records) {
+        try {
+            for (ConsumerRecord<String, String> record : records) {
+
+                String payload = record.value();
+                JsonNode eventNode = objectMapper.readTree(payload);
+                String profileId = eventNode.has("profileId") ? eventNode.get("profileId").asText() : null;
+
+                if (profileId == null) {
+                    log.warn("Skipping event missing profileId: {}", payload);
+                    continue;
+                }
+
+                String destination = String.format("/topic/profiles/%s", profileId);
+                messagingTemplate.convertAndSend(destination, payload);
             }
         } catch (Exception e) {
             log.error("Error processing batch of events", e);

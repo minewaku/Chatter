@@ -33,6 +33,7 @@ public class OutboxKafkaRouter {
     private static final String INTERNAL_TOPIC = "dev.internal.event.profile.outbox";
     private static final String AVATAR_UPLOAD_INTERNAL_TOPIC = "dev.private.event.profile.file.avatarFileStorageUploaded";
     private static final String BANNER_UPLOAD_INTERNAL_TOPIC = "dev.private.event.profile.file.bannerFileStorageUploaded";
+    private static final String PROFILE_SOCKET_TOPIC = "dev.private.event.socket.profile";
 
     private static final Map<String, List<String>> TOPIC_ROUTING = Map.of(
             "AvatarFileStorageUploaded", List.of(AVATAR_UPLOAD_INTERNAL_TOPIC),
@@ -41,8 +42,11 @@ public class OutboxKafkaRouter {
             "AssetAttached", List.of(INTERNAL_TOPIC),
             "AssetDetached", List.of(INTERNAL_TOPIC),
             "PersistFileStorage", List.of(INTERNAL_TOPIC),
-            "DeleteFileStorage", List.of(INTERNAL_TOPIC)
-            
+            "DeleteFileStorage", List.of(INTERNAL_TOPIC),
+
+            "ProfileUpdated", List.of(PROFILE_SOCKET_TOPIC),
+            "AvatarReplaced", List.of(PROFILE_SOCKET_TOPIC),
+            "BannerReplaced", List.of(PROFILE_SOCKET_TOPIC)
     );
 
     @Bean

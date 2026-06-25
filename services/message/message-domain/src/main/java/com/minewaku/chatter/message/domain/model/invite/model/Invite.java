@@ -32,10 +32,11 @@ public class Invite extends BaseEntity<InviteId> implements Persistable<InviteId
     @Column("id")
     private InviteId id;
 
-    @Embedded.Nullable
+    //recheck: can we use @Embedded.Nullable instead?
+    @Column("code")
     private Code code;
 
-    @Embedded.Nullable
+    @Column("guild_id")
     private GuildId guildId;
 
     @Column("inviter_id")
@@ -44,7 +45,7 @@ public class Invite extends BaseEntity<InviteId> implements Persistable<InviteId
     @Column("max_uses")
     private int maxUses;
 
-    @Embedded.Nullable
+    @Column("uses")
     private int uses;
 
     @Column("duration")

@@ -19,8 +19,11 @@ kafka-topics --create --bootstrap-server kafka-chatter:5003 --replication-factor
 kafka-topics --create --bootstrap-server kafka-chatter:5003 --replication-factor 1 --partitions 3 --topic dev.internal.event.profile.dlq --if-not-exists
 kafka-topics --create --bootstrap-server kafka-chatter:5003 --replication-factor 1 --partitions 3 --topic dev.private.event.profile.file.avatarFileStorageUploaded --if-not-exists
 kafka-topics --create --bootstrap-server kafka-chatter:5003 --replication-factor 1 --partitions 3 --topic dev.private.event.profile.file.bannerFileStorageUploaded --if-not-exists
+kafka-topics --create --bootstrap-server kafka-chatter:5003 --replication-factor 1 --partitions 3 --topic dev.private.event.socket.profile --if-not-exists
 
 kafka-topics --create --bootstrap-server kafka-chatter:5003 --replication-factor 1 --partitions 3 --topic dev.internal.event.message.outbox --if-not-exists
 kafka-topics --create --bootstrap-server kafka-chatter:5003 --replication-factor 1 --partitions 3 --topic dev.internal.event.message.dlq --if-not-exists
 kafka-topics --create --bootstrap-server kafka-chatter:5003 --replication-factor 1 --partitions 3 --topic dev.private.event.message.file.guildIconFileStorageUploaded --if-not-exists
 kafka-topics --create --bootstrap-server kafka-chatter:5003 --replication-factor 1 --partitions 3 --topic dev.private.event.message.file.attachmentFileStorageUploaded --if-not-exists
+kafka-topics --create --bootstrap-server kafka-chatter:5003 --replication-factor 1 --partitions 3 --topic dev.private.event.socket.message.guild --if-not-exists
+kafka-topics --create --bootstrap-server kafka-chatter:5003 --replication-factor 1 --partitions 3 --topic dev.private.event.socket.message.channel --if-not-exists

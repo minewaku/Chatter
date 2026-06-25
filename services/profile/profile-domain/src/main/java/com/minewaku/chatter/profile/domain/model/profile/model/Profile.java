@@ -133,8 +133,8 @@ public class Profile extends BaseEntity<ProfileId> {
         if (this.enablement.isSoftDeleted()) {
             return false; 
         }
-        AvatarReplacedDomainEvent avatarEvent = new AvatarReplacedDomainEvent(this.avatarHash, null);
-        BannerReplacedDomainEvent bannerEvent = new BannerReplacedDomainEvent(this.bannerHash, null);
+        AvatarReplacedDomainEvent avatarEvent = new AvatarReplacedDomainEvent(this.getId().getValue(), this.avatarHash, null);
+        BannerReplacedDomainEvent bannerEvent = new BannerReplacedDomainEvent(this.getId().getValue(), this.bannerHash, null);
 
         this.username = username;
         this.bio = null;
@@ -156,6 +156,7 @@ public class Profile extends BaseEntity<ProfileId> {
         }
 
         this.domainEvents.add(new AvatarReplacedDomainEvent(
+            this.getId().getValue(),
             this.avatarHash,
             avatarHash
         ));
@@ -171,6 +172,7 @@ public class Profile extends BaseEntity<ProfileId> {
         }
 
         this.domainEvents.add(new BannerReplacedDomainEvent(
+            this.getId().getValue(),
             this.bannerHash,
             bannerHash
         ));

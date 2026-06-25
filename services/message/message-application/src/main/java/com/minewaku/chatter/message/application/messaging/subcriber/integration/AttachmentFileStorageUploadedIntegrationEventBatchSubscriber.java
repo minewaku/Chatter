@@ -1,5 +1,6 @@
 package com.minewaku.chatter.message.application.messaging.subcriber.integration;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -14,9 +15,12 @@ import org.springframework.transaction.annotation.Transactional;
 import com.minewaku.chatter.message.application.messaging.publisher.integration.IntegrationEventPublisher;
 import com.minewaku.chatter.message.application.messaging.publisher.integration.OutboxStore;
 import com.minewaku.chatter.message.application.messaging.publisher.integration.event.AssetAttachedIntegrationEvent;
+import com.minewaku.chatter.message.application.messaging.publisher.integration.event.AttachmentCreatedIntegrationEvent;
 import com.minewaku.chatter.message.application.messaging.publisher.integration.event.AttachmentFileStorageUploadedIntegrationEvent;
 import com.minewaku.chatter.message.application.messaging.publisher.integration.event.IntegrationEventWrapper;
 import com.minewaku.chatter.message.application.messaging.subcriber.core.IntegrationEventBatchSubscriber;
+import com.minewaku.chatter.message.application.port.outbound.repository.ProcessedEventRepository;
+import com.minewaku.chatter.message.application.port.outbound.repository.ProcessedEventRepository.ProcessedEventRecord;
 import com.minewaku.chatter.message.domain.model.channel.model.ChannelId;
 import com.minewaku.chatter.message.domain.model.message.event.AttachmentAddedDomainEvent;
 import com.minewaku.chatter.message.domain.model.message.model.Message;
@@ -27,21 +31,24 @@ import com.minewaku.chatter.message.domain.sharedkernel.service.UniqueStringIdGe
 
 import lombok.extern.slf4j.Slf4j;
 
-@Component
 @Slf4j
+@Component
 public class AttachmentFileStorageUploadedIntegrationEventBatchSubscriber implements IntegrationEventBatchSubscriber<AttachmentFileStorageUploadedIntegrationEvent> {
     
     private final MessageRepository messageRepository;
     private final UniqueStringIdGenerator uniqueStringIdGenerator;
+    private final ProcessedEventRepository processedEventRepository;
     private final IntegrationEventPublisher integrationEventPublisher;
 
     public AttachmentFileStorageUploadedIntegrationEventBatchSubscriber(
         MessageRepository messageRepository,
         UniqueStringIdGenerator uniqueStringIdGenerator,
+        ProcessedEventRepository processedEventRepository,
         OutboxStore outboxStore
     ) {
         this.messageRepository = messageRepository;
         this.uniqueStringIdGenerator = uniqueStringIdGenerator;
+        this.processedEventRepository = processedEventRepository;
         this.integrationEventPublisher = new IntegrationEventPublisher(outboxStore); 
     }
 
@@ -49,6 +56,20 @@ public class AttachmentFileStorageUploadedIntegrationEventBatchSubscriber implem
     @Transactional
     public void handle(List<AttachmentFileStorageUploadedIntegrationEvent> events) {
         if (events == null || events.isEmpty()) return;
+
+        Set<String> eventIds = events.stream()
+                .map(AttachmentFileStorageUploadedIntegrationEvent::getEventId)
+                .collect(Collectors.toSet());
+
+        Set<String> alreadyProcessed = processedEventRepository.findAllExistingIds(eventIds);
+        List<AttachmentFileStorageUploadedIntegrationEvent> newEvents = events.stream()
+                .filter(e -> !alreadyProcessed.contains(e.getEventId()))
+                .toList();
+
+        if (newEvents.isEmpty()) {
+            log.debug("All {} events in batch already processed, skip", events.size());
+            return;
+        }
 
         Map<String, Map<String, List<AttachmentFileStorageUploadedIntegrationEvent>>> groupedEvents = new HashMap<>();
 
@@ -125,6 +146,20 @@ public class AttachmentFileStorageUploadedIntegrationEventBatchSubscriber implem
                                     domainEvent.getFileSize().intValue()
                             )
                     ));
+
+                    eventsToPublish.add(new IntegrationEventWrapper<>(
+                            uniqueStringIdGenerator.generate(),
+                            domainEvent.getFileHash(),
+                            new AttachmentCreatedIntegrationEvent(
+                                    domainEvent.getMessageId().toString(),
+                                    domainEvent.getChannelId().toString(),
+                                    domainEvent.getNamespace(),
+                                    domainEvent.getFileHash(),
+                                    domainEvent.getContentType(),
+                                    domainEvent.getFileName(),
+                                    domainEvent.getFileSize().intValue()
+                            )
+                    ));
                 }
             }
         }
@@ -136,6 +171,12 @@ public class AttachmentFileStorageUploadedIntegrationEventBatchSubscriber implem
         if (!eventsToPublish.isEmpty()) {
             integrationEventPublisher.publish(eventsToPublish);
         }
+
+        List<ProcessedEventRecord> processedRecords = newEvents.stream()
+                .map(e -> new ProcessedEventRecord(e.getEventId(), Instant.now()))
+                .toList();
+
+        processedEventRepository.saveAll(processedRecords);
     }
 
     private List<AttachmentAddedDomainEvent> attachmentAddedDomainEventsFiltered(

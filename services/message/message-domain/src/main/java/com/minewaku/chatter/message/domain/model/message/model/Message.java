@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.minewaku.chatter.message.domain.model.channel.model.ChannelId;
+import com.minewaku.chatter.message.domain.model.guild.model.GuildId;
 import com.minewaku.chatter.message.domain.model.message.event.AttachmentAddedDomainEvent;
 import com.minewaku.chatter.message.domain.model.recipient.model.UserId;
 import com.minewaku.chatter.message.domain.sharedkernel.event.DomainEvent;
@@ -25,7 +26,7 @@ public class Message {
     private List<DomainEvent> domainEvents = new ArrayList<>();
 
     private Message(
-            @NonNull MessageId id, 
+            @NonNull MessageId id,
             @NonNull ChannelId channelId, 
             @NonNull UserId userId,
             MessageId replyId,
@@ -100,6 +101,8 @@ public class Message {
 
         attachments.add(new Attachment(assetHash, filename, contentType, size));
         domainEvents.add(new AttachmentAddedDomainEvent(
+                this.getId().getValue(),
+                this.getChannelId().getValue(),
                 assetHash, contentType, filename, size));
 
         return true;

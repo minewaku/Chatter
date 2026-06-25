@@ -80,3 +80,9 @@ CREATE TABLE outbox (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX idx_outbox_created_at ON outbox (created_at ASC);
+
+-- Bảng "processed_event"
+CREATE TABLE processed_event (
+    id UUID PRIMARY KEY,
+    processed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);

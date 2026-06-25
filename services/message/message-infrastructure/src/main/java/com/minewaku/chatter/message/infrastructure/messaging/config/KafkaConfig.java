@@ -1,4 +1,4 @@
-package com.minewaku.chatter.message.presentation.messaging.config;
+package com.minewaku.chatter.message.infrastructure.messaging.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

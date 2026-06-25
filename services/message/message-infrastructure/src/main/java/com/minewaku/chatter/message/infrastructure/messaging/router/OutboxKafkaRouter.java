@@ -33,16 +33,22 @@ public class OutboxKafkaRouter {
     private static final String INTERNAL_TOPIC = "dev.internal.event.message.outbox";
     private static final String GUILD_ICON_UPLOAD_INTERNAL_TOPIC = "dev.private.event.message.file.guildIconFileStorageUploaded";
     private static final String ATTACHEMENT_UPLOAD_INTERNAL_TOPIC = "dev.private.event.message.file.attachmentFileStorageUploaded";
+    private static final String GUILD_SOCKET_TOPIC = "dev.private.event.socket.message.guild";
+    private static final String CHANNEL_SOCKET_TOPIC = "dev.private.event.socket.message.channel";
 
 
-    private static final Map<String, List<String>> TOPIC_ROUTING = Map.of(
-            "AttachmentFileStorageUploaded",  List.of(ATTACHEMENT_UPLOAD_INTERNAL_TOPIC),
-            "GuildIconFileStorageUploaded",  List.of(GUILD_ICON_UPLOAD_INTERNAL_TOPIC),
-            "AssetDeleted", List.of(INTERNAL_TOPIC),
-            "AssetAttached", List.of(INTERNAL_TOPIC),
-            "AssetDetached", List.of(INTERNAL_TOPIC),
-            "PersistFileStorage", List.of(INTERNAL_TOPIC),
-            "DeleteFileStorage", List.of(INTERNAL_TOPIC)
+    private static final Map<String, List<String>> TOPIC_ROUTING = Map.ofEntries(
+            Map.entry("AttachmentFileStorageUploaded",  List.of(ATTACHEMENT_UPLOAD_INTERNAL_TOPIC)),
+            Map.entry("GuildIconFileStorageUploaded",  List.of(GUILD_ICON_UPLOAD_INTERNAL_TOPIC)),
+            Map.entry("AssetDeleted", List.of(INTERNAL_TOPIC)),
+            Map.entry("AssetAttached", List.of(INTERNAL_TOPIC)),
+            Map.entry("AssetDetached", List.of(INTERNAL_TOPIC)),
+            Map.entry("PersistFileStorage", List.of(INTERNAL_TOPIC)),
+            Map.entry("DeleteFileStorage", List.of(INTERNAL_TOPIC)),
+            Map.entry("GuildIconReplaced", List.of(GUILD_SOCKET_TOPIC)),
+            Map.entry("MessageCreated", List.of(CHANNEL_SOCKET_TOPIC)),
+            Map.entry("MessageDeleted", List.of(CHANNEL_SOCKET_TOPIC)),
+            Map.entry("AttachmentCreated", List.of(CHANNEL_SOCKET_TOPIC))
     );
 
     @Bean

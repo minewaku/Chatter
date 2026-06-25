@@ -10,4 +10,5 @@ public interface RecipientRepository {
     void saveAll(Iterable<Recipient> recipients);
     void deleteById(RecipientId recipientId);
     Optional<Recipient> findById(RecipientId recipientId);
+    boolean existsById(RecipientId recipientId);
 }

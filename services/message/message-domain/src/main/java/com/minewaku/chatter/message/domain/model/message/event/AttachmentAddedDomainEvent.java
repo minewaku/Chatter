@@ -9,6 +9,8 @@ import lombok.NonNull;
 @Getter
 public class AttachmentAddedDomainEvent extends DomainEvent {
 
+    private final Long messageId;
+    private final Long channelId;
     private final String namespace = Namespace.ATTACHMENT.name();
     private final String fileHash;
     private final String contentType;
@@ -16,11 +18,15 @@ public class AttachmentAddedDomainEvent extends DomainEvent {
     private final Long fileSize;
 
     public AttachmentAddedDomainEvent(
+            @NonNull Long messageId,
+            @NonNull Long channelId,
             @NonNull String fileHash,
             @NonNull String contentType,
             @NonNull String fileName,
             @NonNull Long fileSize) {
 
+        this.messageId = messageId;
+        this.channelId = channelId;
         this.fileHash = fileHash;
         this.contentType = contentType;
         this.fileName = fileName;

@@ -1,4 +1,6 @@
-package com.minewaku.chatter.message.presentation.messaging.consumer;
+package com.minewaku.chatter.message.infrastructure.messaging.consumer;
+
+import java.util.UUID;
 
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.messaging.handler.annotation.Header;
@@ -17,6 +19,7 @@ import com.minewaku.chatter.message.application.messaging.subcriber.integration.
 import com.minewaku.chatter.message.application.messaging.subcriber.integration.DeleteFileStorageIntegrationEventSubscriber;
 import com.minewaku.chatter.message.application.messaging.subcriber.integration.GuildIconFileStorageUploadedIntegrationEventSubscriber;
 import com.minewaku.chatter.message.application.messaging.subcriber.integration.PersistFileStorageIntegrationEventSubscriber;
+import com.minewaku.chatter.message.infrastructure.persistence.postgresql.ProcessedEventJdbcRepository;
 
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +39,8 @@ public class SingleKafkaConsumer {
     private final PersistFileStorageIntegrationEventSubscriber persistFileStorageIntegrationEventSubscriber;
     private final DeleteFileStorageIntegrationEventSubscriber deleteFileStorageIntegrationEventSubscriber;
 
+    private final ProcessedEventJdbcRepository processedEventJdbcRepository;
+
 
     @KafkaListener(
         topics = "dev.private.event.message.file.guildIconFileStorageUploaded", 
@@ -44,7 +49,8 @@ public class SingleKafkaConsumer {
     )
     public void consumeAssetEvents(
             @Payload String payload, 
-            @Header(value = "eventType", required = false) String eventType) {
+            @Header(value = "eventType", required = false) String eventType,
+            @Header(value = "eventId", required = false) String eventId) {
             
         try {
             if (eventType == null) {
