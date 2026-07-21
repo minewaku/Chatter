@@ -1,19 +1,17 @@
 package com.minewaku.chatter.apigateway.config;
 
+import com.minewaku.chatter.apigateway.model.RateLimitPolicy;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotEmpty;
 import java.util.List;
-
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.validation.annotation.Validated;
 
-import com.minewaku.chatter.apigateway.model.RateLimitPolicy;
-
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotEmpty;
-
 @Validated
 @Configuration
-@ConfigurationProperties(prefix = "app.rate-limit", ignoreUnknownFields = false)
+@ConfigurationProperties(prefix = "app.rate-limit",
+                         ignoreUnknownFields = false)
 public class RateLimitConfig {
 
     @Valid
