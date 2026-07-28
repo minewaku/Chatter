@@ -3,6 +3,7 @@ package com.minewaku.chatter.identityaccess.application.service.query;
 import java.util.Set;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.minewaku.chatter.identityaccess.application.port.inbound.query.FindSessionsByUserIdUseCase;
 import com.minewaku.chatter.identityaccess.application.port.outbound.query.SessionReadRepository;
@@ -24,8 +25,8 @@ public class FindSessionsByUserIdApplicationService implements FindSessionsByUse
 
     @Override
     @Retry(name = "transientDataAccess")
+    @Transactional(readOnly = true)
     public Set<SessionReadModel> handle(UserId userId) {
-        Set<SessionReadModel> sessions = sessionReadRepository.findAllSessionsByUserId(userId);
-        return sessions;
+        return sessionReadRepository.findAllSessionsByUserId(userId);
     }
 }

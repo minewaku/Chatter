@@ -5,7 +5,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.minewaku.chatter.identityaccess.application.exception.EntityNotFoundException;
 import com.minewaku.chatter.identityaccess.application.messaging.publisher.integration.IntegrationEventPublisher;
-import com.minewaku.chatter.identityaccess.application.messaging.publisher.integration.OutboxStore;
 import com.minewaku.chatter.identityaccess.application.messaging.publisher.integration.event.ConfirmationTokenCreatedIntegrationEvent;
 import com.minewaku.chatter.identityaccess.application.messaging.publisher.integration.event.IntegrationEventWrapper;
 import com.minewaku.chatter.identityaccess.application.port.inbound.command.confirmationtoken.usecase.ResendConfirmationTokenUseCase;
@@ -34,21 +33,15 @@ public class ResendConfirmationTokenApplicationService implements ResendConfirma
                 ConfirmationTokenRepository confirmationTokenRepository,
                 UserRepository userRepository,
                 UniqueStringIdGenerator uniqueStringIdGenerator,
-                
+				IntegrationEventPublisher integrationEventPublisher,
+				ResendConfirmationTokenDomainService resendConfirmationTokenDomainService) {
 
-                OutboxStore outboxStore,
-            
-                ResendConfirmationTokenDomainService resendConfirmationTokenDomainService) {
-
-                    
-        this.confirmationTokenRepository = confirmationTokenRepository;
-        this.userRepository = userRepository;
-        this.uniqueStringIdGenerator = uniqueStringIdGenerator;
-
-        this.integrationEventPublisher = new IntegrationEventPublisher(outboxStore);
-        
-        this.resendConfirmationTokenDomainService = resendConfirmationTokenDomainService;
-    }
+		this.confirmationTokenRepository = confirmationTokenRepository;
+		this.userRepository = userRepository;
+		this.uniqueStringIdGenerator = uniqueStringIdGenerator;
+		this.integrationEventPublisher = integrationEventPublisher;
+		this.resendConfirmationTokenDomainService = resendConfirmationTokenDomainService;
+	}
 
     @Override
     @Retry(name = "transientDataAccess")

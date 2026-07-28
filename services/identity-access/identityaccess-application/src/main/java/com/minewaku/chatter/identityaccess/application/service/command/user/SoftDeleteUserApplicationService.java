@@ -7,9 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.minewaku.chatter.identityaccess.application.exception.EntityNotFoundException;
 import com.minewaku.chatter.identityaccess.application.messaging.publisher.domain.DomainEventPublisher;
-import com.minewaku.chatter.identityaccess.application.messaging.publisher.domain.EventQueue;
 import com.minewaku.chatter.identityaccess.application.messaging.publisher.integration.IntegrationEventPublisher;
-import com.minewaku.chatter.identityaccess.application.messaging.publisher.integration.OutboxStore;
 import com.minewaku.chatter.identityaccess.application.messaging.publisher.integration.event.IntegrationEventWrapper;
 import com.minewaku.chatter.identityaccess.application.messaging.publisher.integration.event.UserSoftDeletedIntegrationEvent;
 import com.minewaku.chatter.identityaccess.application.port.inbound.command.user.usecase.SoftDeleteUserUseCase;
@@ -35,19 +33,14 @@ public class SoftDeleteUserApplicationService implements SoftDeleteUserUseCase {
 
 	public SoftDeleteUserApplicationService(
 				UserRepository userRepository,
-
 				UniqueStringIdGenerator uniqueStringIdGenerator,
-
-				EventQueue eventQueue,
-				OutboxStore outboxStore) {
-
+				DomainEventPublisher domainEventPublisher,
+				IntegrationEventPublisher integrationEventPublisher) {
 
 		this.userRepository = userRepository;
-
 		this.uniqueStringIdGenerator = uniqueStringIdGenerator;
-
-		this.domainEventPublisher = new DomainEventPublisher(eventQueue);
-		this.integrationEventPublisher = new IntegrationEventPublisher(outboxStore);
+		this.domainEventPublisher = domainEventPublisher;
+		this.integrationEventPublisher = integrationEventPublisher;
 	}
 
 
@@ -83,7 +76,7 @@ public class SoftDeleteUserApplicationService implements SoftDeleteUserUseCase {
 
 	private List<DomainEvent> userSoftDeletedDomainEventFiltered(List<DomainEvent> events) {
         return events.stream()
-                .filter(event -> event instanceof UserSoftDeletedDomainEvent)
+                .filter(UserSoftDeletedDomainEvent.class::isInstance)
                 .toList();
     }
 }

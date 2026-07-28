@@ -64,8 +64,6 @@ public class LoginApplicationService implements LoginUseCase {
 		String accessToken = accessTokenGenerator.generate(user.getId(), user.getEmail());
 		String refreshToken = refreshTokenEncryptor.encrypt(session);
 
-		TokenResponse response = new TokenResponse(accessToken, refreshToken);
-
-		return response;
+		return new TokenResponse(accessToken, refreshToken);
 	}
 }

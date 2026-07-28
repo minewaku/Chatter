@@ -35,7 +35,8 @@ public class ChangePasswordApplicationService implements ChangePasswordUseCase {
 		User user = userRepository.findById(command.userId())
 				.orElseThrow(() -> new EntityNotFoundException("User does not exist"));
 
-		if(!user.changePassword(passwordHasher, command.password(), command.newPassword())) {
+		boolean passwordChanged = user.changePassword(passwordHasher, command.password(), command.newPassword());
+		if (passwordChanged) {
 			userRepository.save(user);
 		}
 		return null;

@@ -1,14 +1,12 @@
 package com.minewaku.chatter.identityaccess.application.service.command.confirmationtoken;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.minewaku.chatter.identityaccess.application.exception.EntityNotFoundException;
 import com.minewaku.chatter.identityaccess.application.messaging.publisher.domain.DomainEventPublisher;
-import com.minewaku.chatter.identityaccess.application.messaging.publisher.domain.EventQueue;
 import com.minewaku.chatter.identityaccess.application.port.inbound.command.confirmationtoken.usecase.VerifyConfirmationTokenUseCase;
 import com.minewaku.chatter.identityaccess.domain.aggregate.confirmationtoken.event.ConfirmationTokenVerifiedDomainEvent;
 import com.minewaku.chatter.identityaccess.domain.aggregate.confirmationtoken.model.ConfirmationToken;
@@ -25,10 +23,10 @@ public class VerifyConfirmationTokenApplicationService implements VerifyConfirma
 
 	public VerifyConfirmationTokenApplicationService(
 			ConfirmationTokenRepository confirmationTokenRepository,
-			EventQueue eventQueue) {	
+			DomainEventPublisher domainEventPublisher) {
 		
 		this.confirmationTokenRepository = confirmationTokenRepository;
-		this.domainEventPublisher = new DomainEventPublisher(eventQueue);
+		this.domainEventPublisher = domainEventPublisher;
 	}
 	
     @Override
@@ -49,7 +47,7 @@ public class VerifyConfirmationTokenApplicationService implements VerifyConfirma
 	
 	private List<DomainEvent> filterEvents(List<DomainEvent> events) {
 	    return events.stream()
-	            .filter(event -> event.getClass().equals(ConfirmationTokenVerifiedDomainEvent.class))
-	            .collect(Collectors.toList());
+	            .filter(ConfirmationTokenVerifiedDomainEvent.class::isInstance)
+	            .toList();
 	}
 }

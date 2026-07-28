@@ -5,7 +5,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.minewaku.chatter.identityaccess.application.exception.EntityNotFoundException;
 import com.minewaku.chatter.identityaccess.application.messaging.publisher.integration.IntegrationEventPublisher;
-import com.minewaku.chatter.identityaccess.application.messaging.publisher.integration.OutboxStore;
 import com.minewaku.chatter.identityaccess.application.messaging.publisher.integration.event.EnablementUpdatedIntegrationEvent;
 import com.minewaku.chatter.identityaccess.application.messaging.publisher.integration.event.IntegrationEventWrapper;
 import com.minewaku.chatter.identityaccess.application.port.inbound.command.user.usecase.UnlockUserUseCase;
@@ -26,16 +25,13 @@ public class UnlockUserApplicationService implements UnlockUserUseCase {
 
 
 	public UnlockUserApplicationService(
-				UserRepository userRepository, 
+				UserRepository userRepository,
+				UniqueStringIdGenerator uniqueStringIdGenerator,
+				IntegrationEventPublisher integrationEventPublisher) {
 
-				UniqueStringIdGenerator uniqueStringIdGenerator, 
-				OutboxStore outboxStore) {
-
-					
 		this.userRepository = userRepository;
-
 		this.uniqueStringIdGenerator = uniqueStringIdGenerator;
-		this.integrationEventPublisher = new IntegrationEventPublisher(outboxStore);
+		this.integrationEventPublisher = integrationEventPublisher;
 	}
 
 	@Override

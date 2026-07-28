@@ -6,9 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.minewaku.chatter.identityaccess.application.messaging.publisher.domain.DomainEventPublisher;
-import com.minewaku.chatter.identityaccess.application.messaging.publisher.domain.EventQueue;
 import com.minewaku.chatter.identityaccess.application.messaging.publisher.integration.IntegrationEventPublisher;
-import com.minewaku.chatter.identityaccess.application.messaging.publisher.integration.OutboxStore;
 import com.minewaku.chatter.identityaccess.application.messaging.publisher.integration.event.IntegrationEventWrapper;
 import com.minewaku.chatter.identityaccess.application.messaging.publisher.integration.event.UserRegisteredIntegrationEvent;
 import com.minewaku.chatter.identityaccess.application.port.inbound.command.auth.command.RegisterCommand;
@@ -37,23 +35,16 @@ public class RegisterUserApplicationService implements RegisterUserUseCase {
 
 	public RegisterUserApplicationService(
 			UserRepository userRepository,
-
 			RegisterDomainService registerDomainService,
-
 			UniqueStringIdGenerator uniqueStringIdGenerator,
-
-			EventQueue eventQueue,
-			OutboxStore outboxStore) {
-
+			DomainEventPublisher domainEventPublisher,
+			IntegrationEventPublisher integrationEventPublisher) {
 
 		this.userRepository = userRepository;
-
 		this.registerDomainService = registerDomainService;
-
 		this.uniqueStringIdGenerator = uniqueStringIdGenerator;
-
-		this.domainEventPublisher = new DomainEventPublisher(eventQueue);
-		this.integrationEventPublisher = new IntegrationEventPublisher(outboxStore);
+		this.domainEventPublisher = domainEventPublisher;
+		this.integrationEventPublisher = integrationEventPublisher;
 	}
 
 
@@ -92,7 +83,7 @@ public class RegisterUserApplicationService implements RegisterUserUseCase {
 
 	private List<DomainEvent> userRegisteredDomainEventFiltered(List<DomainEvent> events) {
         return events.stream()
-                .filter(event -> event instanceof UserRegisteredDomainEvent)
+                .filter(UserRegisteredDomainEvent.class::isInstance)
                 .toList();
     }
 }

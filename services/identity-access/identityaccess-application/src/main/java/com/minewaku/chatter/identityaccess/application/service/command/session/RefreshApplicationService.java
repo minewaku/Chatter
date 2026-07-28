@@ -62,14 +62,14 @@ public class RefreshApplicationService implements RefreshUseCase {
 				.orElseThrow(() -> new EntityNotFoundException("User not found"));
 
 		Session refreshedSession = refreshDomainService.handle(user, session, tokenPayload.generation());
-		if(refreshedSession != null) {
+		Session tokenSession = refreshedSession != null ? refreshedSession : session;
+		if (refreshedSession != null) {
 			sessionRepository.save(refreshedSession);
 		}
 
 		String newAccessToken = accessTokenGenerator.generate(user.getId(), user.getEmail());
-		String newRefreshToken = refreshTokenEncryptor.encrypt(refreshedSession);
-		TokenResponse tokenReponse = new TokenResponse(newAccessToken, newRefreshToken);
-		return tokenReponse;
+		String newRefreshToken = refreshTokenEncryptor.encrypt(tokenSession);
+		return new TokenResponse(newAccessToken, newRefreshToken);
 	}
 
 }

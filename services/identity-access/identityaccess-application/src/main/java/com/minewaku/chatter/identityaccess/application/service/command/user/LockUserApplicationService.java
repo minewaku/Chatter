@@ -5,7 +5,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.minewaku.chatter.identityaccess.application.exception.EntityNotFoundException;
 import com.minewaku.chatter.identityaccess.application.messaging.publisher.integration.IntegrationEventPublisher;
-import com.minewaku.chatter.identityaccess.application.messaging.publisher.integration.OutboxStore;
 import com.minewaku.chatter.identityaccess.application.messaging.publisher.integration.event.EnablementUpdatedIntegrationEvent;
 import com.minewaku.chatter.identityaccess.application.messaging.publisher.integration.event.IntegrationEventWrapper;
 import com.minewaku.chatter.identityaccess.application.port.inbound.command.user.usecase.LockUserUseCase;
@@ -26,14 +25,12 @@ public class LockUserApplicationService implements LockUserUseCase {
 
 	public LockUserApplicationService(
 				UserRepository userRepository,
-
-				UniqueStringIdGenerator uniqueStringIdGenerator, 
-				OutboxStore outboxStore) {
+				UniqueStringIdGenerator uniqueStringIdGenerator,
+				IntegrationEventPublisher integrationEventPublisher) {
 
 		this.userRepository = userRepository;
-		
 		this.uniqueStringIdGenerator = uniqueStringIdGenerator;
-		this.integrationEventPublisher = new IntegrationEventPublisher(outboxStore);
+		this.integrationEventPublisher = integrationEventPublisher;
 	}
 
 	@Override
