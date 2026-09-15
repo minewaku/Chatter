@@ -11,6 +11,7 @@ import com.minewaku.chatter.identityaccess.domain.aggregate.session.exception.In
 import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.UserId;
 import com.minewaku.chatter.identityaccess.domain.sharedkernel.event.DomainEvent;
 import com.minewaku.chatter.identityaccess.domain.sharedkernel.exception.BusinessRuleViolationException;
+import com.minewaku.chatter.identityaccess.domain.sharedkernel.value.AggregateRoot;
 
 import lombok.Getter;
 import lombok.NonNull;
@@ -18,28 +19,23 @@ import lombok.ToString;
 
 @Getter
 @ToString
-public class Session {
+public class Session extends AggregateRoot<SessionId> {
 
     private static final Duration SESSION_LIFESPAN = Duration.ofDays(7);
     private static final Duration REFRESH_GRACE_PERIOD = Duration.ofSeconds(30);
 
-    @NonNull
     private final SessionId sessionId;
 
-    @NonNull
     private final UserId userId;
 
-    @NonNull
     private final DeviceInfo deviceInfo;
-    
+
     private int generation;
 
-    @NonNull
     private Instant issuedAt;
 
     private Instant lastRefreshedAt;
 
-    @NonNull
     private Instant expiresAt;
 
     private boolean revoked;
@@ -47,10 +43,7 @@ public class Session {
 
     private final Integer version;
 
-    @NonNull
-    private final List<DomainEvent> events = new ArrayList<DomainEvent>();
-
-
+    private final List<DomainEvent> events = new ArrayList<>();
 
     private Session(
             @NonNull SessionId sessionId,
@@ -76,59 +69,39 @@ public class Session {
         this.version = version;
     }
 
-    public static Session reconstitute(
-                @NonNull SessionId sessionId,
-                @NonNull UserId userId,
-                @NonNull DeviceInfo deviceInfo,
-                int generation,
-                @NonNull Instant issuedAt,
-                Instant lastRefreshedAt,
-                @NonNull Instant expiresAt,
-                boolean revoked,
-                Instant revokedAt,
-                Integer version) {
-
-        return new Session(
-            sessionId,
-            userId,
-            deviceInfo,
-            generation,
-            issuedAt, 
-            lastRefreshedAt, 
-            expiresAt,
-            revoked, 
-            revokedAt,
-            version);
-    }
-
-
-    /*
-    * STATIC FACTORIES
-    */
     public static Session createNew(
-                @NonNull SessionId sessionId,
-                @NonNull UserId userId,
-                @NonNull DeviceInfo deviceInfo,
-                Duration duration) {
+            @NonNull SessionId sessionId,
+            @NonNull UserId userId,
+            @NonNull DeviceInfo deviceInfo,
+            Duration duration) {
+        Objects.requireNonNull(sessionId, "sessionId cannot be null");
+        Objects.requireNonNull(userId, "userId cannot be null");
+        Objects.requireNonNull(deviceInfo, "deviceInfo cannot be null");
 
         Instant now = Instant.now();
         Duration dur = Objects.requireNonNullElse(duration, SESSION_LIFESPAN);
-        Session session = new Session(
-            sessionId,
-            userId,
-            deviceInfo,
-            1,
-            now,
-            null,
-            now.plus(dur),
-            false,
-            null,
-            null
-        );
+        return new Session(sessionId, userId, deviceInfo, 1, now, null, now.plus(dur), false, null, null);
 
-        return session;
+    }
+    
+    public static Session reconstitute(
+            @NonNull SessionId sessionId,
+            @NonNull UserId userId,
+            @NonNull DeviceInfo deviceInfo,
+            int generation,
+            @NonNull Instant issuedAt,
+            Instant lastRefreshedAt,
+            @NonNull Instant expiresAt,
+            boolean revoked,
+            Instant revokedAt,
+            Integer version) {
+        return new Session(sessionId, userId, deviceInfo, generation, issuedAt, lastRefreshedAt, expiresAt, revoked, revokedAt, version);
     }
 
+    @Override
+    public SessionId getId() {
+        return this.sessionId;
+    }
 
     public boolean refresh(int incomingGeneration) {
         if (this.revoked) {
@@ -148,18 +121,18 @@ public class Session {
             this.generation = this.generation + 1;
             this.lastRefreshedAt = now;
             this.expiresAt = now.plus(SESSION_LIFESPAN);
-            return true; 
+            return true;
         }
 
         if (incomingGeneration == this.generation - 1) {
             if (this.lastRefreshedAt != null) {
                 Instant gracePeriodEnd = this.lastRefreshedAt.plus(REFRESH_GRACE_PERIOD);
-                
+
                 if (!now.isAfter(gracePeriodEnd)) {
                     return false;
                 }
             }
-            
+
             markAsCompromised();
             throw new CompromisedSessionException("Reuse Detection: Grace period exceeded for previous generation.");
         }
@@ -168,30 +141,27 @@ public class Session {
         throw new CompromisedSessionException("Reuse Detection: Old token generation used. Session compromised.");
     }
 
-
     public boolean revoke() {
         if (this.revoked) {
-            return false; 
+            return false;
         }
 
         if (Instant.now().isAfter(this.expiresAt)) {
-            return false; 
+            return false;
         }
-        
+
         this.revoked = true;
         this.revokedAt = Instant.now();
         return true;
     }
 
-
     public boolean logoutFromCurrentSession(SessionId incomingSessionId) {
         if (!this.sessionId.equals(incomingSessionId)) {
             throw new BusinessRuleViolationException("Session ID mismatch: Cannot logout from a different session");
         }
-        
+
         return revoke();
     }
-
 
     private void markAsCompromised() {
         this.revoked = true;

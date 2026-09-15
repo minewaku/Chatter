@@ -1,6 +1,7 @@
 package com.minewaku.chatter.identityaccess.domain.aggregate.user.model;
 
 import com.minewaku.chatter.identityaccess.domain.sharedkernel.exception.DomainValidationException;
+import com.minewaku.chatter.identityaccess.domain.sharedkernel.value.Id;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -10,17 +11,15 @@ import lombok.ToString;
 @Getter
 @ToString
 @EqualsAndHashCode
-public class UserId {
-	
-	@NonNull
-	private final Long value;
-	
-	public UserId(@NonNull Long value) {
+public final class UserId implements Id {
 
-		if(Long.valueOf(value) <= 0) {
-			throw new DomainValidationException("UserId value cannot be smaller than 1");
-		}
-		
-		this.value = value;
-	}
+    private final Long value;
+
+    public UserId(@NonNull Long value) {
+        if (value <= 0) {
+            throw new DomainValidationException("UserId value cannot be smaller than 1");
+        }
+
+        this.value = value;
+    }
 }

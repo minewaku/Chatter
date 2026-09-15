@@ -22,59 +22,57 @@ import io.github.resilience4j.retry.annotation.Retry;
 
 @Service
 public class SoftDeleteUserApplicationService implements SoftDeleteUserUseCase {
-	
-	private final UserRepository userRepository;
 
-	private final UniqueStringIdGenerator uniqueStringIdGenerator;
+    private final UserRepository userRepository;
 
-	private final DomainEventPublisher domainEventPublisher;
-	private final IntegrationEventPublisher integrationEventPublisher;
-	
+    private final UniqueStringIdGenerator uniqueStringIdGenerator;
 
-	public SoftDeleteUserApplicationService(
-				UserRepository userRepository,
-				UniqueStringIdGenerator uniqueStringIdGenerator,
-				DomainEventPublisher domainEventPublisher,
-				IntegrationEventPublisher integrationEventPublisher) {
+    private final DomainEventPublisher domainEventPublisher;
+    private final IntegrationEventPublisher integrationEventPublisher;
 
-		this.userRepository = userRepository;
-		this.uniqueStringIdGenerator = uniqueStringIdGenerator;
-		this.domainEventPublisher = domainEventPublisher;
-		this.integrationEventPublisher = integrationEventPublisher;
-	}
+    public SoftDeleteUserApplicationService(
+            UserRepository userRepository,
+            UniqueStringIdGenerator uniqueStringIdGenerator,
+            DomainEventPublisher domainEventPublisher,
+            IntegrationEventPublisher integrationEventPublisher) {
 
+        this.userRepository = userRepository;
+        this.uniqueStringIdGenerator = uniqueStringIdGenerator;
+        this.domainEventPublisher = domainEventPublisher;
+        this.integrationEventPublisher = integrationEventPublisher;
+    }
 
     @Override
-	@Retry(name = "transientDataAccess")
-	@Transactional
-    public Void handle(UserId userId) {
-		User user = userRepository.findById(userId)
-			.orElseThrow(() -> new EntityNotFoundException("User does not exist"));
-		
-		if(user.softDelete()) {
-			userRepository.save(user);
+    @Retry(name = "transientDataAccess")
+    @Transactional
+    public Void handle(SoftDeleteUserUseCase.Command command) {
+        User user = userRepository.findById(new UserId(command.userId()))
+                .orElseThrow(() -> new EntityNotFoundException("User does not exist"));
 
-			List<DomainEvent> filteredEvents = userSoftDeletedDomainEventFiltered(user.getEvents());
-			domainEventPublisher.publish(filteredEvents);
+        if (user.softDelete()) {
+            userRepository.save(user);
 
-			String eventId = uniqueStringIdGenerator.generate();
-			UserSoftDeletedIntegrationEvent event = new UserSoftDeletedIntegrationEvent(
-				user.getId().getValue(), 
-				user.getEmail().getValue(), 
-				user.getUsername().getValue(), 
-				user.getBirthday().getValue(), 
-				user.getEnablement().isEnabled(), 
-				user.getEnablement().isLocked(), 
-				user.getEnablement().getDeletionStatus().isDeleted(), 
-				user.getEnablement().getDeletionStatus().getDeletedAt());
-			IntegrationEventWrapper<UserSoftDeletedIntegrationEvent> wrapper = new IntegrationEventWrapper<>(eventId, user.getId().getValue().toString(), event);
-			integrationEventPublisher.publish(wrapper);
-		}
+            List<DomainEvent> filteredEvents = userSoftDeletedDomainEventFiltered(user.getEvents());
+            domainEventPublisher.publish(filteredEvents);
+
+            String eventId = uniqueStringIdGenerator.generate();
+            UserSoftDeletedIntegrationEvent event = new UserSoftDeletedIntegrationEvent(
+                    user.getId().getValue(),
+                    user.getEmail().getValue(),
+                    user.getUsername().getValue(),
+                    user.getBirthday().getValue(),
+                    user.getEnablement().isEnabled(),
+                    user.getEnablement().isLocked(),
+                    user.getEnablement().getDeletionStatus().isDeleted(),
+                    user.getEnablement().getDeletionStatus().getDeletedAt());
+            IntegrationEventWrapper<UserSoftDeletedIntegrationEvent> wrapper = new IntegrationEventWrapper<>(eventId, user.getId().getValue().toString(), event);
+            integrationEventPublisher.publish(wrapper);
+        }
 
         return null;
-	}
+    }
 
-	private List<DomainEvent> userSoftDeletedDomainEventFiltered(List<DomainEvent> events) {
+    private List<DomainEvent> userSoftDeletedDomainEventFiltered(List<DomainEvent> events) {
         return events.stream()
                 .filter(UserSoftDeletedDomainEvent.class::isInstance)
                 .toList();

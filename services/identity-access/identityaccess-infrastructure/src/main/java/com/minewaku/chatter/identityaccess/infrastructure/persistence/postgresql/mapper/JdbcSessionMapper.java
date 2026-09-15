@@ -107,16 +107,16 @@ public class JdbcSessionMapper {
             return null;
         }
 
-        return DeviceInfo.builder()
-            .ipAddress(jdbcDeviceInfo.ipAddress())
-            .country(jdbcDeviceInfo.country())
-            .rawUserAgent(jdbcDeviceInfo.rawUserAgent())
-            .deviceType(jdbcDeviceInfo.deviceType())
-            .deviceBrand(jdbcDeviceInfo.deviceBrand())
-            .osName(jdbcDeviceInfo.osName())
-            .osVersion(jdbcDeviceInfo.osVersion())
-            .browserName(jdbcDeviceInfo.browserName())
-            .browserVersion(jdbcDeviceInfo.browserVersion())
-            .build();
+        return new DeviceInfo(
+            jdbcDeviceInfo.ipAddress(),
+            jdbcDeviceInfo.country(),
+            jdbcDeviceInfo.rawUserAgent(),
+            jdbcDeviceInfo.deviceType(),
+            jdbcDeviceInfo.deviceBrand(),
+            jdbcDeviceInfo.osName(),
+            jdbcDeviceInfo.osVersion(),
+            jdbcDeviceInfo.browserName(),
+            jdbcDeviceInfo.browserVersion()
+        );
     }
 }

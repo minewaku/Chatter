@@ -32,9 +32,9 @@ services:
     ports:
       - "5002:5002"
     volumes:
-      - ./vault/config:/vault/config # map from config to host
-      - ./vault/data:/vault/file     # map from data to host
-      - ./vault/tmp:/vault/tmp       # map from tmp to host
+      - ./config:/vault/config # map from config to host
+      - ./data:/vault/file     # map from data to host
+      - ./assets:/vault/tmp    # expose asset templates inside container
     networks:
       - chatter-net
     command: server

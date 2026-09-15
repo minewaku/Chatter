@@ -1,0 +1,18 @@
+# Task info
+
+This project has an `/infrastructure` folder which contains all stuff related to techs's infrastructures.
+
+There is also an `.env` file at the project root
+
+I need you to go into `/infrastructure/vault` and there're 2 task-related folder/file:
+- `assets/json`: contains keys/tokens that serves Vault configurations
+- `scripts/configure-secrets.sh`: serve as *Source of trust* for Vault's configuration scritps.
+
+# Task
+All the scripts/commands in `scripts/configure-secrets.sh` uses variables from `assets/json` so I need you to move these variables from `assets/json`to `.env` at the project root
+
+Then update the `scripts/configure-secrets.sh`
+
+Do not remove the **$ROOT_DIR** mechanims after updating `scripts/configure-secrets.sh`
+
+Do not inspect other components since they're not related to the task

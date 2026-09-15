@@ -6,6 +6,7 @@ import java.util.function.Function;
 import org.springframework.stereotype.Component;
 
 import com.minewaku.chatter.identityaccess.domain.aggregate.confirmationtoken.model.ConfirmationToken;
+import com.minewaku.chatter.identityaccess.domain.aggregate.confirmationtoken.model.ConfirmationTokenId;
 import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.Email;
 import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.UserId;
 import com.minewaku.chatter.identityaccess.infrastructure.persistence.redis.model.ConfirmationTokenModel;
@@ -17,7 +18,7 @@ public class RedisConfirmationTokenMapper {
         if (domain == null) return null;
 
         return new ConfirmationTokenModel(
-            domain.getToken(),
+            domain.getId().getValue(),
             unwrapValue(domain.getUserId(), UserId::getValue),
             unwrapValue(domain.getEmail(), Email::getValue),
             domain.getDuration(),
@@ -31,7 +32,7 @@ public class RedisConfirmationTokenMapper {
         if (dto == null) return null;
 
         return ConfirmationToken.reconstitute(
-            dto.token(),
+            new ConfirmationTokenId(dto.token()),
             mapToUserId(dto.userId()),
             mapToEmail(dto.email()),
             dto.duration(),

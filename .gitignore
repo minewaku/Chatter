@@ -61,7 +61,7 @@ hs_err_pid*
 .data*
 
 # Vault local file storage backend
-/infrastructure/vault/file/
+/infrastructure/components/vault/data/
 
 # ==========================================
 # 4. ENVIRONMENT & SECURITY (SECRETS)

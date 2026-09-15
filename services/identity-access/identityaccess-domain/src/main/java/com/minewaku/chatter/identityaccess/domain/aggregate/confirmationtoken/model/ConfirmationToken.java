@@ -11,6 +11,7 @@ import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.Email;
 import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.UserId;
 import com.minewaku.chatter.identityaccess.domain.sharedkernel.event.DomainEvent;
 import com.minewaku.chatter.identityaccess.domain.sharedkernel.exception.BusinessRuleViolationException;
+import com.minewaku.chatter.identityaccess.domain.sharedkernel.value.AggregateRoot;
 
 import lombok.Getter;
 import lombok.NonNull;
@@ -18,34 +19,26 @@ import lombok.ToString;
 
 @Getter
 @ToString
-public class ConfirmationToken {
+public class ConfirmationToken extends AggregateRoot<ConfirmationTokenId> {
 
-    @NonNull
-    private final String token;
+    private final ConfirmationTokenId id;
 
-    @NonNull
     private final UserId userId;
 
-    @NonNull
     private final Email email;
 
-    @NonNull
     private final Duration duration;
 
-    @NonNull
     private final Instant createdAt;
 
-    @NonNull
     private final Instant expiresAt;
 
     private Instant confirmedAt;
 
-    @NonNull
-    private final List<DomainEvent> events = new ArrayList<DomainEvent>();
+    private final List<DomainEvent> events = new ArrayList<>();
 
-    // Private constructor
     private ConfirmationToken(
-            @NonNull String token,
+            @NonNull ConfirmationTokenId id,
             @NonNull UserId userId,
             @NonNull Email email,
             Duration duration,
@@ -53,7 +46,7 @@ public class ConfirmationToken {
             Instant expiresAt,
             Instant confirmedAt) {
 
-        this.token = token;
+        this.id = id;
         this.userId = userId;
         this.email = email;
         this.duration = duration;
@@ -62,37 +55,34 @@ public class ConfirmationToken {
         this.confirmedAt = confirmedAt;
     }
 
-
-    /*
-    * STATIC FACTORIES
-    */
-    public static ConfirmationToken reconstitute(
-                @NonNull String token,
-                @NonNull UserId userId,
-                @NonNull Email email,
-                Duration duration,
-                Instant createdAt,
-                Instant expiresAt,
-                Instant confirmedAt) {
-
-        return new ConfirmationToken(token, userId, email, duration, createdAt, expiresAt, confirmedAt);
-    }
-
     public static ConfirmationToken createNew(
-            @NonNull String token,
+            @NonNull ConfirmationTokenId id,
             @NonNull UserId userId,
             @NonNull Email email,
             Duration duration) {
+        Objects.requireNonNull(id, "id cannot be null");
+        Objects.requireNonNull(userId, "userId cannot be null");
+        Objects.requireNonNull(email, "email cannot be null");
 
         Instant now = Instant.now();
         Duration dur = Objects.requireNonNullElse(duration, Duration.ofMinutes(15L));
+        return new ConfirmationToken(id, userId, email, dur, now, now.plus(dur), null);
+    }
 
-        ConfirmationToken confirmationToken = 
-            new ConfirmationToken(
-                token, userId, email, dur, now, now.plus(dur),null
-            );
+    public static ConfirmationToken reconstitute(
+            @NonNull ConfirmationTokenId id,
+            @NonNull UserId userId,
+            @NonNull Email email,
+            Duration duration,
+            Instant createdAt,
+            Instant expiresAt,
+            Instant confirmedAt) {
+        return new ConfirmationToken(id, userId, email, duration, createdAt, expiresAt, confirmedAt);
+    }
 
-        return confirmationToken;
+    @Override
+    public ConfirmationTokenId getId() {
+        return this.id;
     }
 
     public void verifyToken() {
@@ -105,26 +95,9 @@ public class ConfirmationToken {
         this.confirmedAt = Instant.now();
 
         ConfirmationTokenVerifiedDomainEvent event = new ConfirmationTokenVerifiedDomainEvent(
-            String.valueOf(this.userId.getValue()),
-            token
-        );
+                String.valueOf(this.userId.getValue()),
+                id.getValue());
 
         this.events.add(event);
-    }
-
-    
-    @Override
-    public boolean equals(Object o) {
-        if (this == o)
-            return true;
-        if (!(o instanceof ConfirmationToken))
-            return false;
-        ConfirmationToken that = (ConfirmationToken) o;
-        return Objects.equals(token, that.token);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(token);
     }
 }

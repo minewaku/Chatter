@@ -1,8 +1,8 @@
 package com.minewaku.chatter.profile.domain.sharedkernel.value;
 
-public abstract class BaseEntity<ID extends Id> {
+public abstract class BaseEntity<T extends Id> {
 
-    public abstract ID getId();
+    public abstract T getId();
 
     @Override
     public boolean equals(Object o) {

@@ -17,37 +17,37 @@ import io.github.resilience4j.retry.annotation.Retry;
 
 @Service
 public class VerifyConfirmationTokenApplicationService implements VerifyConfirmationTokenUseCase {
-	
-	private final ConfirmationTokenRepository confirmationTokenRepository;
-	private final DomainEventPublisher domainEventPublisher;
 
-	public VerifyConfirmationTokenApplicationService(
-			ConfirmationTokenRepository confirmationTokenRepository,
-			DomainEventPublisher domainEventPublisher) {
-		
-		this.confirmationTokenRepository = confirmationTokenRepository;
-		this.domainEventPublisher = domainEventPublisher;
-	}
-	
+    private final ConfirmationTokenRepository confirmationTokenRepository;
+    private final DomainEventPublisher domainEventPublisher;
+
+    public VerifyConfirmationTokenApplicationService(
+            ConfirmationTokenRepository confirmationTokenRepository,
+            DomainEventPublisher domainEventPublisher) {
+
+        this.confirmationTokenRepository = confirmationTokenRepository;
+        this.domainEventPublisher = domainEventPublisher;
+    }
+
     @Override
-	@Retry(name = "transientDataAccess")
-	@Transactional
-    public Void handle(String confirmationToken) {
-		ConfirmationToken existConfirmationToken = confirmationTokenRepository.findByToken(confirmationToken)
-				.orElseThrow(() -> new EntityNotFoundException("Token does not exist"));
+    @Retry(name = "transientDataAccess")
+    @Transactional
+    public Void handle(VerifyConfirmationTokenUseCase.Command command) {
+        ConfirmationToken existConfirmationToken = confirmationTokenRepository.findByToken(command.token())
+                .orElseThrow(() -> new EntityNotFoundException("Token does not exist"));
 
-		existConfirmationToken.verifyToken();
-		confirmationTokenRepository.save(existConfirmationToken);
+        existConfirmationToken.verifyToken();
+        confirmationTokenRepository.save(existConfirmationToken);
 
-		List<DomainEvent> filteredEvents = filterEvents(existConfirmationToken.getEvents());
-		domainEventPublisher.publish(filteredEvents);
+        List<DomainEvent> filteredEvents = filterEvents(existConfirmationToken.getEvents());
+        domainEventPublisher.publish(filteredEvents);
 
         return null;
-	}
-	
-	private List<DomainEvent> filterEvents(List<DomainEvent> events) {
-	    return events.stream()
-	            .filter(ConfirmationTokenVerifiedDomainEvent.class::isInstance)
-	            .toList();
-	}
+    }
+
+    private List<DomainEvent> filterEvents(List<DomainEvent> events) {
+        return events.stream()
+                .filter(ConfirmationTokenVerifiedDomainEvent.class::isInstance)
+                .toList();
+    }
 }

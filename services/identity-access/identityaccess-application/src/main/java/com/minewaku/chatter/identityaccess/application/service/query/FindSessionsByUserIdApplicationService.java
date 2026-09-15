@@ -14,7 +14,7 @@ import io.github.resilience4j.retry.annotation.Retry;
 
 @Service
 public class FindSessionsByUserIdApplicationService implements FindSessionsByUserIdUseCase {
- 
+
     private final SessionReadRepository sessionReadRepository;
 
     public FindSessionsByUserIdApplicationService(
@@ -26,7 +26,7 @@ public class FindSessionsByUserIdApplicationService implements FindSessionsByUse
     @Override
     @Retry(name = "transientDataAccess")
     @Transactional(readOnly = true)
-    public Set<SessionReadModel> handle(UserId userId) {
-        return sessionReadRepository.findAllSessionsByUserId(userId);
+    public Set<SessionReadModel> handle(FindSessionsByUserIdUseCase.Command command) {
+        return sessionReadRepository.findAllSessionsByUserId(new UserId(command.userId()));
     }
 }

@@ -30,23 +30,24 @@ public class ResendConfirmationTokenApplicationService implements ResendConfirma
     private final ResendConfirmationTokenDomainService resendConfirmationTokenDomainService;
 
     public ResendConfirmationTokenApplicationService(
-                ConfirmationTokenRepository confirmationTokenRepository,
-                UserRepository userRepository,
-                UniqueStringIdGenerator uniqueStringIdGenerator,
-				IntegrationEventPublisher integrationEventPublisher,
-				ResendConfirmationTokenDomainService resendConfirmationTokenDomainService) {
+            ConfirmationTokenRepository confirmationTokenRepository,
+            UserRepository userRepository,
+            UniqueStringIdGenerator uniqueStringIdGenerator,
+            IntegrationEventPublisher integrationEventPublisher,
+            ResendConfirmationTokenDomainService resendConfirmationTokenDomainService) {
 
-		this.confirmationTokenRepository = confirmationTokenRepository;
-		this.userRepository = userRepository;
-		this.uniqueStringIdGenerator = uniqueStringIdGenerator;
-		this.integrationEventPublisher = integrationEventPublisher;
-		this.resendConfirmationTokenDomainService = resendConfirmationTokenDomainService;
-	}
+        this.confirmationTokenRepository = confirmationTokenRepository;
+        this.userRepository = userRepository;
+        this.uniqueStringIdGenerator = uniqueStringIdGenerator;
+        this.integrationEventPublisher = integrationEventPublisher;
+        this.resendConfirmationTokenDomainService = resendConfirmationTokenDomainService;
+    }
 
     @Override
     @Retry(name = "transientDataAccess")
     @Transactional
-    public Void handle(Email email) {
+    public Void handle(ResendConfirmationTokenUseCase.Command command) {
+        Email email = new Email(command.email());
         confirmationTokenRepository.deleteByEmail(email);
 
         User user = userRepository.findByEmail(email)
@@ -57,16 +58,14 @@ public class ResendConfirmationTokenApplicationService implements ResendConfirma
 
         String eventId = uniqueStringIdGenerator.generate();
         ConfirmationTokenCreatedIntegrationEvent confirmationTokenCreatedIntegrationEvent = new ConfirmationTokenCreatedIntegrationEvent(
-            confirmationToken.getToken(),
-            confirmationToken.getUserId().getValue(),
-            confirmationToken.getEmail().getValue(),
-            confirmationToken.getDuration().toString(),
-            confirmationToken.getExpiresAt().toString()
-        );
-        IntegrationEventWrapper<ConfirmationTokenCreatedIntegrationEvent> wrapper = new IntegrationEventWrapper<>(eventId, confirmationToken.getToken(), confirmationTokenCreatedIntegrationEvent);
+                confirmationToken.getId().getValue(),
+                confirmationToken.getUserId().getValue(),
+                confirmationToken.getEmail().getValue(),
+                confirmationToken.getDuration().toString(),
+                confirmationToken.getExpiresAt().toString());
+        IntegrationEventWrapper<ConfirmationTokenCreatedIntegrationEvent> wrapper = new IntegrationEventWrapper<>(eventId, confirmationToken.getId().getValue(), confirmationTokenCreatedIntegrationEvent);
         integrationEventPublisher.publish(wrapper);
-        
+
         return null;
     }
-    
 }

@@ -18,43 +18,41 @@ import io.github.resilience4j.retry.annotation.Retry;
 @Service
 public class UnlockUserApplicationService implements UnlockUserUseCase {
 
-	private final UserRepository userRepository;
+    private final UserRepository userRepository;
 
-	private final UniqueStringIdGenerator uniqueStringIdGenerator;
-	private final IntegrationEventPublisher integrationEventPublisher;
+    private final UniqueStringIdGenerator uniqueStringIdGenerator;
+    private final IntegrationEventPublisher integrationEventPublisher;
 
+    public UnlockUserApplicationService(
+            UserRepository userRepository,
+            UniqueStringIdGenerator uniqueStringIdGenerator,
+            IntegrationEventPublisher integrationEventPublisher) {
 
-	public UnlockUserApplicationService(
-				UserRepository userRepository,
-				UniqueStringIdGenerator uniqueStringIdGenerator,
-				IntegrationEventPublisher integrationEventPublisher) {
+        this.userRepository = userRepository;
+        this.uniqueStringIdGenerator = uniqueStringIdGenerator;
+        this.integrationEventPublisher = integrationEventPublisher;
+    }
 
-		this.userRepository = userRepository;
-		this.uniqueStringIdGenerator = uniqueStringIdGenerator;
-		this.integrationEventPublisher = integrationEventPublisher;
-	}
+    @Override
+    @Retry(name = "transientDataAccess")
+    @Transactional
+    public Void handle(UnlockUserUseCase.Command command) {
+        User user = userRepository.findById(new UserId(command.userId()))
+                .orElseThrow(() -> new EntityNotFoundException("User does not exist"));
 
-	@Override
-	@Retry(name = "transientDataAccess")
-	@Transactional
-	public Void handle(UserId userId) {
-		User user = userRepository.findById(userId)
-			.orElseThrow(() -> new EntityNotFoundException("User does not exist"));
-		
-		if(user.unlock()) {
-			userRepository.save(user);
+        if (user.unlock()) {
+            userRepository.save(user);
 
-			String eventId = uniqueStringIdGenerator.generate();
-			EnablementUpdatedIntegrationEvent event = new EnablementUpdatedIntegrationEvent(
-				user.getId().getValue(), user.getEnablement().isEnabled(), 
-				user.getEnablement().isLocked(), 
-				user.getEnablement().getDeletionStatus().isDeleted(), 
-				user.getEnablement().getDeletionStatus().getDeletedAt()
-			);
-			IntegrationEventWrapper<EnablementUpdatedIntegrationEvent> wrapper = new IntegrationEventWrapper<>(eventId, user.getId().getValue().toString(), event);
-			integrationEventPublisher.publish(wrapper);
-		}
+            String eventId = uniqueStringIdGenerator.generate();
+            EnablementUpdatedIntegrationEvent event = new EnablementUpdatedIntegrationEvent(
+                    user.getId().getValue(), user.getEnablement().isEnabled(),
+                    user.getEnablement().isLocked(),
+                    user.getEnablement().getDeletionStatus().isDeleted(),
+                    user.getEnablement().getDeletionStatus().getDeletedAt());
+            IntegrationEventWrapper<EnablementUpdatedIntegrationEvent> wrapper = new IntegrationEventWrapper<>(eventId, user.getId().getValue().toString(), event);
+            integrationEventPublisher.publish(wrapper);
+        }
 
-		return null;
-	}
+        return null;
+    }
 }

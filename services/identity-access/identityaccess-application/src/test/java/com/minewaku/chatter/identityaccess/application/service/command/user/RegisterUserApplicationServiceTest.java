@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
 import java.time.Month;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -17,13 +18,13 @@ import com.minewaku.chatter.identityaccess.application.messaging.publisher.domai
 import com.minewaku.chatter.identityaccess.application.messaging.publisher.integration.IntegrationEventPublisher;
 import com.minewaku.chatter.identityaccess.application.messaging.publisher.integration.OutboxStore;
 import com.minewaku.chatter.identityaccess.application.messaging.publisher.integration.event.IntegrationEventWrapper;
-import com.minewaku.chatter.identityaccess.application.port.inbound.command.auth.command.RegisterCommand;
+import com.minewaku.chatter.identityaccess.application.port.inbound.command.auth.usecase.RegisterUserUseCase;
 import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.Birthday;
 import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.Email;
 import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.User;
 import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.UserId;
 import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.Username;
-import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.credentials.Password;
+import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.credentials.HashedPassword;
 import com.minewaku.chatter.identityaccess.domain.aggregate.user.repository.UserRepository;
 import com.minewaku.chatter.identityaccess.domain.service.RegisterDomainService;
 import com.minewaku.chatter.identityaccess.domain.sharedkernel.service.UniqueStringIdGenerator;
@@ -58,11 +59,11 @@ class RegisterUserApplicationServiceTest {
                 new IntegrationEventPublisher(outboxStore)
         );
 
-        RegisterCommand command = new RegisterCommand(
-                new Email("user@example.com"),
-                new Username("user"),
-                new Birthday(LocalDate.of(1990, Month.JANUARY, 1)),
-                new Password("Password123!")
+        RegisterUserUseCase.Command command = new RegisterUserUseCase.Command(
+                "user@example.com",
+                "user",
+                LocalDate.of(1990, Month.JANUARY, 1),
+                "Password123!"
         );
 
         User user = User.register(
@@ -70,7 +71,7 @@ class RegisterUserApplicationServiceTest {
                 new Email("user@example.com"),
                 new Username("user"),
                 new Birthday(LocalDate.of(1990, Month.JANUARY, 1)),
-                null
+                new HashedPassword("bcrypt", "hashed-password", new byte[]{1, 2, 3})
         );
 
         when(registerDomainService.handle(any(), any(), any(), any())).thenReturn(user);

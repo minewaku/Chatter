@@ -2,6 +2,7 @@ package com.minewaku.chatter.identityaccess.domain.aggregate.user.model;
 
 import java.time.LocalDate;
 import java.time.Period;
+import java.time.ZoneId;
 
 import com.minewaku.chatter.identityaccess.domain.sharedkernel.exception.DomainValidationException;
 
@@ -13,24 +14,22 @@ import lombok.ToString;
 @Getter
 @ToString
 @EqualsAndHashCode
-public class Birthday {
-	
-	@NonNull
-	private final LocalDate value;
+public final class Birthday {
+
+    private final LocalDate value;
 
     public Birthday(@NonNull LocalDate value) {
-		
-        if(value.isAfter(LocalDate.now())) {
-        	throw new DomainValidationException("Birthday cannot be in the future");
+        if (value.isAfter(LocalDate.now(ZoneId.systemDefault()))) {
+            throw new DomainValidationException("Birthday cannot be in the future");
         }
-        if(Period.between(value, LocalDate.now()).getYears() > 150) {
-        	throw new DomainValidationException("Age seems invalid");
+        if (Period.between(value, LocalDate.now(ZoneId.systemDefault())).getYears() > 150) {
+            throw new DomainValidationException("Age seems invalid");
         }
-        
+
         this.value = value;
     }
-	
+
     public int getAge() {
-        return Period.between(value, LocalDate.now()).getYears();
+        return Period.between(value, LocalDate.now(ZoneId.systemDefault())).getYears();
     }
 }

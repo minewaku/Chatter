@@ -22,8 +22,8 @@ public class AssetDimension {
                 @NonNull Integer width, 
                 @NonNull Integer height) {
 
-        if (width != null && width < 0) throw new DomainValidationException("Width must be >= 0");
-        if (height != null && height < 0) throw new DomainValidationException("Height must be >= 0");
+        if (width < 0) throw new DomainValidationException("Width must be >= 0");
+        if (height < 0) throw new DomainValidationException("Height must be >= 0");
         this.width = width;
         this.height = height;
     }

@@ -4,7 +4,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.minewaku.chatter.identityaccess.application.exception.EntityNotFoundException;
-import com.minewaku.chatter.identityaccess.application.port.inbound.command.auth.command.RefreshTokenCommand;
 import com.minewaku.chatter.identityaccess.application.port.inbound.command.auth.usecase.RefreshUseCase;
 import com.minewaku.chatter.identityaccess.application.port.inbound.shared.response.TokenResponse;
 import com.minewaku.chatter.identityaccess.application.port.outbound.provider.AccessTokenGenerator;
@@ -22,55 +21,50 @@ import io.github.resilience4j.retry.annotation.Retry;
 @Service
 public class RefreshApplicationService implements RefreshUseCase {
 
-	private final UserRepository userRepository;
-	private final SessionRepository sessionRepository;
-	private final AccessTokenGenerator accessTokenGenerator;
-	private final RefreshTokenEncryptor refreshTokenEncryptor;
+    private final UserRepository userRepository;
+    private final SessionRepository sessionRepository;
+    private final AccessTokenGenerator accessTokenGenerator;
+    private final RefreshTokenEncryptor refreshTokenEncryptor;
 
-	private final RefreshDomainService refreshDomainService;
+    private final RefreshDomainService refreshDomainService;
 
+    public RefreshApplicationService(
+            UserRepository userRepository,
+            SessionRepository sessionRepository,
+            AccessTokenGenerator accessTokenGenerator,
+            RefreshTokenEncryptor refreshTokenEncryptor,
+            RefreshDomainService refreshDomainService) {
 
-	public RefreshApplicationService(
-			UserRepository userRepository,
-			SessionRepository sessionRepository,
-			AccessTokenGenerator accessTokenGenerator,
-			RefreshTokenEncryptor refreshTokenEncryptor,
-		
-			RefreshDomainService refreshDomainService) {
+        this.userRepository = userRepository;
+        this.sessionRepository = sessionRepository;
+        this.accessTokenGenerator = accessTokenGenerator;
+        this.refreshTokenEncryptor = refreshTokenEncryptor;
 
+        this.refreshDomainService = refreshDomainService;
+    }
 
-		this.userRepository = userRepository;
-		this.sessionRepository = sessionRepository;
-		this.accessTokenGenerator = accessTokenGenerator;
-		this.refreshTokenEncryptor = refreshTokenEncryptor;
-		
-		this.refreshDomainService = refreshDomainService;
-	}
+    @Override
+    @Retry(name = "transientDataAccess")
+    @Transactional
+    public TokenResponse handle(RefreshUseCase.Command command) {
+        TokenPayload tokenPayload = refreshTokenEncryptor.decrypt(command.refreshToken());
+        SessionId sessionId = new SessionId(tokenPayload.sessionId());
 
-	@Override
-	@Retry(name = "transientDataAccess")
-	@Transactional
-	public TokenResponse handle(RefreshTokenCommand command) {
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new EntityNotFoundException("Refresh token not found"));
 
-		TokenPayload tokenPayload = refreshTokenEncryptor.decrypt(command.refreshToken());
-		SessionId sessionId = new SessionId(tokenPayload.sessionId());
+        User user = userRepository.findById(session.getUserId())
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
-		Session session = sessionRepository.findById(sessionId)
-				.orElseThrow(() -> new EntityNotFoundException("Refresh token not found"));
+        Session refreshedSession = refreshDomainService.handle(user, session, tokenPayload.generation());
+        Session tokenSession = refreshedSession != null ? refreshedSession : session;
+        if (refreshedSession != null) {
+            sessionRepository.save(refreshedSession);
+        }
 
-		User user = userRepository.findById(session.getUserId())
-				.orElseThrow(() -> new EntityNotFoundException("User not found"));
-
-		Session refreshedSession = refreshDomainService.handle(user, session, tokenPayload.generation());
-		Session tokenSession = refreshedSession != null ? refreshedSession : session;
-		if (refreshedSession != null) {
-			sessionRepository.save(refreshedSession);
-		}
-
-		String newAccessToken = accessTokenGenerator.generate(user.getId(), user.getEmail());
-		String newRefreshToken = refreshTokenEncryptor.encrypt(tokenSession);
-		return new TokenResponse(newAccessToken, newRefreshToken);
-	}
-
+        String newAccessToken = accessTokenGenerator.generate(user.getId(), user.getEmail());
+        String newRefreshToken = refreshTokenEncryptor.encrypt(tokenSession);
+        return new TokenResponse(newAccessToken, newRefreshToken);
+    }
 }
 

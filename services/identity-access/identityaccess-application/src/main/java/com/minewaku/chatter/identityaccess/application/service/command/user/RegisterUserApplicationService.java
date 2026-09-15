@@ -9,10 +9,13 @@ import com.minewaku.chatter.identityaccess.application.messaging.publisher.domai
 import com.minewaku.chatter.identityaccess.application.messaging.publisher.integration.IntegrationEventPublisher;
 import com.minewaku.chatter.identityaccess.application.messaging.publisher.integration.event.IntegrationEventWrapper;
 import com.minewaku.chatter.identityaccess.application.messaging.publisher.integration.event.UserRegisteredIntegrationEvent;
-import com.minewaku.chatter.identityaccess.application.port.inbound.command.auth.command.RegisterCommand;
 import com.minewaku.chatter.identityaccess.application.port.inbound.command.auth.usecase.RegisterUserUseCase;
 import com.minewaku.chatter.identityaccess.domain.aggregate.user.event.UserRegisteredDomainEvent;
+import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.Birthday;
+import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.Email;
 import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.User;
+import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.Username;
+import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.credentials.Password;
 import com.minewaku.chatter.identityaccess.domain.aggregate.user.repository.UserRepository;
 import com.minewaku.chatter.identityaccess.domain.service.RegisterDomainService;
 import com.minewaku.chatter.identityaccess.domain.sharedkernel.event.DomainEvent;
@@ -22,66 +25,63 @@ import io.github.resilience4j.retry.annotation.Retry;
 
 @Service
 public class RegisterUserApplicationService implements RegisterUserUseCase {
-    
-	private final UserRepository userRepository;
 
-	private final RegisterDomainService registerDomainService;
+    private final UserRepository userRepository;
 
-	private final UniqueStringIdGenerator uniqueStringIdGenerator;
-	
-	private final DomainEventPublisher domainEventPublisher;
-	private final IntegrationEventPublisher integrationEventPublisher;
+    private final RegisterDomainService registerDomainService;
 
+    private final UniqueStringIdGenerator uniqueStringIdGenerator;
 
-	public RegisterUserApplicationService(
-			UserRepository userRepository,
-			RegisterDomainService registerDomainService,
-			UniqueStringIdGenerator uniqueStringIdGenerator,
-			DomainEventPublisher domainEventPublisher,
-			IntegrationEventPublisher integrationEventPublisher) {
+    private final DomainEventPublisher domainEventPublisher;
+    private final IntegrationEventPublisher integrationEventPublisher;
 
-		this.userRepository = userRepository;
-		this.registerDomainService = registerDomainService;
-		this.uniqueStringIdGenerator = uniqueStringIdGenerator;
-		this.domainEventPublisher = domainEventPublisher;
-		this.integrationEventPublisher = integrationEventPublisher;
-	}
+    public RegisterUserApplicationService(
+            UserRepository userRepository,
+            RegisterDomainService registerDomainService,
+            UniqueStringIdGenerator uniqueStringIdGenerator,
+            DomainEventPublisher domainEventPublisher,
+            IntegrationEventPublisher integrationEventPublisher) {
 
+        this.userRepository = userRepository;
+        this.registerDomainService = registerDomainService;
+        this.uniqueStringIdGenerator = uniqueStringIdGenerator;
+        this.domainEventPublisher = domainEventPublisher;
+        this.integrationEventPublisher = integrationEventPublisher;
+    }
 
-	@Override
-	@Retry(name = "transientDataAccess")
-	@Transactional
-	public Void handle(RegisterCommand command) {
+    @Override
+    @Retry(name = "transientDataAccess")
+    @Transactional
+    public Void handle(RegisterUserUseCase.Command command) {
+        User user = registerDomainService.handle(
+                new Email(command.email()),
+                new Username(command.username()),
+                new Birthday(command.birthday()),
+                new Password(command.password()));
 
-		User user = registerDomainService.handle(
-			command.email(),
-			command.username(),
-			command.birthday(),
-			command.password());
-			
-		userRepository.save(user);
+        userRepository.save(user);
 
-		List<DomainEvent> filteredEvents = userRegisteredDomainEventFiltered(user.getEvents());
+        List<DomainEvent> filteredEvents = userRegisteredDomainEventFiltered(user.getEvents());
         domainEventPublisher.publish(filteredEvents);
-		
-		String eventId = uniqueStringIdGenerator.generate();
-		UserRegisteredIntegrationEvent event = new UserRegisteredIntegrationEvent(
-			user.getId().getValue(),
-			user.getEmail().getValue(),
-			user.getUsername().getValue(),
-			user.getBirthday().getValue(),
-			user.getEnablement().isEnabled(),
-			user.getEnablement().getDeletionStatus().isDeleted(),
-			user.getEnablement().isLocked(),
-			user.getEnablement().getDeletionStatus().getDeletedAt());
 
-		IntegrationEventWrapper<UserRegisteredIntegrationEvent> wrapper = new IntegrationEventWrapper<>(eventId, user.getId().getValue().toString(), event);
-		integrationEventPublisher.publish(wrapper);
+        String eventId = uniqueStringIdGenerator.generate();
+        UserRegisteredIntegrationEvent event = new UserRegisteredIntegrationEvent(
+                user.getId().getValue(),
+                user.getEmail().getValue(),
+                user.getUsername().getValue(),
+                user.getBirthday().getValue(),
+                user.getEnablement().isEnabled(),
+                user.getEnablement().getDeletionStatus().isDeleted(),
+                user.getEnablement().isLocked(),
+                user.getEnablement().getDeletionStatus().getDeletedAt());
 
-		return null;
-	}
+        IntegrationEventWrapper<UserRegisteredIntegrationEvent> wrapper = new IntegrationEventWrapper<>(eventId, user.getId().getValue().toString(), event);
+        integrationEventPublisher.publish(wrapper);
 
-	private List<DomainEvent> userRegisteredDomainEventFiltered(List<DomainEvent> events) {
+        return null;
+    }
+
+    private List<DomainEvent> userRegisteredDomainEventFiltered(List<DomainEvent> events) {
         return events.stream()
                 .filter(UserRegisteredDomainEvent.class::isInstance)
                 .toList();

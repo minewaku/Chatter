@@ -18,7 +18,7 @@ services:
     ports:
       - "2181:2181"
     volumes:
-      - .data_zookeeper:/var/lib/zookeeper
+      - ./data/data_zookeeper:/var/lib/zookeeper
     networks:
       - chatter-net
 
@@ -40,7 +40,7 @@ services:
       
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     volumes:
-      - .data_kafka:/var/lib/kafka/data
+      - ./data/data_kafka:/var/lib/kafka/data
       - ./scripts:/opt/kafka/scripts
     networks:
       - chatter-net

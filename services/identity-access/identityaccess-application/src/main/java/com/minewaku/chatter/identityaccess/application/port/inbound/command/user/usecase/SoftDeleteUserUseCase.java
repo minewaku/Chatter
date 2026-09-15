@@ -1,7 +1,9 @@
 package com.minewaku.chatter.identityaccess.application.port.inbound.command.user.usecase;
 
 import com.minewaku.chatter.identityaccess.application.port.inbound.shared.handler.UseCaseHandler;
-import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.UserId;
 
-public interface SoftDeleteUserUseCase extends UseCaseHandler<UserId, Void> {
+public interface SoftDeleteUserUseCase extends UseCaseHandler<SoftDeleteUserUseCase.Command, Void> {
+
+    record Command(Long userId) {
+    }
 }

@@ -8,8 +8,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.minewaku.chatter.identityaccess.application.port.inbound.command.user.usecase.SoftDeleteUserUseCase;
-import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.UserId;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Tag(name = "User Command", description = "User Command API")
@@ -19,18 +19,15 @@ public class UserController {
 
     private final SoftDeleteUserUseCase softDeleteUserUseCase;
 
-    public UserController(
-                SoftDeleteUserUseCase softDeleteUserUseCase) {
-
+    public UserController(SoftDeleteUserUseCase softDeleteUserUseCase) {
         this.softDeleteUserUseCase = softDeleteUserUseCase;
     }
-    
+
+    @Operation(summary = "Delete the current user")
     @DeleteMapping("")
-    public ResponseEntity<Void> deleteUser(
-                @AuthenticationPrincipal Jwt jwt) {
-                    
+    public ResponseEntity<Void> deleteUser(@AuthenticationPrincipal Jwt jwt) {
         String userId = jwt.getSubject();
-        softDeleteUserUseCase.handle(new UserId(Long.parseLong(userId)));
+        softDeleteUserUseCase.handle(new SoftDeleteUserUseCase.Command(Long.parseLong(userId)));
         return ResponseEntity.ok().build();
     }
 }

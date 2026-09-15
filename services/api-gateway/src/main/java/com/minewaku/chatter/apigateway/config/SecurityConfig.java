@@ -41,7 +41,7 @@ public class SecurityConfig {
 
     @Bean
     SecurityWebFilterChain security(ServerHttpSecurity http, CorsConfigurationSource cors) {
-        http.cors(corsSpec -> corsSpec.configurationSource(cors)).csrf(ServerHttpSecurity.CsrfSpec::disable)
+        http.cors(corsSpec -> corsSpec.configurationSource(cors)).csrf(csrf -> csrf.disable())
                 .authorizeExchange(ex -> ex.pathMatchers(HttpMethod.OPTIONS).permitAll().pathMatchers(WHITE_LIST_URLS).permitAll().anyExchange().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
 

@@ -12,29 +12,26 @@ import lombok.ToString;
 @EqualsAndHashCode
 public final class Username {
 
-    private static final String USERNAME_PATTERN = "^(?!.*\\.\\.)[A-Za-z0-9_](?:[A-Za-z0-9_.]{0,30}[A-Za-z0-9_])?$";
+   private static final String USERNAME_PATTERN = "^(?!.*\\.\\.)[A-Za-z0-9_](?:[A-Za-z0-9_.]{0,30}[A-Za-z0-9_])?$";
 
-    @NonNull
-    private final String value;
+   private final String value;
 
-    public Username(@NonNull String value) {
+   public Username(@NonNull String value) {
+       if (value.isBlank()) {
+           throw new DomainValidationException("Username cannot be blank");
+       }
+       if (!value.matches(USERNAME_PATTERN)) {
+           throw new DomainValidationException(
+                   "Invalid username. Must be 2-32 chars, letters, digits, '_' or '.', cannot start/end with '.' or contain '..': " + value);
+       }
+       this.value = value;
+   }
 
-        if (value.isBlank()) {
-            throw new DomainValidationException("Username cannot be blank");
-        }
-        if (!value.matches(USERNAME_PATTERN)) {
-            throw new DomainValidationException(
-                    "Invalid username. Must be 2-32 chars, letters, digits, '_' or '.', cannot start/end with '.' or contain '..': "
-                            + value);
-        }
-        this.value = value;
-    }
+   public Username changeUsername(@NonNull Username newUsername) {
+       if (this.equals(newUsername)) {
+           throw new DomainValidationException("New username cannot be the same as the old username");
+       }
 
-    public Username changeUsername(@NonNull Username newUsername) {
-        if(this.equals(newUsername)) {
-            throw new DomainValidationException("New username cannot be the same as the old username");
-        }
-
-        return newUsername;
-    }
+       return newUsername;
+   }
 }

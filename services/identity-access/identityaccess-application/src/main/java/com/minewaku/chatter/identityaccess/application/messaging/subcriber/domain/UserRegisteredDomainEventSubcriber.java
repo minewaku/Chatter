@@ -9,6 +9,7 @@ import com.minewaku.chatter.identityaccess.application.messaging.publisher.integ
 import com.minewaku.chatter.identityaccess.application.messaging.publisher.integration.event.IntegrationEventWrapper;
 import com.minewaku.chatter.identityaccess.application.messaging.subcriber.core.DomainEventSubscriber;
 import com.minewaku.chatter.identityaccess.domain.aggregate.confirmationtoken.model.ConfirmationToken;
+import com.minewaku.chatter.identityaccess.domain.aggregate.confirmationtoken.model.ConfirmationTokenId;
 import com.minewaku.chatter.identityaccess.domain.aggregate.confirmationtoken.repository.ConfirmationTokenRepository;
 import com.minewaku.chatter.identityaccess.domain.aggregate.user.event.UserRegisteredDomainEvent;
 import com.minewaku.chatter.identityaccess.domain.aggregate.user.model.Email;
@@ -42,8 +43,9 @@ public class UserRegisteredDomainEventSubcriber implements DomainEventSubscriber
 	@Transactional
 	public void handle(UserRegisteredDomainEvent event) {
         String token = uniqueStringIdGenerator.generate();
+        ConfirmationTokenId tokenId = new ConfirmationTokenId(token);
         ConfirmationToken confirmationToken = ConfirmationToken.createNew(
-            token,
+            tokenId,
             new UserId(Long.parseLong(event.getUserId())),
             new Email(event.getEmail()),
             null
@@ -58,7 +60,7 @@ public class UserRegisteredDomainEventSubcriber implements DomainEventSubscriber
             confirmationToken.getDuration().toString(),
             confirmationToken.getExpiresAt().toString()
         );
-        IntegrationEventWrapper<ConfirmationTokenCreatedIntegrationEvent> wrapper = new IntegrationEventWrapper<>(eventId, confirmationToken.getToken(), confirmationTokenCreatedIntegrationEvent);
+        IntegrationEventWrapper<ConfirmationTokenCreatedIntegrationEvent> wrapper = new IntegrationEventWrapper<>(eventId, confirmationToken.getId().getValue(), confirmationTokenCreatedIntegrationEvent);
         integrationEventPublisher.publish(wrapper);
 	}
 }
