@@ -1,0 +1,1 @@
+package com.minewaku.chatter.identityaccess.user; public interface DisableUserAccountUseCase { Result handle(Command c); record Command(long userId){} record Result(boolean changed){} }

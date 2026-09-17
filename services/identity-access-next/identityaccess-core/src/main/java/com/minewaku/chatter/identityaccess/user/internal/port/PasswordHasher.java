@@ -1,0 +1,1 @@
+package com.minewaku.chatter.identityaccess.user.internal.port; import com.minewaku.chatter.identityaccess.user.internal.model.*; public interface PasswordHasher { PasswordHash hash(PlainPassword password); }

@@ -1,0 +1,3 @@
+package com.minewaku.chatter.identityaccess.presentation.user;
+import java.util.*; import org.springframework.http.*; import org.springframework.web.bind.*; import org.springframework.web.bind.annotation.*;
+@RestControllerAdvice public class ApiExceptionHandler { @ExceptionHandler({IllegalArgumentException.class,IllegalStateException.class}) ResponseEntity<Map<String,String>> badRequest(RuntimeException e){return ResponseEntity.badRequest().body(Map.of("message",e.getMessage()));} }

@@ -1,0 +1,18 @@
+package com.minewaku.chatter.identityaccess.user.internal.model;
+import java.time.*;
+import org.springframework.data.annotation.*;
+import org.springframework.data.relational.core.mapping.*;
+@Table("user_account") public class UserAccount {
+ @Id private UserId id; @Column("normalized_email") private Email email; private Username username; private Birthday birthday; private AccountStatus status; private Instant deletedAt;
+ @Embedded(onEmpty=Embedded.OnEmpty.USE_NULL,prefix="password_") private PasswordHash passwordHash; private Instant passwordModifiedAt,createdAt,updatedAt; @Version private Long version;
+ @PersistenceCreator public UserAccount(UserId id,Email email,Username username,Birthday birthday,AccountStatus status,Instant deletedAt,PasswordHash passwordHash,Instant passwordModifiedAt,Instant createdAt,Instant updatedAt,Long version){this.id=id;this.email=email;this.username=username;this.birthday=birthday;this.status=status;this.deletedAt=deletedAt;this.passwordHash=passwordHash;this.passwordModifiedAt=passwordModifiedAt;this.createdAt=createdAt;this.updatedAt=updatedAt;this.version=version;}
+ public static UserAccount register(UserId id,Email email,Username username,Birthday birthday,PasswordHash hash){Instant now=Instant.now();return new UserAccount(id,email,username,birthday,AccountStatus.PENDING_VERIFICATION,null,hash,now,now,now,null);}
+ public UserId id(){return id;} public Email email(){return email;} public Username username(){return username;} public Birthday birthday(){return birthday;} public AccountStatus status(){return status;} public Instant deletedAt(){return deletedAt;} public Instant createdAt(){return createdAt;} public Instant updatedAt(){return updatedAt;} public Long version(){return version;} public boolean isAccessible(){return status.isAccessible();}
+ private boolean transition(AccountStatus target,String op){if(status==target)return false;if(status==AccountStatus.DELETED)throw new InvalidAccountStateTransitionException(status,op);status=target;updatedAt=Instant.now();return true;}
+ public boolean enable(){if(status==AccountStatus.PENDING_VERIFICATION||status==AccountStatus.DISABLED)return transition(AccountStatus.ACTIVE,"enable");if(status==AccountStatus.ACTIVE)return false;throw new InvalidAccountStateTransitionException(status,"enable");}
+ public boolean activateAfterVerification(){if(status==AccountStatus.PENDING_VERIFICATION)return transition(AccountStatus.ACTIVE,"activate");if(status==AccountStatus.ACTIVE)return false;throw new InvalidAccountStateTransitionException(status,"activate");}
+ public boolean disable(){if(status==AccountStatus.DISABLED)return false;if(status==AccountStatus.PENDING_VERIFICATION||status==AccountStatus.ACTIVE||status==AccountStatus.LOCKED)return transition(AccountStatus.DISABLED,"disable");throw new InvalidAccountStateTransitionException(status,"disable");}
+ public boolean lock(){if(status==AccountStatus.LOCKED)return false;if(status==AccountStatus.PENDING_VERIFICATION||status==AccountStatus.ACTIVE||status==AccountStatus.DISABLED)return transition(AccountStatus.LOCKED,"lock");throw new InvalidAccountStateTransitionException(status,"lock");}
+ public boolean unlock(){if(status==AccountStatus.LOCKED)return transition(AccountStatus.ACTIVE,"unlock");if(status==AccountStatus.ACTIVE)return false;throw new InvalidAccountStateTransitionException(status,"unlock");}
+ public boolean softDelete(){if(status==AccountStatus.DELETED)return false;Instant now=Instant.now();status=AccountStatus.DELETED;deletedAt=now;email=new Email("deleted-"+id.value()+"@deleted.invalid");username=new Username("deleted_"+id.value());passwordHash=new PasswordHash("deleted","unusable",new byte[]{0});passwordModifiedAt=now;updatedAt=now;return true;}
+}

@@ -1,0 +1,1 @@
+package com.minewaku.chatter.identityaccess.user; public interface SoftDeleteUserAccountUseCase { Result handle(Command c); record Command(long userId){} record Result(boolean changed){} }

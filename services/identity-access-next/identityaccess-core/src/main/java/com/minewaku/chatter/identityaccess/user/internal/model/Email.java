@@ -1,0 +1,3 @@
+package com.minewaku.chatter.identityaccess.user.internal.model;
+import java.util.*; import java.util.regex.*;
+public record Email(String value) { private static final Pattern F=Pattern.compile("^[a-z0-9+_.-]+@[a-z0-9.-]+$"); public Email { if(value==null) throw new IllegalArgumentException("Email is required"); value=value.trim().toLowerCase(Locale.ROOT); if(value.isBlank()||value.length()>320||!F.matcher(value).matches()) throw new IllegalArgumentException("Invalid email format"); int at=value.lastIndexOf('@'),domain=value.length()-at-1; if(at<1||at>64||domain<3||domain>255) throw new IllegalArgumentException("Invalid email length"); } }

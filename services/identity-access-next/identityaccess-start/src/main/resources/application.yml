@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: identity-access
+  datasource:
+    url: ${IDENTITY_ACCESS_DB_URL:jdbc:postgresql://localhost:5432/identity_access}
+    username: ${IDENTITY_ACCESS_DB_USERNAME:identity_access}
+    password: ${IDENTITY_ACCESS_DB_PASSWORD:identity_access}
+  flyway:
+    enabled: true
+
+identity-access:
+  snowflake:
+    worker-id: ${IDENTITY_ACCESS_SNOWFLAKE_WORKER_ID:0}

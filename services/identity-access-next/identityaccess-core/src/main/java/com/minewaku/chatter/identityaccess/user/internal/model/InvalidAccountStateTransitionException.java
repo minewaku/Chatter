@@ -1,0 +1,1 @@
+package com.minewaku.chatter.identityaccess.user.internal.model; public final class InvalidAccountStateTransitionException extends IllegalStateException { public InvalidAccountStateTransitionException(AccountStatus from,String operation){super("Cannot "+operation+" an account in "+from+" state");} }

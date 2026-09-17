@@ -1,0 +1,1 @@
+package com.minewaku.chatter.identityaccess.user.internal.model; public enum AccountStatus { PENDING_VERIFICATION(false),ACTIVE(true),DISABLED(false),LOCKED(false),DELETED(false); private final boolean accessible; AccountStatus(boolean a){accessible=a;} public boolean isAccessible(){return accessible;} }

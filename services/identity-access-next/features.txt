@@ -1,0 +1,36 @@
+IdentityAccess User features
+
+Registration
+- Register/create user: id, email, username, birthday, hashed password; starts unverified and emits UserRegistered(userId, email).
+- Reconstitute user: id, email, username, birthday, enablement, audit metadata, credentials, version.
+
+Account state
+- Check accessibility: no soft-delete, lock, or disabled state.
+- Check status: unverified, banned, or soft-deleted.
+- Enable/disable account: no params; returns changed.
+- Lock/unlock account: no params; returns changed.
+- Soft-delete account: no params; anonymizes email, username, password, marks updated, emits UserSoftDeleted(userId); returns changed.
+
+Authentication and credentials
+- Authenticate: password hasher, password; requires accessible account and valid password.
+- Change password: password hasher, old password, new password; validates old password, prevents reuse, enforces 5-minute interval.
+
+Profile changes
+- Change username: password hasher, new username, password; requires accessible account and valid password.
+- Change email: password hasher, new email, password; requires accessible account and valid password, then disables account.
+
+Value validation
+- UserId: positive long.
+- Email: normalized lowercase email, length/format limits; cannot remain unchanged.
+- Username: 2-32 chars using letters/digits/underscore/dot; no leading/trailing dot or consecutive dots; cannot remain unchanged.
+- Birthday: not future and age <= 150; exposes age.
+- Phone number: non-blank.
+- Password: >= 8 chars with uppercase, lowercase, digit, and special character.
+- Hashed password: non-blank algorithm/hash and non-empty salt.
+
+Repository operations
+- Save user: user.
+- Delete user: user.
+- Delete by id: userId.
+- Find by id: userId -> optional user.
+- Find by email: email -> optional user.

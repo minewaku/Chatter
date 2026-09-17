@@ -1,0 +1,1 @@
+package com.minewaku.chatter.identityaccess.presentation.user; import java.time.LocalDate; import jakarta.validation.constraints.*; public record RegisterRequest(@NotBlank String email,@NotBlank String username,@NotNull LocalDate birthday,@NotBlank String password){}

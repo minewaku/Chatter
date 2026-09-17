@@ -1,0 +1,3 @@
+package com.minewaku.chatter.identityaccess.user.internal.model;
+import java.util.*; import java.util.regex.*;
+/** Input-only password; never persisted, logged, or returned. */ public final class PlainPassword { private static final Pattern F=Pattern.compile("^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$"); private final char[] value; public PlainPassword(String raw){if(raw==null||raw.isBlank()||!F.matcher(raw).matches())throw new IllegalArgumentException("Invalid password format");value=raw.toCharArray();} public char[] characters(){return Arrays.copyOf(value,value.length);} }
