@@ -1,0 +1,135 @@
+IDENTITY-ACCESS-NEXT (IAN) IDENTITYACCESS-CORE IMPLEMENTATION GUIDE
+PART 3: AUTHENTICATION
+==================================================================
+
+Purpose
+-------
+This is a focused AI handoff for completing the AUTHENTICATION capability in
+identityaccess-core without copying IA's DDD structure.
+
+See infrastructure-structure-design.txt only when implementing infrastructure adapters.
+
+
+Shared rules
+------------
+- Organize by capability, not by token type. Do not create a generic token package.
+- Command and query contracts belong in core; datastore implementations belong in
+  infrastructure.
+- Use command/ and query/ only for public use cases. Keep models and ports under
+  internal/model and internal/port.
+- Core ports are plain Java interfaces and must not name Redis, JDBC, JWT, SMTP, or
+  another implementation technology.
+- JWT is infrastructure. Core exposes AccessTokenIssuer.issue(...) -> String only.
+- Temporary data can still be a core concept. Core owns lifecycle rules; infrastructure
+  owns storage and serialization.
+- Messaging was removed. Preserve its business effects through direct synchronous use-
+  case coordination; do not restore domain/integration event infrastructure.
+- Avoid aggregate base classes, shared kernels, and domain services without concrete
+  behavior.
+
+Target core package
+-------------------
+
+com.minewaku.chatter.identityaccess/
+|-- authentication/
+|   |-- command/
+|   |-- query/
+|   `-- internal/{application,model,port}/
+`-- shared/handler/
+
+
+Required work
+-------------
+
+Current status
+--------------
+Not implemented in IAN. Password matching, login, access-token issuance, refresh
+sessions, refresh, logout, and session queries are missing.
+
+Public commands
+---------------
+
+AuthenticateUseCase.Command(String email, String password, DeviceInfo deviceInfo)
+-> Authenticated(String accessToken, String refreshToken)
+
+- Require an ACTIVE account and matching password.
+- Create RefreshSession and return both credentials.
+
+RefreshAccessTokenUseCase.Command(String refreshToken)
+-> Refreshed(String accessToken)
+
+- Use the same non-rotating refresh token.
+- Require a non-revoked, non-expired session and ACTIVE account.
+- Return only a new access token.
+
+LogoutCurrentSessionUseCase.Command(String refreshToken)
+-> Result(boolean revoked)
+
+- Resolve and idempotently revoke the matching session.
+
+Public query
+------------
+
+FindSessionsQuery.Command(long userId)
+-> List<SessionView>
+
+SessionView: sessionId, userId, deviceInfo, issuedAt, expiresAt, lastUsedAt, revokedAt.
+Presentation obtains userId from the authenticated principal.
+
+Internal model
+--------------
+
+RefreshSession:
+- sessionId
+- userId
+- deviceInfo
+- refreshTokenHash/reference
+- issuedAt
+- expiresAt
+- lastUsedAt
+- revokedAt
+
+Rules: bounded lifetime, explicit revocation, and account accessibility. There is no
+generation, rotation, grace period, or replay-detection algorithm.
+
+Core ports
+----------
+
+RefreshSessionRepository:
+- save(RefreshSession)
+- findByPresentedToken(String) -> Optional<RefreshSession>
+- findByUserId(UserId) -> List<RefreshSession>
+- revokeAllByUserId(UserId) -> int
+
+RefreshSessionViewRepository:
+- findByUserId(UserId) -> List<SessionView>
+
+RefreshTokenGenerator:
+- generate() -> String
+
+AccessTokenIssuer:
+- issue(UserId, Email) -> String
+
+Infrastructure implements opaque secure token generation, hashes stored refresh tokens,
+and implements AccessTokenIssuer as JwtAccessTokenIssuer. JWT/Claims/key types must not
+appear in core. Presentation owns the Secure/HttpOnly/SameSite cookie.
+
+Optional/undecided
+------------------
+- LogoutSessionUseCase(userId, sessionId, currentPassword) -> revoked.
+- LogoutOtherSessionsUseCase(userId, currentSessionId, currentPassword) -> revokedCount.
+
+
+Relevant sequencing
+-------------------
+1. PART 1 must provide PasswordHasher.matches and corrected account status behavior.
+2. Add login, simplified refresh session, refresh, logout, and query.
+3. Integrate session revocation with password change, suspension, and deletion.
+4. Add optional session-management behavior only after explicit approval.
+
+Do not implement
+----------------
+- Refresh-token rotation, generations, grace periods, or AES refresh-token codec.
+- JWT parsing/signing classes in core.
+- Messaging/domain-event infrastructure.
+- A generic token package.

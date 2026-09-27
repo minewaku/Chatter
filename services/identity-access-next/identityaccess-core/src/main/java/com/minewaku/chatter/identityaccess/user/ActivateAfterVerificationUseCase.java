@@ -1,1 +1,0 @@
-package com.minewaku.chatter.identityaccess.user; /** Reserved for future verification; no verification is implemented here. */ public interface ActivateAfterVerificationUseCase { Result handle(Command c); record Command(long userId){} record Result(boolean changed){} }

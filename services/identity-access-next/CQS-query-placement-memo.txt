@@ -1,0 +1,253 @@
+CQS QUERY PLACEMENT MEMO
+========================
+
+Status
+------
+
+This document is guidance for a possible future implementation.
+It does not require changing the current architecture now.
+
+
+Current Situation
+-----------------
+
+The service already has the beginning of Command Query Separation (CQS):
+state-changing operations and read operations are represented by separate
+use-case interfaces.
+
+At present, queries such as FindUserByIdUseCase and FindUserByEmailUseCase
+load the UserAccount aggregate through UserAccountRepository and map it into
+a result DTO. This is acceptable while the service is small.
+
+The possible future improvement is to give queries a dedicated read path so
+that simple reads do not need to hydrate the complete UserAccount aggregate,
+including password and persistence-related fields.
+
+
+Recommended Future Placement
+----------------------------
+
+1. Public query contracts
+
+   Location:
+
+     identityaccess-core/.../user/query
+
+   Responsibilities:
+
+   - Define the query input.
+   - Define the operation-specific result DTO.
+   - Define the public query interface used by presentation or other adapters.
+   - Expose only scalar values and intentional public result types.
+   - Never expose UserAccount or another internal domain model.
+
+   Possible examples:
+
+     FindUserByIdQuery.java
+     FindUserByEmailQuery.java
+     SearchUsersQuery.java
+
+   The existing convention of keeping immutable request and result records
+   with their owning operation can be retained.
+
+
+2. Query handlers and application policy
+
+   Location:
+
+     identityaccess-core/.../user/internal/application/query
+
+   Responsibilities:
+
+   - Coordinate a query operation.
+   - Apply access or authorization policy that belongs to the application.
+   - Call a database-independent read port.
+   - Map an internal read projection to the public query result if necessary.
+
+   Possible example:
+
+     FindUserByIdHandler.java
+
+
+3. Database-independent query ports
+
+   Location:
+
+     identityaccess-core/.../user/internal/port/query
+
+   Responsibilities:
+
+   - Describe the data needed by query handlers.
+   - Avoid Spring JDBC, SQL, database row, or PostgreSQL details.
+   - Return read projections rather than mutable domain aggregates.
+
+   Possible example:
+
+     UserAccountReader.java
+
+   A read port may expose methods such as:
+
+     Optional<UserAccountView> findById(long userId)
+     Optional<UserAccountView> findByEmail(String email)
+
+   Avoid creating one large reader containing every possible reporting and
+   search operation. Split readers by cohesive purpose when they grow.
+
+
+4. SQL and JDBC implementation
+
+   Location:
+
+     identityaccess-infrastructure/.../user/query
+
+   Responsibilities:
+
+   - Contain SELECT statements.
+   - Perform joins, filtering, sorting, and pagination.
+   - Map database rows directly into query projections.
+   - Use JdbcClient, NamedParameterJdbcTemplate, or another selected database
+     access mechanism.
+
+   Possible example:
+
+     JdbcUserAccountReader.java
+
+   Query implementations may select only the columns required by the result.
+   They should not load UserAccount merely to display data.
+
+
+5. HTTP presentation
+
+   Location:
+
+     identityaccess-presentation/.../user
+
+   Responsibilities:
+
+   - Parse path parameters, query parameters, and authentication information.
+   - Invoke the public query contract.
+   - Convert the result into the intended HTTP response.
+   - Avoid containing SQL or persistence logic.
+
+
+Suggested Future Flow
+---------------------
+
+  HTTP controller
+        |
+        v
+  Public query contract                 (core/user/query)
+        |
+        v
+  Query handler and access policy       (core/internal/application/query)
+        |
+        v
+  Query/read port                       (core/internal/port/query)
+        |
+        v
+  JDBC and SQL implementation           (infrastructure/user/query)
+
+
+Command-Side Repository
+-----------------------
+
+UserAccountRepository should remain focused on aggregate persistence for
+commands:
+
+- Load an aggregate before changing its state.
+- Save a new or changed aggregate.
+- Preserve optimistic locking and aggregate persistence rules.
+
+Loading an account before enable, disable, lock, unlock, activation, or soft
+deletion is part of executing a command. It is not an application query merely
+because it reads from the database.
+
+The email check during registration is also command-side behavior. Its intent
+could eventually be expressed as:
+
+  boolean existsByEmail(Email email)
+
+The database UNIQUE constraint must remain the final protection against
+concurrent duplicate registrations.
+
+
+Query Result Design
+-------------------
+
+Prefer operation-specific result types. For example, a profile query, an admin
+account query, and an authentication lookup should not automatically share one
+large UserAccountView.
+
+Benefits:
+
+- Each caller receives only the data it needs.
+- Sensitive fields are less likely to leak.
+- One query can evolve without changing unrelated callers.
+- Queries can select fewer database columns.
+
+Do not return password hashes from general profile or account queries.
+
+
+Authentication Lookup
+---------------------
+
+Authentication should have a dedicated, narrow internal query or port, such
+as LoadAuthenticationAccountByEmail. Its projection should contain only the
+fields needed for authentication, for example:
+
+- User ID
+- Normalized email, if required
+- Password hash information
+- Account status/accessibility
+
+It should not reuse a general FindUserByEmail result containing birthday,
+profile information, or other unrelated fields. It should also not be exposed
+as a general public user lookup endpoint.
+
+
+CQS Versus CQRS
+---------------
+
+CQS means that an operation is treated as either:
+
+- A command that may change state; or
+- A query that returns information and does not change observable business
+  state.
+
+A dedicated query path does not require full CQRS. Commands and queries may
+continue using the same PostgreSQL database and the same user_account table.
+
+Do not introduce a second database, event propagation, eventual consistency,
+or a separate deployment merely to claim CQS compliance.
+
+
+Possible Incremental Migration
+------------------------------
+
+If this design is implemented later, it can be introduced gradually:
+
+1. Leave existing command behavior and UserAccountRepository unchanged.
+2. Rename query input records from Command to Query or Request when convenient.
+3. Add a QueryHandler<Q, R> interface if it improves vocabulary clarity.
+4. Introduce the query/read port for one useful read operation.
+5. Implement that port with direct JDBC in infrastructure.
+6. Move new list, search, paging, or reporting operations onto the read path.
+7. Migrate existing simple reads only when there is a concrete benefit.
+
+There is no need to create a separate Maven query module initially. A separate
+module should be considered only if the read side later has materially
+different dependencies, storage, ownership, deployment, or operational needs.
+
+
+Decision Summary
+----------------
+
+- Keep the current architecture for now.
+- Public query contracts and operation-specific results belong in core.
+- Query policy and orchestration belong in core application code.
+- Database-independent read ports belong in core internal ports.
+- SELECT SQL and JDBC row mapping belong in infrastructure.
+- HTTP mapping belongs in presentation.
+- UserAccountRepository remains the aggregate repository used by commands.
+- Queries return projections, not UserAccount aggregates.
+- The command and query sides may continue sharing the same database.

@@ -1,0 +1,87 @@
+IDENTITY-ACCESS-NEXT (IAN) IDENTITYACCESS-CORE IMPLEMENTATION TASKS
+PART 1: USER
+==================================================================
+
+Objective
+---------
+Complete the approved USER capability work in identityaccess-core.
+
+
+Tasks
+-----
+
+1. Correct account status semantics.
+
+   Implement only these transitions:
+
+   PENDING_VERIFICATION -> ACTIVE       only after valid email verification
+   ACTIVE -> LOCKED -> ACTIVE           security lock/unlock
+   ACTIVE -> SUSPENDED -> ACTIVE        admin suspend/reinstate
+   any non-deleted state -> DELETED
+
+   Never allow a pending account to become active through unlock or reinstate.
+
+   Rename:
+
+   DisableUserAccountUseCase -> SuspendUserAccountUseCase
+   EnableUserAccountUseCase  -> ReinstateUserAccountUseCase
+
+2. Extend PasswordHasher with password verification:
+
+   hash(PlainPassword) -> PasswordHash
+   matches(PlainPassword, PasswordHash) -> boolean
+
+3. Add change-password behavior:
+
+   ChangePasswordUseCase.Command(long userId, String currentPassword,
+                                  String newPassword)
+   -> Result(boolean changed)
+
+   Require:
+   - an accessible account;
+   - the correct current password; and
+   - a new password that differs from the current password.
+
+   Add passwordModifiedAt only if retaining IA's five-minute change interval.
+
+4. Preserve registration outcomes internally:
+
+   Registered(long userId) | AccountAlreadyActive | VerificationPending
+
+5. Separate CQS repositories when persistence work begins:
+
+   UserAccountRepository       -> write/domain model
+   UserAccountViewRepository   -> query projections
+
+   Existing FindUser queries may remain, but after the split they must use the read
+   port and immutable query results.
+
+6. Integrate these cross-capability effects when their capabilities are available:
+
+   - Successful registration requests email verification when PART 2 is available.
+   - Password change, suspension, and soft deletion revoke all refresh sessions for
+     the user when PART 3 is available.
+
+7. Add username-change behavior:
+
+   ChangeUsernameUseCase(long userId, currentPassword, newUsername) -> changed
+
+8. Add email-change behavior:
+
+   ChangeEmailUseCase(long userId, currentPassword, newEmail)
+   -> changed + verificationRequired
+
+   A successful email change returns the account to PENDING_VERIFICATION and requests
+   new verification.
+
+9. Preserve deletion semantics. Do not add account restoration; deletion anonymizes
+   identity and credentials.
+
+
+Implementation order
+--------------------
+1. Correct statuses and add PasswordHasher.matches/change password.
+2. Integrate successful registration with email verification when PART 2 is available.
+3. Revoke authentication sessions on password change, suspension, and deletion when
+   PART 3 is available.
+4. Add username-change and email-change behavior.

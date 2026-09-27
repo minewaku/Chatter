@@ -1,0 +1,58 @@
+IDENTITY-ACCESS-NEXT (IAN) IDENTITYACCESS-CORE DESIGN NOTES
+PART 1: USER
+==================================================================
+
+Purpose
+-------
+This document records the design intent, boundaries, existing behavior, and undecided
+scope for the USER capability in identityaccess-core. It does not list approved
+implementation tasks; those are in missing-core-behaviors-part-1-user-tasks.txt.
+
+The implementation should complete the USER capability without copying IA's DDD
+structure.
+
+See infrastructure-structure-design.txt only when implementing infrastructure adapters.
+
+
+Shared rules
+------------
+- Organize by capability, not by token type. Do not create a generic token package.
+- Command and query contracts belong in core; datastore implementations belong in
+  infrastructure.
+- Use command/ and query/ only for public use cases. Keep models and ports under
+  internal/model and internal/port.
+- Core ports are plain Java interfaces and must not name Redis, JDBC, JWT, SMTP, or
+  another implementation technology.
+- JWT is infrastructure. Core exposes AccessTokenIssuer.issue(...) -> String only.
+- Temporary data can still be a core concept. Core owns lifecycle rules; infrastructure
+  owns storage and serialization.
+- Messaging was removed. Preserve its business effects through direct synchronous use-
+  case coordination; do not restore domain/integration event infrastructure.
+- Avoid aggregate base classes, shared kernels, and domain services without concrete
+  behavior.
+
+
+Target core package
+-------------------
+
+com.minewaku.chatter.identityaccess/
+|-- user/
+|   |-- command/
+|   |-- query/
+|   `-- internal/{application,model,port}/
+`-- shared/handler/
+
+
+Already implemented
+-------------------
+- Register user.
+- Find user by ID/email.
+- Enable/disable, lock/unlock, activate-after-verification, and soft-delete.
+- UserAccount and its email, username, birthday, password, ID, and status values.
+- UserAccountRepository, UserIdGenerator, and hash-only PasswordHasher ports.
+
+Do not implement
+----------------
+- Messaging/domain-event infrastructure.
+- A generic token package.
+- Account restoration without an approved retention/privacy design.

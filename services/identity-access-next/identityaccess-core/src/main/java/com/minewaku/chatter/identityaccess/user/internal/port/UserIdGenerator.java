@@ -1,1 +1,8 @@
-package com.minewaku.chatter.identityaccess.user.internal.port; import com.minewaku.chatter.identityaccess.user.internal.model.UserId; public interface UserIdGenerator { UserId nextId(); }
+package com.minewaku.chatter.identityaccess.user.internal.port;
+
+import com.minewaku.chatter.identityaccess.user.internal.model.UserId;
+
+public interface UserIdGenerator {
+
+    UserId nextId();
+}

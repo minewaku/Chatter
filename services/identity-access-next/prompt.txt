@@ -1,0 +1,115 @@
+# Project Context
+
+This is a microservice project. All services are located under `/services`.
+
+The current working directory is:
+
+`services/identity-access-next`
+
+Do not inspect unrelated services or components unless they are required for the current task.
+
+## Services
+
+- `IAN` = current service: `identity-access-next`
+- `IA` = legacy service: `../identity-access`
+
+`IA` is the legacy implementation and must be treated as **read-only reference material**.
+
+Do not modify any files under `../identity-access`.
+
+---
+
+# Goal
+
+`IA` was built using Domain-Driven Design (DDD) and Clean Architecture.
+
+I am rebuilding it as `IAN` with a simpler architecture while keeping Clean Architecture.
+
+The `identityaccess-core` module has already been migrated into the new structure.
+
+Do not refactor or migrate `identityaccess-core` unless something there is directly required to complete the infrastructure migration.
+
+Your responsibility is the migration and redesign of:
+
+`identityaccess-infrastructure`
+
+---
+
+# Phase 1 — Brainstorm
+
+Before modifying any files, discuss with me how the new `identityaccess-infrastructure` should be structured.
+
+Focus on:
+
+- Clean Architecture conventions
+- package organization commonly used in production Java/Spring projects
+- maintainability
+- clear separation between adapters and infrastructure concerns
+- avoiding unnecessary DDD-specific structure
+- keeping the structure practical rather than over-engineered
+
+Inspect the existing `identityaccess-infrastructure` in IA only as needed to understand what infrastructure concerns currently exist.
+
+Do not modify files during this phase.
+
+Present the proposed package structure and explain the important architectural decisions.
+
+---
+
+# Phase 2 — Migration
+
+After we finish and agree on the brainstormed structure, proceed with the migration.
+
+## Step 1 — Maven dependencies
+
+Compare the POM files of IA and IAN.
+
+Identify dependencies required by the infrastructure features being migrated that are missing from IAN.
+
+Add only the dependencies that are actually needed.
+
+Do not blindly copy all dependencies from IA.
+
+## Step 2 — Infrastructure migration
+
+Migrate the relevant infrastructure implementations from:
+
+`../identity-access`
+
+into the new structure under:
+
+`identityaccess-infrastructure`
+
+Use IA as the source of truth for existing behavior, configuration, integration details, and implementation requirements.
+
+Adapt the implementation to the architecture and conventions of IAN instead of blindly copying the old package structure.
+
+---
+
+# Excluded Areas
+
+Do NOT migrate or implement the following packages in this task:
+
+- `cache`
+- `cdc`
+- `exception`
+- `messaging`
+- `persistence`
+- `scheduler`
+
+Some belong to features that were removed from IAN, while others are intentionally reserved for later tasks after their architecture has been decided.
+
+Do not add dependencies that are needed only by these excluded areas.
+
+---
+
+# Working Rules
+
+- Treat `../identity-access` as read-only.
+- Modify files only inside `identity-access-next`.
+- Do not inspect unrelated services.
+- Prefer targeted inspection of IA instead of scanning the entire service.
+- Preserve relevant behavior from IA, but adapt the implementation to IAN's new architecture.
+- Do not reintroduce removed features simply because they exist in IA.
+- Do not refactor `identityaccess-core` unless required by a concrete infrastructure integration issue.
+

@@ -8,11 +8,10 @@ CREATE TABLE user_account (
     password_algorithm VARCHAR(64) NOT NULL,
     password_hash VARCHAR(512) NOT NULL,
     password_salt BYTEA NOT NULL,
-    password_modified_at TIMESTAMP WITH TIME ZONE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
     version BIGINT NOT NULL DEFAULT 0,
-    CONSTRAINT ck_user_account_status CHECK (status IN ('PENDING_VERIFICATION', 'ACTIVE', 'DISABLED', 'LOCKED', 'DELETED')),
+    CONSTRAINT ck_user_account_status CHECK (status IN ('PENDING_VERIFICATION', 'ACTIVE', 'LOCKED', 'SUSPENDED', 'DELETED')),
     CONSTRAINT ck_user_account_deletion CHECK (
         (status = 'DELETED' AND deleted_at IS NOT NULL) OR
         (status <> 'DELETED' AND deleted_at IS NULL)

@@ -1,0 +1,195 @@
+IAN CORE AND INFRASTRUCTURE STRUCTURE
+=====================================
+
+Goal
+----
+Keep Clean Architecture, add CQS without full CQRS, and organize infrastructure by
+business capability first. Storage duration does not define a package: Redis can be a
+primary store or a cache, while PostgreSQL can hold permanent or expiring data.
+
+
+Responsibility boundary
+-----------------------
+
+identityaccess-core owns:
+- command and query use-case contracts;
+- command/query input and output records;
+- account, verification, and session rules;
+- technology-neutral outbound ports;
+- state transitions and authorization decisions.
+
+identityaccess-infrastructure owns:
+- implementations of core outbound ports;
+- JDBC/Redis/other storage details and mappings;
+- password hashing, secure token generation, JWT issuance, and email delivery;
+- Spring Security, datastore clients, Vault, and other operational configuration.
+
+identityaccess-presentation owns:
+- HTTP requests/responses, cookies, headers, and authenticated-principal extraction.
+
+Core must not import Redis/JDBC entities, JWT/Claims classes, RSA keys, SMTP/template
+types, HTTP cookies, or datastore configuration.
+
+
+CQS placement
+-------------
+Both command and query contracts belong in core. Only their technical data-access
+implementations belong in infrastructure.
+
+Suggested future core shape:
+
+user/
+|-- command/
+|   |-- RegisterUserUseCase.java
+|   `-- SuspendUserAccountUseCase.java
+|-- query/
+|   |-- FindUserByIdQuery.java
+|   `-- UserAccountView.java
+`-- internal/
+    |-- application/
+    `-- port/
+        |-- UserAccountRepository.java       (write/domain repository)
+        `-- UserAccountViewRepository.java   (read/projection repository)
+
+Commands change state and return only acknowledgement, an identifier, or a typed
+outcome. Queries have no side effects and return immutable read models. Both sides may
+initially use the same PostgreSQL database; CQS does not require separate databases.
+
+
+Infrastructure package convention
+---------------------------------
+For repository adapters use:
+
+adapter/outbound/<capability>/<read-or-write>/<technology>
+
+For a cached copy use:
+
+adapter/outbound/<capability>/read/cache/<technology>
+
+Non-storage adapters such as hashing, ID generation, mail, and token issuance do not
+need artificial read/write folders.
+
+
+Target structure
+----------------
+
+identityaccess-infrastructure/src/main/
+|-- java/com/minewaku/chatter/identityaccess/infrastructure/
+|   |-- adapter/outbound/
+|   |   |-- user/
+|   |   |   |-- password/Argon2PasswordHasher.java                 [NEXT]
+|   |   |   |-- id/
+|   |   |   |   |-- SnowflakeUserIdGenerator.java                  [NEXT]
+|   |   |   |   `-- SnowflakeProperties.java                       [NEXT]
+|   |   |   |-- write/jdbc/JdbcUserAccountRepository.java          [FUTURE]
+|   |   |   |-- read/jdbc/JdbcUserAccountViewRepository.java       [FUTURE]
+|   |   |   `-- read/cache/redis/RedisUserAccountViewCache.java     [FUTURE]
+|   |   |-- authentication/
+|   |   |   |-- JwtAccessTokenIssuer.java                          [FUTURE]
+|   |   |   `-- SecureRandomRefreshTokenGenerator.java             [FUTURE]
+|   |   |-- verification/
+|   |   |   |-- token/SecureRandomVerificationTokenGenerator.java  [FUTURE]
+|   |   |   |-- mail/SmtpVerificationNotifier.java                 [FUTURE]
+|   |   |   `-- write/redis/RedisEmailVerificationRepository.java  [FUTURE]
+|   |   `-- session/
+|   |       |-- write/redis/RedisRefreshSessionRepository.java      [FUTURE]
+|   |       `-- read/redis/RedisSessionViewRepository.java          [FUTURE]
+|   |-- security/
+|   |   |-- SecurityConfiguration.java                              [NEXT]
+|   |   |-- JwtDecoderConfiguration.java                            [NEXT]
+|   |   `-- JwtProperties.java                                      [NEXT]
+|   `-- integration/
+|       |-- postgresql/PostgreSqlConfiguration.java                 [FUTURE]
+|       |-- redis/RedisConfiguration.java                           [FUTURE]
+|       `-- vault/VaultDatasourceCredentialRotator.java             [OPTIONAL]
+`-- resources/
+    |-- db/migration/V1__create_user_account.sql                     [EXISTS]
+    `-- templates/email-verification.html                           [FUTURE]
+
+Do not create FUTURE folders until their core ports are approved and their task is in
+scope. Persistence and cache implementation remain excluded from the current migration.
+
+
+Redis: primary storage versus cache
+-----------------------------------
+These are different roles even when both use Redis:
+
+- session/write/redis: Redis is the authoritative refresh-session store.
+- verification/write/redis: Redis is the authoritative verification store.
+- user/read/cache/redis: PostgreSQL is authoritative; Redis holds an optional copy.
+
+Shared Redis connection/serialization configuration belongs in integration/redis.
+Capability-specific keys, mapping, TTL, and lookup behavior stay with that adapter.
+
+A cache normally remains invisible to core. A CachedUserAccountViewRepository may
+decorate JdbcUserAccountViewRepository and use RedisUserAccountViewCache. Write-side
+cache eviction is handled in infrastructure after a successful commit, or by a bounded
+TTL when eventual freshness is acceptable.
+
+
+Current implementation status
+-----------------------------
+
+Already implemented in core:
+- registration and user lookup by ID/email;
+- enable/disable, lock/unlock, activate-after-verification, and soft-delete behavior;
+- UserAccount, value objects, and account-state logic;
+- PasswordHasher, UserIdGenerator, and UserAccountRepository ports.
+
+Already implemented in infrastructure:
+- V1 user-account SQL migration;
+- Maven dependencies prepared for JDBC, security, Flyway, Vault, Password4j, and JWT.
+- No Java infrastructure adapter is currently present.
+
+Not implemented yet:
+- Argon2PasswordHasher and SnowflakeUserIdGenerator adapters;
+- native Spring resource-server security;
+- corrected account-state flow and PasswordHasher.matches;
+- email-verification model/use cases/ports/adapters;
+- login, access-token issuance, refresh sessions, refresh, and logout;
+- separate CQS read repository ports and read adapters;
+- persistence repositories and caching adapters;
+- optional Vault credential rotation decision.
+
+The detailed behavior gaps remain in missing-core-behaviors.txt.
+
+
+Agreed account and token rules
+------------------------------
+Account statuses:
+
+PENDING_VERIFICATION -> ACTIVE only through valid email verification
+ACTIVE -> LOCKED -> ACTIVE for security locking
+ACTIVE -> SUSPENDED -> ACTIVE for administrative suspension/reinstatement
+any non-deleted status -> DELETED
+
+Do not provide a generic enable operation and do not allow pending accounts to pass
+through LOCKED/SUSPENDED to become active.
+
+Access token:
+- core declares AccessTokenIssuer.issue(userId, email) -> String;
+- infrastructure implements JwtAccessTokenIssuer;
+- JWT types and signing details never enter core;
+- incoming JWT validation uses Spring Security resource-server support.
+
+Refresh token:
+- opaque, high-entropy, non-rotating token;
+- only its hash/reference is stored;
+- refresh returns a new access token, not a new refresh token;
+- expiry and explicit logout/account revocation terminate it;
+- no AES token codec, generation counter, grace period, or replay algorithm.
+
+Email verification:
+- core concepts are EmailVerification and EmailVerificationRepository;
+- expiry, eligibility, single use, and account activation are core rules;
+- token generation/hashing, storage technology, URL creation, and mail are infrastructure.
+
+
+Current migration order
+-----------------------
+1. Correct core account transitions and add PasswordHasher.matches.
+2. Implement Argon2 and Snowflake adapters.
+3. Implement native Spring resource-server security.
+4. Decide whether Vault credential rotation remains required.
+5. Add verification/authentication/session adapters after their core contracts exist.
+6. Add read/write repositories and caching only in their separately approved tasks.
