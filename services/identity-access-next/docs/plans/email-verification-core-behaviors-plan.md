@@ -12,9 +12,9 @@ synchronous registration/email-change delivery effects.
 | Task | Status | Remaining gap |
 | --- | --- | --- |
 | Email-verification capability | Not implemented | Core has no `emailverification` package, model, ports, commands, services, or tests. |
-| Activation boundary | Unsafe public surface remains | `UserAccount.activateAfterVerification()` correctly permits only `PENDING_VERIFICATION -> ACTIVE`, but `ActivateAfterVerificationUseCase.Command(long userId)` can invoke it without verification evidence. |
+| Activation boundary | Public command removed; coordinator pending | `UserAccount.activateAfterVerification()` permits only `PENDING_VERIFICATION -> ACTIVE`; the arbitrary-user-ID use case and service are removed, and Part 2 must provide the sole trusted token coordinator. |
 | Registration integration | Ready | `RegisterUserService` saves a new pending account and returns `Registered(long userId)`, but creates no verification and sends nothing. |
-| Email-change integration | Ready | `ChangeEmailService` saves a changed email, returns the account to `PENDING_VERIFICATION`, and reports verification required, but creates no replacement verification. |
+| Email-change integration | Separate design required | `ChangeEmailService` currently changes the normalized email while the account remains `ACTIVE`. Part 2 must not reuse initial `PENDING_VERIFICATION`; a future flow must retain the verified email and model an unverified candidate separately. |
 | Time support | Available | `identityaccess-start` already provides a UTC `Clock`. |
 | Adapters | Not implemented | Verification persistence, secure token generation, rate limiting, and notification are absent. |
 
@@ -100,9 +100,9 @@ before implementation because the working tree contains broad uncommitted change
     Treat a missing account, changed email, or any other state as `InvalidOrExpired`.
   - In one transaction, record `verifiedAt`, activate the account, save both models,
     and return `Verified(userId)` only after both saves succeed.
-  - Remove `user.api.command.ActivateAfterVerificationUseCase` and
-    `ActivateAfterVerificationService`; only the trusted verification coordinator may
-    invoke the domain transition. Update USER tests accordingly.
+  - Keep the removed `user.api.command.ActivateAfterVerificationUseCase` and
+    `ActivateAfterVerificationService` absent; only the trusted verification
+    coordinator may invoke the domain transition. Update USER tests accordingly.
   - Test blank/missing, expired, consumed, wrong-email, missing-account, non-pending,
     successful, repeated-presentation, timestamp, and either-save-failure cases.
   - Verify: repository-wide search finds no public arbitrary-ID activation path, and
@@ -114,11 +114,12 @@ before implementation because the working tree contains broad uncommitted change
     endpoint from trusted internal flows.
   - After `RegisterUserService` saves a new account, create and request its initial
     verification in the same command/transaction before returning `Registered`.
-  - Do not send for `AccountAlreadyActive`, `VerificationPending`, or the uniqueness
+  - Do not send for `AccountAlreadyExists`, `VerificationPending`, or the uniqueness
     race reread path.
-  - After `ChangeEmailService` actually saves a new email and moves the account to
-    pending, replace the old verification and deliver to the normalized new address.
-    Do nothing for unchanged or rejected changes.
+  - Do not route email changes through initial-account verification or move the account
+    to `PENDING_VERIFICATION`. Introduce a separate unverified-email candidate flow
+    that retains the verified email while the account remains `ACTIVE`; do nothing for
+    unchanged or rejected changes.
   - Keep USER dependent only on a narrow core coordinator, never on presentation or
     infrastructure classes.
   - Test exactly one request for new registration and changed email; no requests on
@@ -150,7 +151,7 @@ before implementation because the working tree contains broad uncommitted change
   `identityaccess-core/src/main/java/com/minewaku/chatter/identityaccess/emailverification/internal/`
 - `identityaccess-core/src/main/java/com/minewaku/chatter/identityaccess/user/internal/application/command/RegisterUserService.java`
 - `identityaccess-core/src/main/java/com/minewaku/chatter/identityaccess/user/internal/application/command/ChangeEmailService.java`
-- Remove or internalize:
+- Already removed by the USER status-policy work; keep absent:
   - `identityaccess-core/src/main/java/com/minewaku/chatter/identityaccess/user/api/command/ActivateAfterVerificationUseCase.java`
   - `identityaccess-core/src/main/java/com/minewaku/chatter/identityaccess/user/internal/application/command/ActivateAfterVerificationService.java`
 

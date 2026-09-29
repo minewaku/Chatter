@@ -14,10 +14,14 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Arrays;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 class UserAccountTest {
 
     private static final PlainPassword PASSWORD = new PlainPassword("Password1!");
+    private static final PlainPassword INCORRECT_PASSWORD = new PlainPassword("Incorrect2@");
+    private static final Instant ORIGINAL_UPDATED_AT = Instant.parse("2026-01-01T00:00:00Z");
     private static final PasswordHasher PASSWORD_HASHER = new TestPasswordHasher();
 
     private UserAccount account(AccountStatus status) {
@@ -29,8 +33,8 @@ class UserAccountTest {
                 status,
                 null,
                 PASSWORD_HASHER.hash(PASSWORD),
-                Instant.parse("2026-01-01T00:00:00Z"),
-                Instant.parse("2026-01-01T00:00:00Z"),
+                ORIGINAL_UPDATED_AT,
+                ORIGINAL_UPDATED_AT,
                 0L);
     }
 
@@ -63,6 +67,55 @@ class UserAccountTest {
         assertTrue(account.reinstate());
         assertFalse(account.reinstate());
         assertEquals(AccountStatus.ACTIVE, account.status());
+    }
+
+    @ParameterizedTest
+    @EnumSource(AccountStatus.class)
+    void activate_after_verification_follows_the_status_policy(AccountStatus source) {
+        assertTransitionPolicy(
+                source,
+                AccountStatus.PENDING_VERIFICATION,
+                AccountStatus.ACTIVE,
+                UserAccount::activateAfterVerification);
+    }
+
+    @ParameterizedTest
+    @EnumSource(AccountStatus.class)
+    void lock_follows_the_status_policy(AccountStatus source) {
+        assertTransitionPolicy(source, AccountStatus.ACTIVE, AccountStatus.LOCKED, UserAccount::lock);
+    }
+
+    @ParameterizedTest
+    @EnumSource(AccountStatus.class)
+    void unlock_follows_the_status_policy(AccountStatus source) {
+        assertTransitionPolicy(source, AccountStatus.LOCKED, AccountStatus.ACTIVE, UserAccount::unlock);
+    }
+
+    @ParameterizedTest
+    @EnumSource(AccountStatus.class)
+    void suspend_follows_the_status_policy(AccountStatus source) {
+        assertTransitionPolicy(source, AccountStatus.ACTIVE, AccountStatus.SUSPENDED, UserAccount::suspend);
+    }
+
+    @ParameterizedTest
+    @EnumSource(AccountStatus.class)
+    void reinstate_follows_the_status_policy(AccountStatus source) {
+        assertTransitionPolicy(source, AccountStatus.SUSPENDED, AccountStatus.ACTIVE, UserAccount::reinstate);
+    }
+
+    @ParameterizedTest
+    @EnumSource(AccountStatus.class)
+    void soft_delete_follows_the_status_policy(AccountStatus source) {
+        UserAccount account = account(source);
+
+        if (source == AccountStatus.DELETED) {
+            assertFalse(account.softDelete());
+            assertEquals(ORIGINAL_UPDATED_AT, account.updatedAt());
+        } else {
+            assertTrue(account.softDelete());
+            assertEquals(AccountStatus.DELETED, account.status());
+            assertNotEquals(ORIGINAL_UPDATED_AT, account.updatedAt());
+        }
     }
 
     @Test
@@ -134,6 +187,18 @@ class UserAccountTest {
                 .changePassword(PASSWORD, new PlainPassword("OtherPassword3#"), PASSWORD_HASHER));
     }
 
+    @ParameterizedTest
+    @EnumSource(value = AccountStatus.class, names = "ACTIVE", mode = EnumSource.Mode.EXCLUDE)
+    void password_change_rejects_every_inaccessible_status_before_matching_credentials(AccountStatus status) {
+        UserAccount account = account(status);
+
+        assertThrows(
+                InvalidAccountStateTransitionException.class,
+                () -> account.changePassword(INCORRECT_PASSWORD, new PlainPassword("NewPassword2@"), PASSWORD_HASHER));
+        assertEquals(ORIGINAL_UPDATED_AT, account.updatedAt());
+        assertTrue(PASSWORD_HASHER.matches(PASSWORD, account.passwordHash()));
+    }
+
     @Test
     void username_changes_require_accessible_correct_credentials_and_a_new_value() {
         UserAccount account = account(AccountStatus.ACTIVE);
@@ -149,19 +214,41 @@ class UserAccountTest {
                 .changeUsername(PASSWORD, new Username("other_person"), PASSWORD_HASHER));
     }
 
+    @ParameterizedTest
+    @EnumSource(value = AccountStatus.class, names = "ACTIVE", mode = EnumSource.Mode.EXCLUDE)
+    void username_change_rejects_every_inaccessible_status_before_matching_credentials(AccountStatus status) {
+        UserAccount account = account(status);
+
+        assertThrows(
+                InvalidAccountStateTransitionException.class,
+                () -> account.changeUsername(INCORRECT_PASSWORD, new Username("new_person"), PASSWORD_HASHER));
+        assertEquals(ORIGINAL_UPDATED_AT, account.updatedAt());
+        assertEquals("person_42", account.username().value());
+    }
+
     @Test
     void email_changes_require_accessible_correct_credentials_and_a_new_normalized_value() {
         UserAccount account = account(AccountStatus.ACTIVE);
 
         assertFalse(account.changeEmail(PASSWORD, new Email(" PERSON@example.com "), PASSWORD_HASHER));
+        assertEquals(ORIGINAL_UPDATED_AT, account.updatedAt());
         assertTrue(account.changeEmail(PASSWORD, new Email("New@Example.com"), PASSWORD_HASHER));
         assertEquals("new@example.com", account.email().value());
-        assertEquals(AccountStatus.PENDING_VERIFICATION, account.status());
-        assertThrows(
-                InvalidAccountStateTransitionException.class,
-                () -> account.changeEmail(PASSWORD, new Email("other@example.com"), PASSWORD_HASHER));
+        assertEquals(AccountStatus.ACTIVE, account.status());
         assertThrows(InvalidCredentialsException.class, () -> account(AccountStatus.ACTIVE)
                 .changeEmail(new PlainPassword("Incorrect2@"), new Email("other@example.com"), PASSWORD_HASHER));
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = AccountStatus.class, names = "ACTIVE", mode = EnumSource.Mode.EXCLUDE)
+    void email_change_rejects_every_inaccessible_status_before_matching_credentials(AccountStatus status) {
+        UserAccount account = account(status);
+
+        assertThrows(
+                InvalidAccountStateTransitionException.class,
+                () -> account.changeEmail(INCORRECT_PASSWORD, new Email("new@example.com"), PASSWORD_HASHER));
+        assertEquals(ORIGINAL_UPDATED_AT, account.updatedAt());
+        assertEquals("person@example.com", account.email().value());
     }
 
     @Test
@@ -170,6 +257,30 @@ class UserAccountTest {
         assertThrows(IllegalArgumentException.class, () -> new Email("not-an-email"));
         assertThrows(IllegalArgumentException.class, () -> new Username(".bad"));
         assertThrows(IllegalArgumentException.class, () -> new PlainPassword("password"));
+    }
+
+    private void assertTransitionPolicy(
+            AccountStatus source, AccountStatus expected, AccountStatus target, AccountOperation operation) {
+        UserAccount account = account(source);
+
+        if (source == target) {
+            assertFalse(operation.apply(account));
+            assertEquals(target, account.status());
+            assertEquals(ORIGINAL_UPDATED_AT, account.updatedAt());
+        } else if (source == expected) {
+            assertTrue(operation.apply(account));
+            assertEquals(target, account.status());
+            assertNotEquals(ORIGINAL_UPDATED_AT, account.updatedAt());
+        } else {
+            assertThrows(InvalidAccountStateTransitionException.class, () -> operation.apply(account));
+            assertEquals(source, account.status());
+            assertEquals(ORIGINAL_UPDATED_AT, account.updatedAt());
+        }
+    }
+
+    @FunctionalInterface
+    private interface AccountOperation {
+        boolean apply(UserAccount account);
     }
 
     private static final class TestPasswordHasher implements PasswordHasher {

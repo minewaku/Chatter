@@ -7,11 +7,11 @@ public interface RegisterUserUseCase extends UseCaseHandler<RegisterUserUseCase.
 
     record Command(String email, String username, LocalDate birthday, String password) {}
 
-    sealed interface Result permits Registered, AccountAlreadyActive, VerificationPending {}
+    sealed interface Result permits Registered, AccountAlreadyExists, VerificationPending {}
 
     record Registered(long userId) implements Result {}
 
-    record AccountAlreadyActive() implements Result {}
+    record AccountAlreadyExists() implements Result {}
 
     record VerificationPending() implements Result {}
 }

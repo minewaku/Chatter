@@ -3,9 +3,9 @@ package com.minewaku.chatter.identityaccess.user.internal.application;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.minewaku.chatter.identityaccess.user.api.command.ActivateAfterVerificationUseCase;
 import com.minewaku.chatter.identityaccess.user.api.command.ChangeEmailUseCase;
 import com.minewaku.chatter.identityaccess.user.api.command.ChangePasswordUseCase;
 import com.minewaku.chatter.identityaccess.user.api.command.ChangeUsernameUseCase;
@@ -17,7 +17,6 @@ import com.minewaku.chatter.identityaccess.user.api.command.SuspendUserAccountUs
 import com.minewaku.chatter.identityaccess.user.api.command.UnlockUserAccountUseCase;
 import com.minewaku.chatter.identityaccess.user.api.query.FindUserByEmailUseCase;
 import com.minewaku.chatter.identityaccess.user.api.query.FindUserByIdUseCase;
-import com.minewaku.chatter.identityaccess.user.internal.application.command.ActivateAfterVerificationService;
 import com.minewaku.chatter.identityaccess.user.internal.application.command.ChangeEmailService;
 import com.minewaku.chatter.identityaccess.user.internal.application.command.ChangePasswordService;
 import com.minewaku.chatter.identityaccess.user.internal.application.command.ChangeUsernameService;
@@ -29,6 +28,9 @@ import com.minewaku.chatter.identityaccess.user.internal.application.command.Sus
 import com.minewaku.chatter.identityaccess.user.internal.application.command.UnlockUserAccountService;
 import com.minewaku.chatter.identityaccess.user.internal.application.query.FindUserByEmailService;
 import com.minewaku.chatter.identityaccess.user.internal.application.query.FindUserByIdService;
+import com.minewaku.chatter.identityaccess.user.internal.exception.DuplicateUserAccountException;
+import com.minewaku.chatter.identityaccess.user.internal.exception.InvalidAccountStateTransitionException;
+import com.minewaku.chatter.identityaccess.user.internal.model.AccountStatus;
 import com.minewaku.chatter.identityaccess.user.internal.model.Birthday;
 import com.minewaku.chatter.identityaccess.user.internal.model.Email;
 import com.minewaku.chatter.identityaccess.user.internal.model.PlainPassword;
@@ -38,11 +40,60 @@ import com.minewaku.chatter.identityaccess.user.internal.model.UserId;
 import com.minewaku.chatter.identityaccess.user.internal.model.Username;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
 class UserAccountApplicationServiceTest {
 
     private static final String CURRENT_PASSWORD = "Password1!";
+    private static final ExistingAccountCommand LOCK =
+            (repository, hasher, userId) -> new LockUserAccountService(repository)
+                    .handle(new LockUserAccountUseCase.Command(userId))
+                    .changed();
+    private static final ExistingAccountCommand UNLOCK =
+            (repository, hasher, userId) -> new UnlockUserAccountService(repository)
+                    .handle(new UnlockUserAccountUseCase.Command(userId))
+                    .changed();
+    private static final ExistingAccountCommand SUSPEND =
+            (repository, hasher, userId) -> new SuspendUserAccountService(repository)
+                    .handle(new SuspendUserAccountUseCase.Command(userId))
+                    .changed();
+    private static final ExistingAccountCommand REINSTATE =
+            (repository, hasher, userId) -> new ReinstateUserAccountService(repository)
+                    .handle(new ReinstateUserAccountUseCase.Command(userId))
+                    .changed();
+    private static final ExistingAccountCommand SOFT_DELETE =
+            (repository, hasher, userId) -> new SoftDeleteUserAccountService(repository)
+                    .handle(new SoftDeleteUserAccountUseCase.Command(userId))
+                    .changed();
+    private static final ExistingAccountCommand CHANGE_PASSWORD =
+            (repository, hasher, userId) -> new ChangePasswordService(repository, hasher)
+                    .handle(new ChangePasswordUseCase.Command(userId, CURRENT_PASSWORD, "NewPassword2@"))
+                    .changed();
+    private static final ExistingAccountCommand KEEP_PASSWORD =
+            (repository, hasher, userId) -> new ChangePasswordService(repository, hasher)
+                    .handle(new ChangePasswordUseCase.Command(userId, CURRENT_PASSWORD, CURRENT_PASSWORD))
+                    .changed();
+    private static final ExistingAccountCommand CHANGE_USERNAME =
+            (repository, hasher, userId) -> new ChangeUsernameService(repository, hasher)
+                    .handle(new ChangeUsernameUseCase.Command(userId, CURRENT_PASSWORD, "new_person"))
+                    .changed();
+    private static final ExistingAccountCommand KEEP_USERNAME =
+            (repository, hasher, userId) -> new ChangeUsernameService(repository, hasher)
+                    .handle(new ChangeUsernameUseCase.Command(userId, CURRENT_PASSWORD, "person_42"))
+                    .changed();
+    private static final ExistingAccountCommand CHANGE_EMAIL =
+            (repository, hasher, userId) -> new ChangeEmailService(repository, hasher)
+                    .handle(new ChangeEmailUseCase.Command(userId, CURRENT_PASSWORD, "new@example.com"))
+                    .changed();
+    private static final ExistingAccountCommand KEEP_EMAIL =
+            (repository, hasher, userId) -> new ChangeEmailService(repository, hasher)
+                    .handle(new ChangeEmailUseCase.Command(userId, CURRENT_PASSWORD, " PERSON@example.com "))
+                    .changed();
 
     @Test
     void change_password_hashes_and_saves_once_only_when_value_changes() {
@@ -96,43 +147,56 @@ class UserAccountApplicationServiceTest {
     }
 
     @Test
-    void registration_returns_typed_outcomes_without_duplicate_saves() {
+    void registration_creates_and_saves_one_pending_account_when_email_is_available() {
         UserAccountTestFakes.DeterministicPasswordHasher hasher =
                 new UserAccountTestFakes.DeterministicPasswordHasher();
         UserAccountTestFakes.SequentialUserIdGenerator ids = new UserAccountTestFakes.SequentialUserIdGenerator(100);
-        RegisterUserUseCase.Command command = registrationCommand();
+        UserAccountTestFakes.InMemoryRepository repository = new UserAccountTestFakes.InMemoryRepository();
 
-        UserAccountTestFakes.InMemoryRepository newRepository = new UserAccountTestFakes.InMemoryRepository();
-        RegisterUserUseCase.Result registered = new RegisterUserService(newRepository, ids, hasher).handle(command);
+        RegisterUserUseCase.Result registered =
+                new RegisterUserService(repository, ids, hasher).handle(registrationCommand());
+
         assertEquals(new RegisterUserUseCase.Registered(100), registered);
-        assertEquals(1, newRepository.saveCalls);
-
-        UserAccountTestFakes.InMemoryRepository pendingRepository = new UserAccountTestFakes.InMemoryRepository();
-        pendingRepository.add(pendingAccount(hasher));
-        RegisterUserUseCase.Result pending = new RegisterUserService(pendingRepository, ids, hasher).handle(command);
-        assertInstanceOf(RegisterUserUseCase.VerificationPending.class, pending);
-        assertEquals(0, pendingRepository.saveCalls);
-
-        UserAccountTestFakes.InMemoryRepository activeRepository = new UserAccountTestFakes.InMemoryRepository();
-        activeRepository.add(activeAccount(hasher));
-        RegisterUserUseCase.Result active = new RegisterUserService(activeRepository, ids, hasher).handle(command);
-        assertInstanceOf(RegisterUserUseCase.AccountAlreadyActive.class, active);
-        assertEquals(0, activeRepository.saveCalls);
+        assertEquals(1, repository.findByEmailCalls);
+        assertEquals(1, ids.calls);
+        assertEquals(1, repository.saveCalls);
     }
 
-    @Test
-    void registration_rereads_email_after_a_uniqueness_race() {
+    @ParameterizedTest
+    @EnumSource(AccountStatus.class)
+    void registration_classifies_every_existing_status_without_creating_or_saving(AccountStatus status) {
         UserAccountTestFakes.DeterministicPasswordHasher hasher =
                 new UserAccountTestFakes.DeterministicPasswordHasher();
+        UserAccountTestFakes.SequentialUserIdGenerator ids = new UserAccountTestFakes.SequentialUserIdGenerator(100);
+        UserAccountTestFakes.InMemoryRepository repository = new UserAccountTestFakes.InMemoryRepository();
+        repository.add(account(status, hasher));
+
+        RegisterUserUseCase.Result result =
+                new RegisterUserService(repository, ids, hasher).handle(registrationCommand());
+
+        assertRegistrationClassification(status, result);
+        assertEquals(1, repository.findByEmailCalls);
+        assertEquals(0, ids.calls);
+        assertEquals(0, repository.saveCalls);
+    }
+
+    @ParameterizedTest
+    @EnumSource(AccountStatus.class)
+    void registration_retry_after_a_uniqueness_race_applies_the_same_classification(AccountStatus status) {
+        UserAccountTestFakes.DeterministicPasswordHasher hasher =
+                new UserAccountTestFakes.DeterministicPasswordHasher();
+        UserAccountTestFakes.SequentialUserIdGenerator ids = new UserAccountTestFakes.SequentialUserIdGenerator(100);
         UserAccountTestFakes.InMemoryRepository repository = new UserAccountTestFakes.InMemoryRepository();
         repository.duplicateOnNextSave = true;
-        repository.accountToExposeAfterDuplicate = pendingAccount(hasher);
+        repository.accountToExposeAfterDuplicate = account(status, hasher);
+        RegisterUserService service = new RegisterUserService(repository, ids, hasher);
 
-        RegisterUserUseCase.Result result = new RegisterUserService(
-                        repository, new UserAccountTestFakes.SequentialUserIdGenerator(100), hasher)
-                .handle(registrationCommand());
+        assertThrows(DuplicateUserAccountException.class, () -> service.handle(registrationCommand()));
+        RegisterUserUseCase.Result result = service.handle(registrationCommand());
 
-        assertInstanceOf(RegisterUserUseCase.VerificationPending.class, result);
+        assertRegistrationClassification(status, result);
+        assertEquals(2, repository.findByEmailCalls);
+        assertEquals(1, ids.calls);
         assertEquals(1, repository.saveCalls);
     }
 
@@ -141,14 +205,8 @@ class UserAccountApplicationServiceTest {
         UserAccountTestFakes.DeterministicPasswordHasher hasher =
                 new UserAccountTestFakes.DeterministicPasswordHasher();
         UserAccountTestFakes.InMemoryRepository repository = new UserAccountTestFakes.InMemoryRepository();
-        repository.add(pendingAccount(hasher));
+        repository.add(activeAccount(hasher));
 
-        assertTrue(new ActivateAfterVerificationService(repository)
-                .handle(new ActivateAfterVerificationUseCase.Command(42))
-                .changed());
-        assertFalse(new ActivateAfterVerificationService(repository)
-                .handle(new ActivateAfterVerificationUseCase.Command(42))
-                .changed());
         assertTrue(new LockUserAccountService(repository)
                 .handle(new LockUserAccountUseCase.Command(42))
                 .changed());
@@ -179,11 +237,45 @@ class UserAccountApplicationServiceTest {
         assertFalse(new SoftDeleteUserAccountService(repository)
                 .handle(new SoftDeleteUserAccountUseCase.Command(42))
                 .changed());
-        assertEquals(6, repository.saveCalls);
+        assertEquals(5, repository.saveCalls);
     }
 
-    @Test
-    void query_services_read_immutable_projections_only_through_view_repository() {
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("existingAccountCommandCases")
+    void existing_account_commands_load_once_and_save_only_changes(
+            String description, AccountStatus status, ExpectedEffect expectedEffect, ExistingAccountCommand command) {
+        UserAccountTestFakes.DeterministicPasswordHasher hasher =
+                new UserAccountTestFakes.DeterministicPasswordHasher();
+        UserAccountTestFakes.InMemoryRepository repository = new UserAccountTestFakes.InMemoryRepository();
+        repository.add(account(status, hasher));
+
+        if (expectedEffect == ExpectedEffect.REJECTED) {
+            assertThrows(InvalidAccountStateTransitionException.class, () -> command.invoke(repository, hasher, 42));
+        } else {
+            boolean changed = command.invoke(repository, hasher, 42);
+            assertEquals(expectedEffect == ExpectedEffect.CHANGED, changed);
+        }
+
+        assertEquals(1, repository.findByIdCalls);
+        assertEquals(expectedEffect == ExpectedEffect.CHANGED ? 1 : 0, repository.saveCalls);
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("existingAccountCommands")
+    void existing_account_commands_fail_after_one_lookup_when_the_account_is_missing(
+            String description, ExistingAccountCommand command) {
+        UserAccountTestFakes.DeterministicPasswordHasher hasher =
+                new UserAccountTestFakes.DeterministicPasswordHasher();
+        UserAccountTestFakes.InMemoryRepository repository = new UserAccountTestFakes.InMemoryRepository();
+
+        assertThrows(IllegalArgumentException.class, () -> command.invoke(repository, hasher, 404));
+        assertEquals(1, repository.findByIdCalls);
+        assertEquals(0, repository.saveCalls);
+    }
+
+    @ParameterizedTest
+    @EnumSource(AccountStatus.class)
+    void query_services_return_immutable_projections_for_every_status(AccountStatus status) {
         UserAccountTestFakes.InMemoryViewRepository repository = new UserAccountTestFakes.InMemoryViewRepository();
         Instant timestamp = Instant.parse("2026-01-01T00:00:00Z");
         repository.add(new UserAccountView(
@@ -191,9 +283,9 @@ class UserAccountApplicationServiceTest {
                 "person@example.com",
                 "person_42",
                 LocalDate.of(1990, 1, 1),
-                "ACTIVE",
-                true,
-                null,
+                status.name(),
+                status.isAccessible(),
+                status == AccountStatus.DELETED ? timestamp : null,
                 timestamp,
                 timestamp));
 
@@ -206,8 +298,57 @@ class UserAccountApplicationServiceTest {
 
         assertEquals("person_42", byId.username());
         assertEquals("person@example.com", byEmail.email());
+        assertEquals(status.name(), byId.status());
+        assertEquals(status.name(), byEmail.status());
+        assertEquals(status.isAccessible(), byId.accessible());
+        assertEquals(status.isAccessible(), byEmail.accessible());
         assertEquals(1, repository.findByIdCalls);
         assertEquals(1, repository.findByEmailCalls);
+    }
+
+    private static Stream<Arguments> existingAccountCommandCases() {
+        return Stream.of(
+                Arguments.of("lock changes active", AccountStatus.ACTIVE, ExpectedEffect.CHANGED, LOCK),
+                Arguments.of("lock is a locked no-op", AccountStatus.LOCKED, ExpectedEffect.NO_OP, LOCK),
+                Arguments.of("lock rejects pending", AccountStatus.PENDING_VERIFICATION, ExpectedEffect.REJECTED, LOCK),
+                Arguments.of("unlock changes locked", AccountStatus.LOCKED, ExpectedEffect.CHANGED, UNLOCK),
+                Arguments.of("unlock is an active no-op", AccountStatus.ACTIVE, ExpectedEffect.NO_OP, UNLOCK),
+                Arguments.of("unlock rejects suspended", AccountStatus.SUSPENDED, ExpectedEffect.REJECTED, UNLOCK),
+                Arguments.of("suspend changes active", AccountStatus.ACTIVE, ExpectedEffect.CHANGED, SUSPEND),
+                Arguments.of("suspend is a suspended no-op", AccountStatus.SUSPENDED, ExpectedEffect.NO_OP, SUSPEND),
+                Arguments.of("suspend rejects locked", AccountStatus.LOCKED, ExpectedEffect.REJECTED, SUSPEND),
+                Arguments.of("reinstate changes suspended", AccountStatus.SUSPENDED, ExpectedEffect.CHANGED, REINSTATE),
+                Arguments.of("reinstate is an active no-op", AccountStatus.ACTIVE, ExpectedEffect.NO_OP, REINSTATE),
+                Arguments.of("reinstate rejects locked", AccountStatus.LOCKED, ExpectedEffect.REJECTED, REINSTATE),
+                Arguments.of("soft delete changes active", AccountStatus.ACTIVE, ExpectedEffect.CHANGED, SOFT_DELETE),
+                Arguments.of(
+                        "soft delete is a deleted no-op", AccountStatus.DELETED, ExpectedEffect.NO_OP, SOFT_DELETE),
+                Arguments.of("password changes active", AccountStatus.ACTIVE, ExpectedEffect.CHANGED, CHANGE_PASSWORD),
+                Arguments.of("password is an active no-op", AccountStatus.ACTIVE, ExpectedEffect.NO_OP, KEEP_PASSWORD),
+                Arguments.of(
+                        "password rejects pending",
+                        AccountStatus.PENDING_VERIFICATION,
+                        ExpectedEffect.REJECTED,
+                        CHANGE_PASSWORD),
+                Arguments.of("username changes active", AccountStatus.ACTIVE, ExpectedEffect.CHANGED, CHANGE_USERNAME),
+                Arguments.of("username is an active no-op", AccountStatus.ACTIVE, ExpectedEffect.NO_OP, KEEP_USERNAME),
+                Arguments.of("username rejects locked", AccountStatus.LOCKED, ExpectedEffect.REJECTED, CHANGE_USERNAME),
+                Arguments.of("email changes active", AccountStatus.ACTIVE, ExpectedEffect.CHANGED, CHANGE_EMAIL),
+                Arguments.of("email is an active no-op", AccountStatus.ACTIVE, ExpectedEffect.NO_OP, KEEP_EMAIL),
+                Arguments.of(
+                        "email rejects suspended", AccountStatus.SUSPENDED, ExpectedEffect.REJECTED, CHANGE_EMAIL));
+    }
+
+    private static Stream<Arguments> existingAccountCommands() {
+        return Stream.of(
+                Arguments.of("lock missing account", LOCK),
+                Arguments.of("unlock missing account", UNLOCK),
+                Arguments.of("suspend missing account", SUSPEND),
+                Arguments.of("reinstate missing account", REINSTATE),
+                Arguments.of("soft delete missing account", SOFT_DELETE),
+                Arguments.of("change password missing account", CHANGE_PASSWORD),
+                Arguments.of("change username missing account", CHANGE_USERNAME),
+                Arguments.of("change email missing account", CHANGE_EMAIL));
     }
 
     private UserAccount pendingAccount(UserAccountTestFakes.DeterministicPasswordHasher hasher) {
@@ -225,8 +366,45 @@ class UserAccountApplicationServiceTest {
         return account;
     }
 
+    private void assertRegistrationClassification(AccountStatus status, RegisterUserUseCase.Result result) {
+        if (status == AccountStatus.PENDING_VERIFICATION) {
+            assertInstanceOf(RegisterUserUseCase.VerificationPending.class, result);
+        } else {
+            assertInstanceOf(RegisterUserUseCase.AccountAlreadyExists.class, result);
+        }
+    }
+
+    private UserAccount account(AccountStatus status, UserAccountTestFakes.DeterministicPasswordHasher hasher) {
+        Instant timestamp = Instant.parse("2026-01-01T00:00:00Z");
+        return UserAccount.reconstitute(
+                new UserId(42),
+                new Email("person@example.com"),
+                new Username("person_42"),
+                new Birthday(LocalDate.of(1990, 1, 1)),
+                status,
+                status == AccountStatus.DELETED ? timestamp : null,
+                hasher.hash(new PlainPassword(CURRENT_PASSWORD)),
+                timestamp,
+                timestamp,
+                0L);
+    }
+
     private RegisterUserUseCase.Command registrationCommand() {
         return new RegisterUserUseCase.Command(
-                "person@example.com", "person_42", LocalDate.of(1990, 1, 1), CURRENT_PASSWORD);
+                " PERSON@Example.com ", "person_42", LocalDate.of(1990, 1, 1), CURRENT_PASSWORD);
+    }
+
+    private enum ExpectedEffect {
+        CHANGED,
+        NO_OP,
+        REJECTED
+    }
+
+    @FunctionalInterface
+    private interface ExistingAccountCommand {
+        boolean invoke(
+                UserAccountTestFakes.InMemoryRepository repository,
+                UserAccountTestFakes.DeterministicPasswordHasher hasher,
+                long userId);
     }
 }

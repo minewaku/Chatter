@@ -22,6 +22,8 @@ final class UserAccountTestFakes {
 
     static final class InMemoryRepository implements UserAccountRepository {
         private final Map<UserId, UserAccount> accounts = new LinkedHashMap<>();
+        int findByIdCalls;
+        int findByEmailCalls;
         int saveCalls;
         boolean duplicateOnNextSave;
         UserAccount accountToExposeAfterDuplicate;
@@ -32,11 +34,13 @@ final class UserAccountTestFakes {
 
         @Override
         public Optional<UserAccount> findById(UserId userId) {
+            findByIdCalls++;
             return Optional.ofNullable(accounts.get(userId));
         }
 
         @Override
         public Optional<UserAccount> findByEmail(Email email) {
+            findByEmailCalls++;
             return accounts.values().stream()
                     .filter(account -> account.email().equals(email))
                     .findFirst();
@@ -100,6 +104,7 @@ final class UserAccountTestFakes {
 
     static final class SequentialUserIdGenerator implements UserIdGenerator {
         private long nextValue;
+        int calls;
 
         SequentialUserIdGenerator(long initialValue) {
             nextValue = initialValue;
@@ -107,6 +112,7 @@ final class UserAccountTestFakes {
 
         @Override
         public UserId nextId() {
+            calls++;
             return new UserId(nextValue++);
         }
     }

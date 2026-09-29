@@ -172,7 +172,6 @@ public class UserAccount {
             return false;
         }
         email = newEmail;
-        status = AccountStatus.PENDING_VERIFICATION;
         markUpdated();
         return true;
     }

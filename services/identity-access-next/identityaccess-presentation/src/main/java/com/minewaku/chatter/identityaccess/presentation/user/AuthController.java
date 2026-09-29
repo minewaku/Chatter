@@ -23,7 +23,7 @@ public class AuthController {
     public ResponseEntity<Void> register(@Valid @RequestBody RegisterRequest r) {
         RegisterUserUseCase.Result result =
                 register.handle(new RegisterUserUseCase.Command(r.email(), r.username(), r.birthday(), r.password()));
-        return result instanceof RegisterUserUseCase.AccountAlreadyActive
+        return result instanceof RegisterUserUseCase.AccountAlreadyExists
                 ? ResponseEntity.status(HttpStatus.CONFLICT).build()
                 : ResponseEntity.ok().build();
     }

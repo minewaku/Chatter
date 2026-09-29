@@ -1,7 +1,6 @@
 package com.minewaku.chatter.identityaccess.user.internal.application.command;
 
 import com.minewaku.chatter.identityaccess.user.api.command.RegisterUserUseCase;
-import com.minewaku.chatter.identityaccess.user.internal.exception.DuplicateUserAccountException;
 import com.minewaku.chatter.identityaccess.user.internal.model.AccountStatus;
 import com.minewaku.chatter.identityaccess.user.internal.model.Birthday;
 import com.minewaku.chatter.identityaccess.user.internal.model.Email;
@@ -40,19 +39,15 @@ public class RegisterUserService implements RegisterUserUseCase {
         if (existingResult != null) {
             return existingResult;
         }
-        try {
-            UserAccount account = UserAccount.register(
-                    userIdGenerator.nextId(), email, username, birthday, passwordHasher.hash(password));
-            repository.save(account);
-            return new Registered(account.id().value());
-        } catch (DuplicateUserAccountException conflict) {
-            return repository.findByEmail(email).map(this::registrationResult).orElseThrow(() -> conflict);
-        }
+        UserAccount account = UserAccount.register(
+                userIdGenerator.nextId(), email, username, birthday, passwordHasher.hash(password));
+        repository.save(account);
+        return new Registered(account.id().value());
     }
 
     private Result registrationResult(UserAccount account) {
         return account.status() == AccountStatus.PENDING_VERIFICATION
                 ? new VerificationPending()
-                : new AccountAlreadyActive();
+                : new AccountAlreadyExists();
     }
 }
