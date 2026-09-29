@@ -1,0 +1,4 @@
+interface:
+  display_name: "RPI Research"
+  short_description: "Map codebases and existing flows"
+  default_prompt: "Use $rpi-research to map the codebase, trace information flow, and summarize what exists today."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "RPI Clarify"
+  short_description: "Review plans, surface risks, and get sign-off"
+  default_prompt: "Use $rpi-clarify to review the plan, surface every open question and risk, and get explicit sign-off before implementation."

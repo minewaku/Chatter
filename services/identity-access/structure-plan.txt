@@ -1,0 +1,7 @@
+# Identity Access - agreed direction
+
+- Use Clean Architecture, not tactical DDD: keep small immutable Java value objects for `UserId`, `Email`, `Username`, `Birthday`, `Password`, and `PasswordHash`; do not recreate aggregates, domain events, or a shared kernel.
+- Organize as a feature-first modular monolith (`user`, `auth`, `session`, `verification`), each with `application`, `model`, `adapter/in`, and `adapter/out`; keep framework/persistence annotations and Spring Data JDBC rows in `adapter/out`.
+- Identity Access remains the authority for account state. Other services consume only a validated subject/scopes, never the mutable `isDeleted`/`isLocked`/`isEnabled` fields.
+- Issue short-lived access JWTs and rotate refresh tokens. State change revokes sessions/refresh capability; use introspection or a gateway/deny-list only where immediate access revocation is required.
+- Remove integration events/outbox only when no service needs a reliable asynchronous business outcome. If cross-service deletion, provisioning, or fast revocation-cache updates are required, retain a narrowly versioned integration event/outbox; events alone do not provide immediate revocation.

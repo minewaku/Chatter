@@ -17,8 +17,7 @@ set +a
 : "${IDENTITYACCESS_REDIS_PASSWORD:?Missing IDENTITYACCESS_REDIS_PASSWORD}"
 : "${IDENTITYACCESS_REFRESH_SALT:?Missing IDENTITYACCESS_REFRESH_SALT}"
 : "${IDENTITYACCESS_REFRESH_PASSWORD:?Missing IDENTITYACCESS_REFRESH_PASSWORD}"
-
-# Identity Access PostgreSQL credential
+: "${IDENTITYACCESS_DB_VAULT_USERNAME:?Missing IDENTITYACCESS_DB_VAULT_USERNAME}"
 : "${IDENTITYACCESS_DB_VAULT_PASSWORD:?Missing IDENTITYACCESS_DB_VAULT_PASSWORD}"
 
 # Profile service secrets
@@ -30,8 +29,7 @@ set +a
 : "${PROFILE_CLOUDINARY_API_KEY:?Missing PROFILE_CLOUDINARY_API_KEY}"
 : "${PROFILE_CLOUDINARY_API_SECRET:?Missing PROFILE_CLOUDINARY_API_SECRET}"
 : "${PROFILE_CLOUDINARY_SECURE:?Missing PROFILE_CLOUDINARY_SECURE}"
-
-# Profile PostgreSQL credential
+: "${PROFILE_DB_VAULT_USERNAME:?Missing PROFILE_DB_VAULT_USERNAME}"
 : "${PROFILE_DB_VAULT_PASSWORD:?Missing PROFILE_DB_VAULT_PASSWORD}"
 
 # API Gateway service secrets
@@ -47,13 +45,10 @@ set +a
 : "${MESSAGE_CLOUDINARY_API_KEY:?Missing MESSAGE_CLOUDINARY_API_KEY}"
 : "${MESSAGE_CLOUDINARY_API_SECRET:?Missing MESSAGE_CLOUDINARY_API_SECRET}"
 : "${MESSAGE_CLOUDINARY_SECURE:?Missing MESSAGE_CLOUDINARY_SECURE}"
-
-# Message PostgreSQL and ScyllaDB credentials
+: "${MESSAGE_DB_VAULT_USERNAME:?Missing MESSAGE_DB_VAULT_USERNAME}"
 : "${MESSAGE_DB_VAULT_PASSWORD:?Missing MESSAGE_DB_VAULT_PASSWORD}"
+: "${MESSAGE_SCYLLA_VAULT_USERNAME:?Missing MESSAGE_SCYLLA_VAULT_USERNAME}"
 : "${MESSAGE_SCYLLA_VAULT_PASSWORD:?Missing MESSAGE_SCYLLA_VAULT_PASSWORD}"
-
-# Shared Vault database credential
-: "${VAULT_DB_USERNAME:?Missing VAULT_DB_USERNAME}"
 
 
 # KV secrets
@@ -99,7 +94,7 @@ vault write database/config/identityaccess-postgresql \
   plugin_name="postgresql-database-plugin" \
   connection_url="postgresql://{{username}}:{{password}}@identityaccess-postgresql-chatter:5440/chatter?sslmode=disable" \
   allowed_roles="identityaccess-postgresql-approle" \
-  username="$VAULT_DB_USERNAME" \
+  username="$IDENTITYACCESS_DB_VAULT_USERNAME" \
   password="$IDENTITYACCESS_DB_VAULT_PASSWORD"
 
 vault write database/roles/identityaccess-postgresql-approle \
@@ -117,7 +112,7 @@ vault write database/config/profile-postgresql \
   plugin_name="postgresql-database-plugin" \
   connection_url="postgresql://{{username}}:{{password}}@profile-postgresql-chatter:5441/chatter?sslmode=disable" \
   allowed_roles="profile-postgresql-approle" \
-  username="$VAULT_DB_USERNAME" \
+  username="$PROFILE_DB_VAULT_USERNAME" \
   password="$PROFILE_DB_VAULT_PASSWORD"
 
 vault write database/roles/profile-postgresql-approle \
@@ -135,7 +130,7 @@ vault write database/config/message-postgresql \
   plugin_name="postgresql-database-plugin" \
   connection_url="postgresql://{{username}}:{{password}}@message-postgresql-chatter:5442/chatter?sslmode=disable" \
   allowed_roles="message-postgresql-approle" \
-  username="$VAULT_DB_USERNAME" \
+  username="$MESSAGE_DB_VAULT_USERNAME" \
   password="$MESSAGE_DB_VAULT_PASSWORD"
 
 vault write database/roles/message-postgresql-approle \
@@ -154,7 +149,7 @@ vault write database/config/message-scylladb \
   hosts="message-scylladb-chatter" \
   port="9052" \
   protocol_version=4 \
-  username="$VAULT_DB_USERNAME" \
+  username="$MESSAGE_SCYLLA_VAULT_USERNAME" \
   password="$MESSAGE_SCYLLA_VAULT_PASSWORD" \
   tls=false \
   allowed_roles="message-scylladb-approle"

@@ -1,0 +1,4 @@
+interface:
+  display_name: "RPI Implement"
+  short_description: "Execute plans with compact checkpoints"
+  default_prompt: "Use $rpi-implement to implement the approved plan in small verified steps with intentional compaction."

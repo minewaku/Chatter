@@ -1,0 +1,38 @@
+# Intention
+
+I have an IdentityAccesss service in which was built with Domain Driven Design (DDD) and Clean Architecture (CL).
+
+Now I want to remove the DDD part since I think it slow and hard to maintain to go with only CL. 
+
+I already move all the features or important things in the features.txt which was extracted from `identityaccess-domain`
+
+Before moving on, I need to brainstorm with you for some technical/architecture concerns/ideas/solutions
+
+# Important
+
+I really need your advice as an senior/experience developer since I need someone to correct my idea/vision
+
+# My questions
+
+## 1
+Despite of removing DDD, I still love it's **Value Objet** idea so can I built a service using **Value Object** but not DDD.
+
+I plan to use spring-data-jdbc especially from Spring Boot 4.x (if you dont know this version that mean your knowledge is out-of-date so do not doubt about it) since its light-weight and CL friendly
+
+So what would the package structures of the service look like after I implements **Value Objet** (Only if this idea got approved during the discusions)
+
+## 2
+I plan to remove the "publish event to other service system" inside `identityaccess-infrastructure` + `identityaccess-application`
+
+But this feature is related to domain aspect:
+- If a User contains isDeleted, isLocked, isEnabled properties, do other service need to know about it.
+- When a User got invalidated through isDeleted, isLocked, isEnabled after a valid jwt got issued, do other service need to care about that or we just need to wait until it expired?
+
+## 3
+I have heard about many way of structuring folders, what are they and what is the best way (I have heard a way of folder structuring that mimic DDD but not a DDD - this allow us to separate services if they are grown up in the future - how about it?)
+
+## 4
+After discusions you need to summary what we have agree in a very short/brief way into `structure-plan.txt`
+
+
+

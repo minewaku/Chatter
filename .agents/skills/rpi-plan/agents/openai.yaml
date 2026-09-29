@@ -1,0 +1,4 @@
+interface:
+  display_name: "RPI Plan"
+  short_description: "Turn research into an execution plan"
+  default_prompt: "Use $rpi-plan to turn the research findings into a concise, ordered implementation plan."
