@@ -35,7 +35,6 @@ import com.minewaku.chatter.identityaccess.user.internal.model.Birthday;
 import com.minewaku.chatter.identityaccess.user.internal.model.Email;
 import com.minewaku.chatter.identityaccess.user.internal.model.PlainPassword;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserAccount;
-import com.minewaku.chatter.identityaccess.user.internal.model.UserAccountView;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserId;
 import com.minewaku.chatter.identityaccess.user.internal.model.Username;
 import java.time.Instant;
@@ -275,10 +274,10 @@ class UserAccountApplicationServiceTest {
 
     @ParameterizedTest
     @EnumSource(AccountStatus.class)
-    void query_services_return_immutable_projections_for_every_status(AccountStatus status) {
-        UserAccountTestFakes.InMemoryViewRepository repository = new UserAccountTestFakes.InMemoryViewRepository();
+    void query_services_return_query_specific_results_for_every_status(AccountStatus status) {
+        UserAccountTestFakes.InMemoryQueryRepository repository = new UserAccountTestFakes.InMemoryQueryRepository();
         Instant timestamp = Instant.parse("2026-01-01T00:00:00Z");
-        repository.add(new UserAccountView(
+        FindUserByIdUseCase.Result expectedById = new FindUserByIdUseCase.Result(
                 42,
                 "person@example.com",
                 "person_42",
@@ -287,7 +286,19 @@ class UserAccountApplicationServiceTest {
                 status.isAccessible(),
                 status == AccountStatus.DELETED ? timestamp : null,
                 timestamp,
-                timestamp));
+                timestamp);
+        FindUserByEmailUseCase.Result expectedByEmail = new FindUserByEmailUseCase.Result(
+                42,
+                "person@example.com",
+                "person_42",
+                LocalDate.of(1990, 1, 1),
+                status.name(),
+                status.isAccessible(),
+                status == AccountStatus.DELETED ? timestamp : null,
+                timestamp,
+                timestamp);
+        repository.addById(expectedById);
+        repository.addByEmail(expectedByEmail);
 
         FindUserByIdUseCase.Result byId = new FindUserByIdService(repository)
                 .handle(new FindUserByIdUseCase.Query(42))
@@ -296,14 +307,36 @@ class UserAccountApplicationServiceTest {
                 .handle(new FindUserByEmailUseCase.Query("PERSON@example.com"))
                 .orElseThrow();
 
-        assertEquals("person_42", byId.username());
-        assertEquals("person@example.com", byEmail.email());
-        assertEquals(status.name(), byId.status());
-        assertEquals(status.name(), byEmail.status());
-        assertEquals(status.isAccessible(), byId.accessible());
-        assertEquals(status.isAccessible(), byEmail.accessible());
+        assertEquals(expectedById, byId);
+        assertEquals(expectedByEmail, byEmail);
         assertEquals(1, repository.findByIdCalls);
         assertEquals(1, repository.findByEmailCalls);
+    }
+
+    @Test
+    void query_services_return_empty_when_no_account_is_found() {
+        UserAccountTestFakes.InMemoryQueryRepository repository = new UserAccountTestFakes.InMemoryQueryRepository();
+
+        assertTrue(new FindUserByIdService(repository)
+                .handle(new FindUserByIdUseCase.Query(404))
+                .isEmpty());
+        assertTrue(new FindUserByEmailService(repository)
+                .handle(new FindUserByEmailUseCase.Query("missing@example.com"))
+                .isEmpty());
+        assertEquals(1, repository.findByIdCalls);
+        assertEquals(1, repository.findByEmailCalls);
+    }
+
+    @Test
+    void query_services_reject_invalid_inputs_before_reading() {
+        UserAccountTestFakes.InMemoryQueryRepository repository = new UserAccountTestFakes.InMemoryQueryRepository();
+
+        assertThrows(IllegalArgumentException.class, () -> new FindUserByIdService(repository)
+                .handle(new FindUserByIdUseCase.Query(0)));
+        assertThrows(IllegalArgumentException.class, () -> new FindUserByEmailService(repository)
+                .handle(new FindUserByEmailUseCase.Query("invalid-email")));
+        assertEquals(0, repository.findByIdCalls);
+        assertEquals(0, repository.findByEmailCalls);
     }
 
     private static Stream<Arguments> existingAccountCommandCases() {

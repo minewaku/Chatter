@@ -1,17 +1,18 @@
 package com.minewaku.chatter.identityaccess.user.internal.application;
 
+import com.minewaku.chatter.identityaccess.user.api.query.FindUserByEmailUseCase;
+import com.minewaku.chatter.identityaccess.user.api.query.FindUserByIdUseCase;
 import com.minewaku.chatter.identityaccess.user.internal.exception.DuplicateUserAccountException;
 import com.minewaku.chatter.identityaccess.user.internal.model.Email;
 import com.minewaku.chatter.identityaccess.user.internal.model.PasswordHash;
 import com.minewaku.chatter.identityaccess.user.internal.model.PlainPassword;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserAccount;
-import com.minewaku.chatter.identityaccess.user.internal.model.UserAccountView;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserId;
 import com.minewaku.chatter.identityaccess.user.internal.model.Username;
 import com.minewaku.chatter.identityaccess.user.internal.port.PasswordHasher;
 import com.minewaku.chatter.identityaccess.user.internal.port.UserIdGenerator;
+import com.minewaku.chatter.identityaccess.user.internal.port.query.UserAccountQueryRepository;
 import com.minewaku.chatter.identityaccess.user.internal.port.repository.UserAccountRepository;
-import com.minewaku.chatter.identityaccess.user.internal.port.repository.UserAccountViewRepository;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -66,27 +67,30 @@ final class UserAccountTestFakes {
         }
     }
 
-    static final class InMemoryViewRepository implements UserAccountViewRepository {
-        private final Map<UserId, UserAccountView> accounts = new LinkedHashMap<>();
+    static final class InMemoryQueryRepository implements UserAccountQueryRepository {
+        private final Map<UserId, FindUserByIdUseCase.Result> accountsById = new LinkedHashMap<>();
+        private final Map<Email, FindUserByEmailUseCase.Result> accountsByEmail = new LinkedHashMap<>();
         int findByIdCalls;
         int findByEmailCalls;
 
-        void add(UserAccountView account) {
-            accounts.put(new UserId(account.userId()), account);
+        void addById(FindUserByIdUseCase.Result account) {
+            accountsById.put(new UserId(account.userId()), account);
+        }
+
+        void addByEmail(FindUserByEmailUseCase.Result account) {
+            accountsByEmail.put(new Email(account.email()), account);
         }
 
         @Override
-        public Optional<UserAccountView> findById(UserId userId) {
+        public Optional<FindUserByIdUseCase.Result> findById(UserId userId) {
             findByIdCalls++;
-            return Optional.ofNullable(accounts.get(userId));
+            return Optional.ofNullable(accountsById.get(userId));
         }
 
         @Override
-        public Optional<UserAccountView> findByEmail(Email email) {
+        public Optional<FindUserByEmailUseCase.Result> findByEmail(Email email) {
             findByEmailCalls++;
-            return accounts.values().stream()
-                    .filter(account -> account.email().equals(email.value()))
-                    .findFirst();
+            return Optional.ofNullable(accountsByEmail.get(email));
         }
     }
 

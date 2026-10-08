@@ -1,111 +1,78 @@
-IDENTITY-ACCESS-NEXT (IAN) IDENTITYACCESS-CORE IMPLEMENTATION GUIDE
-PART 2: EMAILVERIFICATION
-==================================================================
+IDENTITY-ACCESS-NEXT: EMAIL VERIFICATION (PART 2)
+=================================================
 
-Purpose
--------
-This is a focused AI handoff for completing the EMAILVERIFICATION capability in
-identityaccess-core without copying IA's DDD structure.
+Scope
+-----
+Implement email verification in identityaccess-core only. This file supersedes
+older email-verification plan notes where they conflict. Part 1's successful
+email-change behavior is included here. Do not implement endpoints, adapters,
+rate limiting, storage technology, or mail templates in this task.
 
-See infrastructure-structure-design.txt only when implementing infrastructure adapters.
+Structure
+---------
+- Use emailverification/command for public use cases and
+  emailverification/internal/{application,model,port} for implementation.
+- Core ports are plain Java interfaces without infrastructure technology names.
+- Coordinate use cases directly and synchronously; add no messaging, events,
+  generic token package, aggregate base, or public activation by user ID.
 
-
-Shared rules
-------------
-- Organize by capability, not by token type. Do not create a generic token package.
-- Command and query contracts belong in core; datastore implementations belong in
-  infrastructure.
-- Use command/ and query/ only for public use cases. Keep models and ports under
-  internal/model and internal/port.
-- Core ports are plain Java interfaces and must not name Redis, JDBC, JWT, SMTP, or
-  another implementation technology.
-- JWT is infrastructure. Core exposes AccessTokenIssuer.issue(...) -> String only.
-- Temporary data can still be a core concept. Core owns lifecycle rules; infrastructure
-  owns storage and serialization.
-- Messaging was removed. Preserve its business effects through direct synchronous use-
-  case coordination; do not restore domain/integration event infrastructure.
-- Avoid aggregate base classes, shared kernels, and domain services without concrete
-  behavior.
-
-Target core package
--------------------
-
-com.minewaku.chatter.identityaccess/
-|-- emailverification/
-|   |-- command/
-|   `-- internal/{application,model,port}/
-`-- shared/handler/
-
-
-Required work
--------------
-
-Current status
---------------
-Not implemented in IAN. IA created verification data and sent mail through event
-subscribers. Keep the effects, not the messaging mechanism.
-
-Public commands
+Public behavior
 ---------------
-
-RequestEmailVerificationUseCase.Command(String email)
--> Accepted
-
-- Public, rate-limited, and non-enumerating.
-- Only a pending account is eligible.
-- Replace the previous outstanding verification.
-- Create a new verification and request delivery.
+RequestEmailVerificationUseCase.Command(String email) -> Accepted
+- For every valid email, return the same fieldless Accepted result, including
+  absent, ineligible, and externally throttled accounts. Use the existing Email
+  validation for malformed input. The outer layer owns rate limiting; core adds
+  no limiter port or policy in this task.
+- Only a PENDING_VERIFICATION account may receive a new token. Invalidate its
+  previous outstanding token, create a replacement, and request delivery.
 
 VerifyEmailUseCase.Command(String token)
--> Verified(long userId) | InvalidOrExpired | AlreadyVerified
+  -> Verified(long userId) | InvalidOrExpired | AlreadyVerified
+- Missing, invalidated, or expired tokens return InvalidOrExpired. A token
+  expires when now >= expiresAt. Blank tokens are invalid.
+- A consumed token returns AlreadyVerified until its expiry; retain enough
+  state for this result. A resend invalidates the old token, so presenting it
+  returns InvalidOrExpired.
+- For an unused valid token, load the user and require both
+  PENDING_VERIFICATION status and an email matching the verification record.
+  Otherwise return InvalidOrExpired. Mark the verification used and transition
+  the account to ACTIVE in one transaction; only then return Verified(userId).
 
-- Resolve the opaque token.
-- Reject missing, expired, or consumed verification.
-- Mark it verified and perform PENDING_VERIFICATION -> ACTIVE.
-- Do not expose activation by arbitrary user ID as a public endpoint.
+Registration and email change
+-----------------------------
+- A newly registered pending account gets one verification and delivery request
+  before registration returns. Existing-account results do not trigger delivery.
+- On a successful change to a different email, change the account from ACTIVE
+  to PENDING_VERIFICATION, invalidate previous outstanding verification, and
+  request verification for the new email. Keep Part 1's
+  changed/verificationRequired result. Unchanged or rejected changes do nothing.
+- Pending accounts cannot use protected account changes; resend and verify
+  remain available. Status or email changes before verification make an unused
+  token invalid under the checks above.
 
-Internal model
---------------
+Model and ports
+---------------
+- Name the model EmailVerification: raw token, userId, email, createdAt,
+  expiresAt, and optional verifiedAt. It is expiring, single-use, and replaceable.
+- Default lifetime: 24 hours, supplied as a configurable Duration. Use an
+  injected Clock for creation and expiry checks.
+- EmailVerificationRepository: save(EmailVerification),
+  findByPresentedToken(String) -> Optional<EmailVerification>,
+  invalidateForUser(UserId). The current contract permits storing raw tokens;
+  do not log or include them in public results.
+- VerificationTokenGenerator.generate() -> String. Its later adapter must
+  produce an unpredictable token.
+- VerificationNotifier.sendVerification(Email, String rawToken, Instant expiresAt)
+  -> void. URL construction and delivery implementation belong outside core.
+- Reuse USER's Email, UserId, UserAccount, and UserAccountRepository.
 
-EmailVerification:
-- verificationId/token reference
-- userId
-- email
-- createdAt
-- expiresAt
-- verifiedAt
-
-Rules: expiring, single-use, replaceable on resend, and valid only for a pending account.
-Use EmailVerification, not VerificationToken or VerificationChallenge, as the model name.
-
-Core ports
-----------
-
-EmailVerificationRepository:
-- save(EmailVerification)
-- findByPresentedToken(String) -> Optional<EmailVerification>
-- invalidateForUser(UserId)
-
-VerificationTokenGenerator:
-- generate() -> String
-
-VerificationNotifier:
-- sendVerification(Email, String rawToken, Instant expiresAt) -> accepted/void
-
-Infrastructure must hash stored tokens and owns Redis/JDBC, URL construction, templates,
-and SMTP. PostgreSQL simplifies atomic activation; Redis gives natural expiry but no
-normal transaction with a PostgreSQL account.
-
-
-Relevant sequencing
--------------------
-1. PART 1 must provide the corrected PENDING_VERIFICATION -> ACTIVE status behavior.
-2. Add the model, ports, resend, verify, and registration integration.
-3. Preserve registration's verification-delivery effect through direct synchronous
-   use-case coordination.
-
-Do not implement
-----------------
-- Messaging/domain-event infrastructure.
-- A generic token package.
-- Public activation by arbitrary user ID.
+Transaction and verification expectations
+-----------------------------------------
+- Put @Transactional on command handlers coordinating account and verification
+  writes. Propagate repository and notifier failures. Delivery accepted by a
+  mail provider cannot be rolled back; a dead link after a later commit failure
+  is an accepted limitation, recoverable by resend while the account is pending.
+- Core tests cover creation, resend, expiry boundary, replay, invalidation,
+  status/email mismatch, registration/email-change effects, and failure paths.
+  Adapter tests later must prove database rollback and concurrent single-use;
+  @Transactional alone does not guarantee the latter.
