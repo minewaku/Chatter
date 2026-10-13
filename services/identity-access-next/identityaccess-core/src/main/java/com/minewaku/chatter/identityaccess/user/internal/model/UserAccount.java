@@ -5,7 +5,9 @@ import com.minewaku.chatter.identityaccess.user.internal.exception.InvalidCreden
 import com.minewaku.chatter.identityaccess.user.internal.port.PasswordHasher;
 import java.time.Instant;
 import java.util.Objects;
+import lombok.Getter;
 
+@Getter
 public class UserAccount {
 
     private final UserId id;
@@ -63,46 +65,6 @@ public class UserAccount {
             Long version) {
         return new UserAccount(
                 id, email, username, birthday, status, deletedAt, passwordHash, createdAt, updatedAt, version);
-    }
-
-    public UserId id() {
-        return id;
-    }
-
-    public Email email() {
-        return email;
-    }
-
-    public Username username() {
-        return username;
-    }
-
-    public Birthday birthday() {
-        return birthday;
-    }
-
-    public AccountStatus status() {
-        return status;
-    }
-
-    public Instant deletedAt() {
-        return deletedAt;
-    }
-
-    public PasswordHash passwordHash() {
-        return passwordHash;
-    }
-
-    public Instant createdAt() {
-        return createdAt;
-    }
-
-    public Instant updatedAt() {
-        return updatedAt;
-    }
-
-    public Long version() {
-        return version;
     }
 
     public boolean isAccessible() {

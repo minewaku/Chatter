@@ -6,6 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.minewaku.chatter.identityaccess.authentication.internal.application.AuthenticationSessionRevocationCoordinator;
+import com.minewaku.chatter.identityaccess.authentication.internal.application.AuthenticationTestFakes;
+import com.minewaku.chatter.identityaccess.emailverification.internal.application.EmailVerificationIssuanceCoordinator;
+import com.minewaku.chatter.identityaccess.emailverification.internal.port.repository.EmailVerificationRepository;
 import com.minewaku.chatter.identityaccess.user.api.command.ChangeEmailUseCase;
 import com.minewaku.chatter.identityaccess.user.api.command.ChangePasswordUseCase;
 import com.minewaku.chatter.identityaccess.user.api.command.ChangeUsernameUseCase;
@@ -37,8 +41,12 @@ import com.minewaku.chatter.identityaccess.user.internal.model.PlainPassword;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserAccount;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserId;
 import com.minewaku.chatter.identityaccess.user.internal.model.Username;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -49,6 +57,10 @@ import org.junit.jupiter.params.provider.MethodSource;
 class UserAccountApplicationServiceTest {
 
     private static final String CURRENT_PASSWORD = "Password1!";
+    private static final AuthenticationSessionRevocationCoordinator SESSION_REVOCATION =
+            new AuthenticationSessionRevocationCoordinator(
+                    new AuthenticationTestFakes.InMemorySessionRepository(),
+                    AuthenticationTestFakes.clockAt(AuthenticationTestFakes.NOW));
     private static final ExistingAccountCommand LOCK =
             (repository, hasher, userId) -> new LockUserAccountService(repository)
                     .handle(new LockUserAccountUseCase.Command(userId))
@@ -58,7 +70,7 @@ class UserAccountApplicationServiceTest {
                     .handle(new UnlockUserAccountUseCase.Command(userId))
                     .changed();
     private static final ExistingAccountCommand SUSPEND =
-            (repository, hasher, userId) -> new SuspendUserAccountService(repository)
+            (repository, hasher, userId) -> new SuspendUserAccountService(repository, SESSION_REVOCATION)
                     .handle(new SuspendUserAccountUseCase.Command(userId))
                     .changed();
     private static final ExistingAccountCommand REINSTATE =
@@ -66,15 +78,15 @@ class UserAccountApplicationServiceTest {
                     .handle(new ReinstateUserAccountUseCase.Command(userId))
                     .changed();
     private static final ExistingAccountCommand SOFT_DELETE =
-            (repository, hasher, userId) -> new SoftDeleteUserAccountService(repository)
+            (repository, hasher, userId) -> new SoftDeleteUserAccountService(repository, SESSION_REVOCATION)
                     .handle(new SoftDeleteUserAccountUseCase.Command(userId))
                     .changed();
     private static final ExistingAccountCommand CHANGE_PASSWORD =
-            (repository, hasher, userId) -> new ChangePasswordService(repository, hasher)
+            (repository, hasher, userId) -> new ChangePasswordService(repository, hasher, SESSION_REVOCATION)
                     .handle(new ChangePasswordUseCase.Command(userId, CURRENT_PASSWORD, "NewPassword2@"))
                     .changed();
     private static final ExistingAccountCommand KEEP_PASSWORD =
-            (repository, hasher, userId) -> new ChangePasswordService(repository, hasher)
+            (repository, hasher, userId) -> new ChangePasswordService(repository, hasher, SESSION_REVOCATION)
                     .handle(new ChangePasswordUseCase.Command(userId, CURRENT_PASSWORD, CURRENT_PASSWORD))
                     .changed();
     private static final ExistingAccountCommand CHANGE_USERNAME =
@@ -101,7 +113,7 @@ class UserAccountApplicationServiceTest {
         UserAccountTestFakes.InMemoryRepository repository = new UserAccountTestFakes.InMemoryRepository();
         UserAccount account = activeAccount(hasher);
         repository.add(account);
-        ChangePasswordService service = new ChangePasswordService(repository, hasher);
+        ChangePasswordService service = new ChangePasswordService(repository, hasher, SESSION_REVOCATION);
 
         ChangePasswordUseCase.Result changed =
                 service.handle(new ChangePasswordUseCase.Command(42, CURRENT_PASSWORD, "NewPassword2@"));
@@ -151,14 +163,21 @@ class UserAccountApplicationServiceTest {
                 new UserAccountTestFakes.DeterministicPasswordHasher();
         UserAccountTestFakes.SequentialUserIdGenerator ids = new UserAccountTestFakes.SequentialUserIdGenerator(100);
         UserAccountTestFakes.InMemoryRepository repository = new UserAccountTestFakes.InMemoryRepository();
+        List<String> deliveries = new ArrayList<>();
+        EmailVerificationIssuanceCoordinator issuance = new EmailVerificationIssuanceCoordinator(
+                Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC),
+                () -> "registration-token",
+                new EmptyVerificationRepository(),
+                (email, token, expiresAt) -> deliveries.add(token));
 
         RegisterUserUseCase.Result registered =
-                new RegisterUserService(repository, ids, hasher).handle(registrationCommand());
+                new RegisterUserService(repository, ids, hasher, issuance).handle(registrationCommand());
 
         assertEquals(new RegisterUserUseCase.Registered(100), registered);
         assertEquals(1, repository.findByEmailCalls);
         assertEquals(1, ids.calls);
         assertEquals(1, repository.saveCalls);
+        assertEquals(List.of("registration-token"), deliveries);
     }
 
     @ParameterizedTest
@@ -171,7 +190,7 @@ class UserAccountApplicationServiceTest {
         repository.add(account(status, hasher));
 
         RegisterUserUseCase.Result result =
-                new RegisterUserService(repository, ids, hasher).handle(registrationCommand());
+                new RegisterUserService(repository, ids, hasher, issuance()).handle(registrationCommand());
 
         assertRegistrationClassification(status, result);
         assertEquals(1, repository.findByEmailCalls);
@@ -188,7 +207,7 @@ class UserAccountApplicationServiceTest {
         UserAccountTestFakes.InMemoryRepository repository = new UserAccountTestFakes.InMemoryRepository();
         repository.duplicateOnNextSave = true;
         repository.accountToExposeAfterDuplicate = account(status, hasher);
-        RegisterUserService service = new RegisterUserService(repository, ids, hasher);
+        RegisterUserService service = new RegisterUserService(repository, ids, hasher, issuance());
 
         assertThrows(DuplicateUserAccountException.class, () -> service.handle(registrationCommand()));
         RegisterUserUseCase.Result result = service.handle(registrationCommand());
@@ -218,10 +237,10 @@ class UserAccountApplicationServiceTest {
         assertFalse(new UnlockUserAccountService(repository)
                 .handle(new UnlockUserAccountUseCase.Command(42))
                 .changed());
-        assertTrue(new SuspendUserAccountService(repository)
+        assertTrue(new SuspendUserAccountService(repository, SESSION_REVOCATION)
                 .handle(new SuspendUserAccountUseCase.Command(42))
                 .changed());
-        assertFalse(new SuspendUserAccountService(repository)
+        assertFalse(new SuspendUserAccountService(repository, SESSION_REVOCATION)
                 .handle(new SuspendUserAccountUseCase.Command(42))
                 .changed());
         assertTrue(new ReinstateUserAccountService(repository)
@@ -230,13 +249,71 @@ class UserAccountApplicationServiceTest {
         assertFalse(new ReinstateUserAccountService(repository)
                 .handle(new ReinstateUserAccountUseCase.Command(42))
                 .changed());
-        assertTrue(new SoftDeleteUserAccountService(repository)
+        assertTrue(new SoftDeleteUserAccountService(repository, SESSION_REVOCATION)
                 .handle(new SoftDeleteUserAccountUseCase.Command(42))
                 .changed());
-        assertFalse(new SoftDeleteUserAccountService(repository)
+        assertFalse(new SoftDeleteUserAccountService(repository, SESSION_REVOCATION)
                 .handle(new SoftDeleteUserAccountUseCase.Command(42))
                 .changed());
         assertEquals(5, repository.saveCalls);
+    }
+
+    @Test
+    void account_changes_revoke_all_sessions_only_when_they_actually_change_the_account() {
+        UserAccountTestFakes.DeterministicPasswordHasher hasher =
+                new UserAccountTestFakes.DeterministicPasswordHasher();
+        UserAccountTestFakes.InMemoryRepository repository = new UserAccountTestFakes.InMemoryRepository();
+        repository.add(activeAccount(hasher));
+        AuthenticationTestFakes.InMemorySessionRepository sessions =
+                new AuthenticationTestFakes.InMemorySessionRepository();
+        sessions.seed(
+                AuthenticationTestFakes.session(
+                        "0190f3a0-0000-7000-8000-000000000001", 42, AuthenticationTestFakes.NOW),
+                "raw-1");
+        AuthenticationSessionRevocationCoordinator revocation = new AuthenticationSessionRevocationCoordinator(
+                sessions, AuthenticationTestFakes.clockAt(AuthenticationTestFakes.NOW));
+        ChangePasswordService passwords = new ChangePasswordService(repository, hasher, revocation);
+
+        assertThrows(
+                RuntimeException.class,
+                () -> passwords.handle(new ChangePasswordUseCase.Command(42, "WrongPassword3#", "NewPassword2@")));
+        assertFalse(passwords
+                .handle(new ChangePasswordUseCase.Command(42, CURRENT_PASSWORD, CURRENT_PASSWORD))
+                .changed());
+        assertEquals(0, sessions.revokeAllCalls);
+
+        assertTrue(passwords
+                .handle(new ChangePasswordUseCase.Command(42, CURRENT_PASSWORD, "NewPassword2@"))
+                .changed());
+        assertEquals(1, sessions.revokeAllCalls);
+        assertTrue(new SuspendUserAccountService(repository, revocation)
+                .handle(new SuspendUserAccountUseCase.Command(42))
+                .changed());
+        assertEquals(2, sessions.revokeAllCalls);
+        assertTrue(new SoftDeleteUserAccountService(repository, revocation)
+                .handle(new SoftDeleteUserAccountUseCase.Command(42))
+                .changed());
+        assertEquals(3, sessions.revokeAllCalls);
+        assertEquals(
+                AuthenticationTestFakes.NOW,
+                sessions.get("0190f3a0-0000-7000-8000-000000000001").revokedAt());
+    }
+
+    @Test
+    void session_revocation_failure_propagates_and_reports_no_change() {
+        UserAccountTestFakes.DeterministicPasswordHasher hasher =
+                new UserAccountTestFakes.DeterministicPasswordHasher();
+        UserAccountTestFakes.InMemoryRepository repository = new UserAccountTestFakes.InMemoryRepository();
+        repository.add(activeAccount(hasher));
+        AuthenticationTestFakes.InMemorySessionRepository sessions =
+                new AuthenticationTestFakes.InMemorySessionRepository();
+        sessions.failOnRevokeAll = true;
+        SuspendUserAccountService service = new SuspendUserAccountService(
+                repository,
+                new AuthenticationSessionRevocationCoordinator(
+                        sessions, AuthenticationTestFakes.clockAt(AuthenticationTestFakes.NOW)));
+
+        assertThrows(IllegalStateException.class, () -> service.handle(new SuspendUserAccountUseCase.Command(42)));
     }
 
     @ParameterizedTest(name = "{0}")
@@ -425,6 +502,46 @@ class UserAccountApplicationServiceTest {
     private RegisterUserUseCase.Command registrationCommand() {
         return new RegisterUserUseCase.Command(
                 " PERSON@Example.com ", "person_42", LocalDate.of(1990, 1, 1), CURRENT_PASSWORD);
+    }
+
+    private EmailVerificationIssuanceCoordinator issuance() {
+        return new EmailVerificationIssuanceCoordinator(
+                Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC),
+                () -> "test-token",
+                new EmailVerificationRepository() {
+                    @Override
+                    public void save(
+                            com.minewaku.chatter.identityaccess.emailverification.internal.model.EmailVerification
+                                    verification) {}
+
+                    @Override
+                    public java.util.Optional<
+                                    com.minewaku.chatter.identityaccess.emailverification.internal.model
+                                            .EmailVerification>
+                            findByPresentedToken(String token) {
+                        return java.util.Optional.empty();
+                    }
+
+                    @Override
+                    public void invalidateForUser(UserId userId) {}
+                },
+                (email, token, expiry) -> {});
+    }
+
+    private static final class EmptyVerificationRepository implements EmailVerificationRepository {
+        @Override
+        public void save(
+                com.minewaku.chatter.identityaccess.emailverification.internal.model.EmailVerification verification) {}
+
+        @Override
+        public java.util.Optional<
+                        com.minewaku.chatter.identityaccess.emailverification.internal.model.EmailVerification>
+                findByPresentedToken(String token) {
+            return java.util.Optional.empty();
+        }
+
+        @Override
+        public void invalidateForUser(UserId userId) {}
     }
 
     private enum ExpectedEffect {

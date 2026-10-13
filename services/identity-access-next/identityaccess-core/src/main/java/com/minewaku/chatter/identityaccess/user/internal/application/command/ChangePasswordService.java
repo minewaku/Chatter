@@ -1,5 +1,6 @@
 package com.minewaku.chatter.identityaccess.user.internal.application.command;
 
+import com.minewaku.chatter.identityaccess.authentication.internal.application.AuthenticationSessionRevocationCoordinator;
 import com.minewaku.chatter.identityaccess.user.api.command.ChangePasswordUseCase;
 import com.minewaku.chatter.identityaccess.user.internal.model.PlainPassword;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserAccount;
@@ -12,10 +13,15 @@ import org.springframework.transaction.annotation.Transactional;
 public class ChangePasswordService extends UserAccountCommandService implements ChangePasswordUseCase {
 
     private final PasswordHasher passwordHasher;
+    private final AuthenticationSessionRevocationCoordinator sessionRevocation;
 
-    public ChangePasswordService(UserAccountRepository repository, PasswordHasher passwordHasher) {
+    public ChangePasswordService(
+            UserAccountRepository repository,
+            PasswordHasher passwordHasher,
+            AuthenticationSessionRevocationCoordinator sessionRevocation) {
         super(repository);
         this.passwordHasher = passwordHasher;
+        this.sessionRevocation = sessionRevocation;
     }
 
     @Override
@@ -24,6 +30,10 @@ public class ChangePasswordService extends UserAccountCommandService implements 
         UserAccount account = getAccount(command.userId());
         boolean changed = account.changePassword(
                 new PlainPassword(command.currentPassword()), new PlainPassword(command.newPassword()), passwordHasher);
-        return new Result(saveIfChanged(account, changed));
+        boolean saved = saveIfChanged(account, changed);
+        if (saved) {
+            sessionRevocation.revokeAllFor(account.id());
+        }
+        return new Result(saved);
     }
 }

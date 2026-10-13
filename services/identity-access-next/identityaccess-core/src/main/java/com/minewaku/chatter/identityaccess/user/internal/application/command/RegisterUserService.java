@@ -1,31 +1,29 @@
 package com.minewaku.chatter.identityaccess.user.internal.application.command;
 
+import com.minewaku.chatter.identityaccess.emailverification.internal.application.EmailVerificationIssuanceCoordinator;
+import com.minewaku.chatter.identityaccess.shared.port.TimeBasedIdGenerator;
 import com.minewaku.chatter.identityaccess.user.api.command.RegisterUserUseCase;
 import com.minewaku.chatter.identityaccess.user.internal.model.AccountStatus;
 import com.minewaku.chatter.identityaccess.user.internal.model.Birthday;
 import com.minewaku.chatter.identityaccess.user.internal.model.Email;
 import com.minewaku.chatter.identityaccess.user.internal.model.PlainPassword;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserAccount;
+import com.minewaku.chatter.identityaccess.user.internal.model.UserId;
 import com.minewaku.chatter.identityaccess.user.internal.model.Username;
 import com.minewaku.chatter.identityaccess.user.internal.port.PasswordHasher;
-import com.minewaku.chatter.identityaccess.user.internal.port.UserIdGenerator;
 import com.minewaku.chatter.identityaccess.user.internal.port.repository.UserAccountRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class RegisterUserService implements RegisterUserUseCase {
 
     private final UserAccountRepository repository;
-    private final UserIdGenerator userIdGenerator;
+    private final TimeBasedIdGenerator userIdGenerator;
     private final PasswordHasher passwordHasher;
-
-    public RegisterUserService(
-            UserAccountRepository repository, UserIdGenerator userIdGenerator, PasswordHasher passwordHasher) {
-        this.repository = repository;
-        this.userIdGenerator = userIdGenerator;
-        this.passwordHasher = passwordHasher;
-    }
+    private final EmailVerificationIssuanceCoordinator verificationIssuance;
 
     @Override
     @Transactional
@@ -40,8 +38,9 @@ public class RegisterUserService implements RegisterUserUseCase {
             return existingResult;
         }
         UserAccount account = UserAccount.register(
-                userIdGenerator.nextId(), email, username, birthday, passwordHasher.hash(password));
+                new UserId(userIdGenerator.nextId()), email, username, birthday, passwordHasher.hash(password));
         repository.save(account);
+        verificationIssuance.issue(account.id(), account.email());
         return new Registered(account.id().value());
     }
 

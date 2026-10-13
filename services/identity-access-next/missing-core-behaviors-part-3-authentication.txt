@@ -67,6 +67,9 @@ LogoutCurrentSessionUseCase.Command(String refreshToken)
 
 - Resolve and idempotently revoke the matching session.
 
+LogoutSessionUseCase(userId, sessionId, currentPassword) -> revoked.
+LogoutOtherSessionsUseCase(userId, currentSessionId, currentPassword) -> revokedCount.
+
 Public query
 ------------
 
@@ -79,11 +82,10 @@ Presentation obtains userId from the authenticated principal.
 Internal model
 --------------
 
-RefreshSession:
-- sessionId
+RefreshSession: (This is a weird name to me that you could give me some recommendation names)
+- sessionId (uuid v7 for database friendly)
 - userId
 - deviceInfo
-- refreshTokenHash/reference
 - issuedAt
 - expiresAt
 - lastUsedAt
@@ -95,11 +97,12 @@ generation, rotation, grace period, or replay-detection algorithm.
 Core ports
 ----------
 
-RefreshSessionRepository:
+RefreshSessionRepository: (you can adjust these names below since they are just draft)
 - save(RefreshSession)
-- findByPresentedToken(String) -> Optional<RefreshSession>
+- findBySessionId(String) -> Optional<RefreshSession>
 - findByUserId(UserId) -> List<RefreshSession>
 - revokeAllByUserId(UserId) -> int
+- revokePresentToken -> int
 
 RefreshSessionViewRepository:
 - findByUserId(UserId) -> List<SessionView>
@@ -110,14 +113,10 @@ RefreshTokenGenerator:
 AccessTokenIssuer:
 - issue(UserId, Email) -> String
 
+
 Infrastructure implements opaque secure token generation, hashes stored refresh tokens,
 and implements AccessTokenIssuer as JwtAccessTokenIssuer. JWT/Claims/key types must not
 appear in core. Presentation owns the Secure/HttpOnly/SameSite cookie.
-
-Optional/undecided
-------------------
-- LogoutSessionUseCase(userId, sessionId, currentPassword) -> revoked.
-- LogoutOtherSessionsUseCase(userId, currentSessionId, currentPassword) -> revokedCount.
 
 
 Relevant sequencing

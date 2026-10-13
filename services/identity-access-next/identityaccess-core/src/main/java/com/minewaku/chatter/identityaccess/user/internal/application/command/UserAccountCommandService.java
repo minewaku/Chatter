@@ -3,14 +3,13 @@ package com.minewaku.chatter.identityaccess.user.internal.application.command;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserAccount;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserId;
 import com.minewaku.chatter.identityaccess.user.internal.port.repository.UserAccountRepository;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
 
+@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 abstract class UserAccountCommandService {
 
     private final UserAccountRepository repository;
-
-    UserAccountCommandService(UserAccountRepository repository) {
-        this.repository = repository;
-    }
 
     protected UserAccount getAccount(long userId) {
         return repository

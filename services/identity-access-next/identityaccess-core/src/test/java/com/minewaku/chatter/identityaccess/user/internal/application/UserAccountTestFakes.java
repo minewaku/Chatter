@@ -1,5 +1,6 @@
 package com.minewaku.chatter.identityaccess.user.internal.application;
 
+import com.minewaku.chatter.identityaccess.shared.port.TimeBasedIdGenerator;
 import com.minewaku.chatter.identityaccess.user.api.query.FindUserByEmailUseCase;
 import com.minewaku.chatter.identityaccess.user.api.query.FindUserByIdUseCase;
 import com.minewaku.chatter.identityaccess.user.internal.exception.DuplicateUserAccountException;
@@ -10,7 +11,6 @@ import com.minewaku.chatter.identityaccess.user.internal.model.UserAccount;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserId;
 import com.minewaku.chatter.identityaccess.user.internal.model.Username;
 import com.minewaku.chatter.identityaccess.user.internal.port.PasswordHasher;
-import com.minewaku.chatter.identityaccess.user.internal.port.UserIdGenerator;
 import com.minewaku.chatter.identityaccess.user.internal.port.query.UserAccountQueryRepository;
 import com.minewaku.chatter.identityaccess.user.internal.port.repository.UserAccountRepository;
 import java.util.LinkedHashMap;
@@ -106,7 +106,7 @@ final class UserAccountTestFakes {
         }
     }
 
-    static final class SequentialUserIdGenerator implements UserIdGenerator {
+    static final class SequentialUserIdGenerator implements TimeBasedIdGenerator {
         private long nextValue;
         int calls;
 
@@ -115,9 +115,9 @@ final class UserAccountTestFakes {
         }
 
         @Override
-        public UserId nextId() {
+        public long nextId() {
             calls++;
-            return new UserId(nextValue++);
+            return nextValue++;
         }
     }
 }

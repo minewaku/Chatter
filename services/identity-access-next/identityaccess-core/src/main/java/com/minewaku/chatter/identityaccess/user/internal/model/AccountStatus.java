@@ -1,5 +1,10 @@
 package com.minewaku.chatter.identityaccess.user.internal.model;
 
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.Accessors;
+
+@RequiredArgsConstructor
 public enum AccountStatus {
 
     /**
@@ -42,13 +47,7 @@ public enum AccountStatus {
      */
     DELETED(false);
 
+    @Getter
+    @Accessors(fluent = false)
     private final boolean accessible;
-
-    AccountStatus(boolean accessible) {
-        this.accessible = accessible;
-    }
-
-    public boolean isAccessible() {
-        return accessible;
-    }
 }
