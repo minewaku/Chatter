@@ -5,6 +5,8 @@
 * `components/kafka/` → `components/kafka/AGENTS.md`
 * `components/vault/` → `components/vault/AGENTS.md`
 * `components/cloudflare/` → `components/cloudflare/AGENTS.md`
+* `components/postgresql/` → `components/postgresql/README.md`
+* `components/redis/` → `components/redis/README.md`
 
 ## Shared
 

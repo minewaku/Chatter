@@ -1,13 +1,67 @@
+server:
+  port: ${IDENTITY_ACCESS_SERVER_PORT:5001}
+
 spring:
   application:
     name: identity-access
   datasource:
-    url: ${IDENTITY_ACCESS_DB_URL:jdbc:postgresql://localhost:5432/identity_access}
-    username: ${IDENTITY_ACCESS_DB_USERNAME:identity_access}
-    password: ${IDENTITY_ACCESS_DB_PASSWORD:identity_access}
+    url: ${IDENTITY_ACCESS_DB_URL:jdbc:postgresql://localhost:5432/chatter?currentSchema=identity_access}
+    username: ${IDENTITY_ACCESS_DB_USERNAME:admin}
+    password: ${IDENTITY_ACCESS_DB_PASSWORD:123456}
   flyway:
     enabled: true
+    schemas: identity_access
+    default-schema: identity_access
+    create-schemas: true
+  data:
+    redis:
+      host: ${IDENTITY_ACCESS_REDIS_HOST:localhost}
+      port: ${IDENTITY_ACCESS_REDIS_PORT:6379}
+      username: ${IDENTITY_ACCESS_REDIS_USERNAME:admin}
+      password: ${IDENTITY_ACCESS_REDIS_PASSWORD:123456}
+  mail:
+    host: ${IDENTITY_ACCESS_MAIL_HOST:localhost}
+    port: ${IDENTITY_ACCESS_MAIL_PORT:1025}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  health:
+    mail:
+      enabled: false
 
 identity-access:
   snowflake:
     worker-id: ${IDENTITY_ACCESS_SNOWFLAKE_WORKER_ID:0}
+  redis:
+    key-prefix: "identity-access:"
+  session:
+    lifetime: P30D
+    retention: P30D
+  security:
+    jwt:
+      private-key: ${IDENTITY_ACCESS_JWT_PRIVATE_KEY}
+      public-key: ${IDENTITY_ACCESS_JWT_PUBLIC_KEY}
+      issuer: identity-access
+      audience: chatter
+      access-token-ttl: PT15M
+    public-endpoints:
+      - /api/v*/auth/register
+      - /api/v*/auth/authenticate
+      - /api/v*/auth/refresh
+      - /api/v*/auth/logout
+      - /api/v*/auth/verification/resend
+      - /api/v*/auth/verification/confirm
+      - /swagger-ui/**
+      - /swagger-ui.html
+      - /v3/api-docs/**
+    cors:
+      allowed-origins: []
+  verification:
+    mail:
+      from: no-reply@chatter.local
+      subject: Verify your Chatter email
+      public-base-url: http://localhost:5001
+      confirm-path: /api/v1/auth/verification/confirm

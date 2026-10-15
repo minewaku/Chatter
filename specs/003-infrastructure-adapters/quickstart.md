@@ -50,8 +50,11 @@ Expected: unit tests, Testcontainers integration tests, ArchUnit structure test,
 ## 5. Start the service and walk the flow
 
 ```bash
-mvn -pl identityaccess-start -am spring-boot:run
+mvn -pl identityaccess-start -am -DskipTests package
+java -jar identityaccess-start/target/identityaccess-start-0.0.1-SNAPSHOT.jar
 ```
+
+(`spring-boot:run` with `-am` also targets the parent pom, which has no main class, so run the packaged jar instead.)
 
 Expected on first start: log lines show Flyway migrating schema `identity_access`; `curl localhost:5001/actuator/health` returns `{"status":"UP"}`; `\dt identity_access.*` in `psql` lists `user_account` and `flyway_schema_history`, and nothing exists in `public` (SC-009).
 

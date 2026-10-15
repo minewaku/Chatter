@@ -1,0 +1,23 @@
+services:
+  redis-chatter:
+    image: redis:7
+    container_name: redis-chatter
+    restart: unless-stopped
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - ./config/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - ./data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--user", "admin", "--pass", "123456", "--no-auth-warning", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - chatter-net
+
+networks:
+  chatter-net:
+    name: chatter-net
+    driver: bridge

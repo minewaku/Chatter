@@ -48,7 +48,7 @@ redis/
 | Image | `redis:7` |
 | Network | `chatter-net` |
 | Host port | `${REDIS_PORT:-6379}` → container `6379` |
-| ACL | `user default off`; `user admin on >123456 ~* &* +@all` |
+| ACL | `user default on >123456 ~* &* +@all` (password required; must stay enabled so AOF replay of transactions works); `user admin on >123456 ~* &* +@all` |
 | Persistence | `appendonly yes`; data in `./data:/data` |
 | Health check | `redis-cli --user admin --pass 123456 --no-auth-warning ping` returns `PONG` |
 | Restart policy | `unless-stopped` |

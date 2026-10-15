@@ -182,3 +182,6 @@ README.html
 
 # Stray Maven local repo created when a Windows settings.xml path (D:/...) is read on Linux
 **/D:/
+
+# identity-access-next local development signing keys
+services/identity-access-next/.local/

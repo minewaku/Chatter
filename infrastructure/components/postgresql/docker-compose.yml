@@ -1,0 +1,25 @@
+services:
+  postgresql-chatter:
+    image: postgres:17
+    container_name: postgresql-chatter
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: chatter
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - ./data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d chatter"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - chatter-net
+
+networks:
+  chatter-net:
+    name: chatter-net
+    driver: bridge
