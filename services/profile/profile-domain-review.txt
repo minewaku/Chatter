@@ -1,0 +1,177 @@
+PROFILE-DOMAIN REVIEW
+=====================
+Module:  services/profile/profile-domain
+Date:    2026-10-17
+Branch:  profile (off master @ dd2164c)
+Scope:   all 31 files under profile-domain/src/main; usage checked in profile-application.
+Status:  nothing fixed yet. No tests exist in the module (src/ has only main).
+
+Paths below are relative to:
+  profile-domain/src/main/java/com/minewaku/chatter/profile/domain/
+
+
+A. BUGS  (fix first)
+--------------------
+
+1. Asset audit timestamps are never updated
+   model/asset/model/Asset.java:132, 148
+   AuditMetadata is immutable; markUpdated() returns a NEW instance.
+   Asset.detached() and Asset.attached() call it and discard the result,
+   so modified_at never changes. Profile does it correctly
+   (this.auditMetadata = this.auditMetadata.markUpdated()).
+   Also: attached() has a "!= null" guard that detached() lacks.
+   Fix: assign the result; drop or unify the null guard.
+
+2. Asset.detached() can emit duplicate AssetOrphanedDomainEvent
+   model/asset/model/Asset.java:129-143
+   The "refCount == 0" check is outside the "refCount > 0" branch.
+   Calling detached() on an asset already at 0 emits another orphaned
+   event, which triggers another storage delete.
+   Fix: only emit when the count transitions from 1 to 0 (or no-op at 0).
+
+3. BannerReplacedDomainEvent uses the wrong @NonNull
+   model/profile/event/BannerReplacedDomainEvent.java:317 (import)
+   Imports io.micrometer.common.lang.NonNull, which does no checking.
+   AvatarReplacedDomainEvent uses lombok.NonNull, which does.
+   Fix: import lombok.NonNull.
+
+4. Asset.isNew is never reset after save
+   model/asset/model/Asset.java:77-78, 120
+   createNew() sets isNew = true; nothing clears it. A second save() on the
+   same instance would attempt an INSERT again.
+
+5. Asset ref-counting has no concurrency guard, and soft-delete bypasses it
+   model/asset/model/Asset.java (no @Version)
+   application: SoftDeleteProfileApplicationService.handle()
+   - Concurrent attached()/detached() can lose updates -> leaked files or
+     premature deletion.
+   - Assets are content-addressed (namespace + hash), so users with the same
+     image share one row. SoftDeleteProfileApplicationService calls
+     assetRepository.deleteByAssetIdentity(...) directly, deleting the shared
+     asset regardless of refCount and bypassing the aggregate and the detach
+     events (the later AssetDetached subscriber then finds nothing).
+   Fix: add @Version (or atomic UPDATE ... ref_count = ref_count +/- 1);
+   route soft-delete through detached() instead of deleting directly.
+   (The soft-delete part is in the application layer, out of domain scope.)
+
+
+B. ARCHITECTURE
+---------------
+
+6. Domain is coupled to Spring Data JDBC
+   pom.xml pulls in the full spring-boot-starter-data-jdbc. Profile, Asset
+   and all value objects carry @Table/@Column/@Embedded/@PersistenceCreator/
+   @Transient; Asset implements Spring's Persistable. Persistence concerns
+   shape the model (reconstitute doubles as persistence ctor, isNew flag,
+   validation on load).
+   Options: pure-Java domain + mapping in profile-infrastructure (clean), or
+   depend only on spring-data-relational (cheap). Decide deliberately.
+
+7. sharedkernel depends on a bounded context
+   sharedkernel/event/UserSoftDeletedDomainEvent.java imports ProfileId.
+   It is also unused anywhere, and its @NonNull hashes are wrong because
+   avatar/banner can be null. Delete it.
+
+8. Exceptions are misplaced / sloppy
+   sharedkernel/exception/**
+   - AppException and ResourceNotFoundException are application/infra
+     concepts living in the domain.
+   - BusinessRuleViolationException error code typo: "BUSSINESS_RULE_VIOLATION".
+   - DomainException is concrete; should be abstract.
+   - BusinessException disables stack traces twice (ctor flags AND a
+     synchronized fillInStackTrace override).
+   - AppException(String, String) skips the null-default for errorCode that
+     the other constructor applies.
+
+9. Domain events handled ad hoc
+   Profile and Asset each hold a mutable List<DomainEvent> exposed by @Getter;
+   callers filter by instanceof; nothing clears the list (risk of
+   republishing).
+   Fix: AggregateRoot base class with pullDomainEvents().
+
+10. Time is hard-wired
+    DomainEvent, AuditMetadata, DeletionStatus call Instant.now() directly.
+    No injectable Clock -> untestable time. AuditMetadata.markUpdated() throws
+    DomainValidationException if the clock goes backwards (infra condition
+    surfaced as a business error).
+
+
+C. DESIGN / MODELLING
+---------------------
+
+11. Profile does not enforce its own invariants
+    model/profile/model/Profile.java
+    - softDelete(username, enablement) takes new state from the caller; nothing
+      checks the enablement is actually deleted or the username anonymized.
+    - updateEnablement(Enablement) accepts anything; a soft-deleted profile
+      can be "undeleted" with its data already wiped.
+    - CreateNew accepts any Enablement (can create an already-enabled profile).
+    Fix: model transitions as behaviour: enable(), lock(), softDelete(
+    anonymizedUsername), using DeletionStatus.markDeleted() (currently unused).
+
+12. Enablement is a boolean state machine
+    model/profile/model/Enablement.java
+    - enabled + locked + deleted flags decoded implicitly by isUnverified()/
+      isBanned(). A Status enum or explicit transitions would be clearer.
+    - ctor has @NonNull Boolean AND "enabled != null ? ... : false": contradictory,
+      the ternary is dead code.
+    - enabled() returns a new instance; the name is misleading.
+    - Mirrors identity-service state (UserNotAccessibleException, "User is
+      locked") inside the profile context: cross-context coupling.
+
+13. Audit metadata applied inconsistently
+    changeAvatar/changeBanner/changeDisplayName/changeBio never update
+    auditMetadata; only softDelete and updateEnablement do.
+
+14. softDelete always emits both replaced events
+    Even when avatar/banner hashes are already null.
+
+15. Naming / shape
+    - Profile.CreateNew -> createNew (Asset uses createNew).
+    - isAccessible() returns void and throws -> assertAccessible().
+    - AvatarReplaced/BannerReplaced events are copy-paste; one
+      ProfileImageReplaced event carrying a Namespace would do.
+    - Those events carry namespace as String and a raw Long profileId, while
+      AssetOrphanedDomainEvent uses AssetId.
+    - avatarHash/bannerHash are raw Strings (no value object, no validation).
+
+16. Inconsistent identity types
+    - ProfileId: immutable, implements Id. AssetId: mutable field, protected
+      no-arg ctor, @Column("id") on top of @Id, does not implement Id.
+    - Profile extends BaseEntity; Asset does not and has no equals/hashCode.
+    - Long.valueOf(value) <= 0 in both is pointless boxing.
+
+17. Value-object rough edges
+    - Username: message says "2-32 chars" but regex allows 1-32; pattern
+      recompiled on every call (String.matches); no normalization, so
+      "Alice" != "alice" unless the DB handles it.
+    - Username.changeUsername() mutates nothing, only returns its argument
+      after an equality check; Profile never calls it.
+    - DisplayName: MIN_LENGTH check duplicates isBlank(); message says
+      "control characters" but regex only excludes \n \r \t.
+    - Bio/DisplayName count UTF-16 units (emoji miscounted).
+    - Validation lives in @PersistenceCreator ctors: tightening a rule later
+      makes existing rows fail to load.
+
+18. Repository interfaces inconsistent
+    - ProfileRepository uses List/Iterable; AssetRepository uses Collection.
+    - ProfileRepository exposes delete/deleteById (hard delete) on an
+      aggregate designed around soft delete.
+    - AssetRepository.delete(Asset file): stale param name.
+    - No uniqueness query (e.g. existsByUsername) on either; may be handled
+      elsewhere, but a domain rule should not depend on that.
+
+19. Dead code
+    - AssetDimension (never referenced).
+    - Namespace.fromValue (duplicates valueOf).
+    - UserSoftDeletedDomainEvent (see #7).
+
+
+SUGGESTED ORDER
+---------------
+1. Bugs #1, #2, #3, then the shared-asset delete in #5.
+2. Profile owns its transitions (#11, #12) + AggregateRoot for events (#9).
+3. Unit tests for Enablement, value objects, Asset ref-counting (these would
+   have caught #1 and #2).
+4. Decide on removing Spring Data from the domain (#6) as a separate,
+   deliberate change.
