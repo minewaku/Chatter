@@ -99,9 +99,9 @@ vault write database/config/identityaccess-postgresql \
 
 vault write database/roles/identityaccess-postgresql-approle \
   db_name="identityaccess-postgresql" \
-  creation_statements=@"$ROOT_DIR/infrastructure/vault/assets/sql/postgresql-role-orm.sql" \
-  revocation_statements=@"$ROOT_DIR/infrastructure/vault/assets/sql/postgresql-revoke-orm.sql" \
-  renewal_statements=@"$ROOT_DIR/infrastructure/vault/assets/sql/postgresql-renew-orm.sql" \
+  creation_statements=@"$ROOT_DIR/infrastructure/components/vault/assets/sql/postgresql-role-orm.sql" \
+  revocation_statements=@"$ROOT_DIR/infrastructure/components/vault/assets/sql/postgresql-revoke-orm.sql" \
+  renewal_statements=@"$ROOT_DIR/infrastructure/components/vault/assets/sql/postgresql-renew-orm.sql" \
   default_ttl=1h \
   max_ttl=24h
 
@@ -117,9 +117,9 @@ vault write database/config/profile-postgresql \
 
 vault write database/roles/profile-postgresql-approle \
   db_name="profile-postgresql" \
-  creation_statements=@"$ROOT_DIR/infrastructure/vault/assets/sql/postgresql-role-orm.sql" \
-  revocation_statements=@"$ROOT_DIR/infrastructure/vault/assets/sql/postgresql-revoke-orm.sql" \
-  renewal_statements=@"$ROOT_DIR/infrastructure/vault/assets/sql/postgresql-renew-orm.sql" \
+  creation_statements=@"$ROOT_DIR/infrastructure/components/vault/assets/sql/postgresql-role-orm.sql" \
+  revocation_statements=@"$ROOT_DIR/infrastructure/components/vault/assets/sql/postgresql-revoke-orm.sql" \
+  renewal_statements=@"$ROOT_DIR/infrastructure/components/vault/assets/sql/postgresql-renew-orm.sql" \
   default_ttl=1h \
   max_ttl=24h
 
@@ -135,9 +135,9 @@ vault write database/config/message-postgresql \
 
 vault write database/roles/message-postgresql-approle \
   db_name="message-postgresql" \
-  creation_statements=@"$ROOT_DIR/infrastructure/vault/assets/sql/postgresql-role-orm.sql" \
-  revocation_statements=@"$ROOT_DIR/infrastructure/vault/assets/sql/postgresql-revoke-orm.sql" \
-  renewal_statements=@"$ROOT_DIR/infrastructure/vault/assets/sql/postgresql-renew-orm.sql" \
+  creation_statements=@"$ROOT_DIR/infrastructure/components/vault/assets/sql/postgresql-role-orm.sql" \
+  revocation_statements=@"$ROOT_DIR/infrastructure/components/vault/assets/sql/postgresql-revoke-orm.sql" \
+  renewal_statements=@"$ROOT_DIR/infrastructure/components/vault/assets/sql/postgresql-renew-orm.sql" \
   default_ttl=1h \
   max_ttl=24h
 
@@ -156,8 +156,8 @@ vault write database/config/message-scylladb \
 
 vault write database/roles/message-scylladb-approle \
   db_name="message-scylladb" \
-  creation_statements=@"$ROOT_DIR/infrastructure/vault/assets/cql/cassandra-role-orm.cql" \
-  revocation_statements=@"$ROOT_DIR/infrastructure/vault/assets/cql/cassandra-revoke-orm.cql" \
+  creation_statements=@"$ROOT_DIR/infrastructure/components/vault/assets/cql/cassandra-role-orm.cql" \
+  revocation_statements=@"$ROOT_DIR/infrastructure/components/vault/assets/cql/cassandra-revoke-orm.cql" \
   default_ttl=1h \
   max_ttl=24h
 
@@ -165,5 +165,5 @@ vault write database/roles/message-scylladb-approle \
 # Shared JWT keys
 
 vault kv put secret/common/jwt/rs256 \
-  private-key=@"$ROOT_DIR/infrastructure/vault/assets/keys/private-key.pem" \
-  public-key=@"$ROOT_DIR/infrastructure/vault/assets/keys/public-key.pem"
+  private-key=@"$ROOT_DIR/infrastructure/components/vault/assets/keys/private-key.pem" \
+  public-key=@"$ROOT_DIR/infrastructure/components/vault/assets/keys/public-key.pem"
