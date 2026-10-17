@@ -39,7 +39,7 @@ class JwtAccessTokenIssuerTest {
 
     @Test
     void tokenCarriesTheRequiredClaimsAndTheConfiguredLifetime() {
-        String token = issuer.issue(new UserId(1234L), new Email("alice@example.com"));
+        String token = issuer.issue(new UserId(1234L), new Email("alice@example.com"), "session-1");
 
         Jwt jwt = NimbusJwtDecoder.withPublicKey((RSAPublicKey) pair.getPublic())
                 .build()
@@ -48,6 +48,7 @@ class JwtAccessTokenIssuerTest {
         assertThat(jwt.getHeaders()).containsEntry("alg", "RS256");
         assertThat(jwt.getSubject()).isEqualTo("1234");
         assertThat(jwt.getClaimAsString("email")).isEqualTo("alice@example.com");
+        assertThat(jwt.getClaimAsString("sid")).isEqualTo("session-1");
         assertThat(jwt.getClaimAsString("iss")).isEqualTo("test-issuer");
         assertThat(jwt.getAudience()).containsExactly("test-audience");
         assertThat(jwt.getIssuedAt()).isEqualTo(now);
@@ -56,7 +57,7 @@ class JwtAccessTokenIssuerTest {
 
     @Test
     void tokenIsRejectedByADecoderWithAnotherKey() {
-        String token = issuer.issue(new UserId(1L), new Email("alice@example.com"));
+        String token = issuer.issue(new UserId(1L), new Email("alice@example.com"), "session-1");
         RSAPublicKey foreign = (RSAPublicKey) RsaKeyFixtures.newKeyPair().getPublic();
 
         assertThatThrownBy(() -> NimbusJwtDecoder.withPublicKey(foreign).build().decode(token))
@@ -74,7 +75,7 @@ class JwtAccessTokenIssuerTest {
 
     @Test
     void neverLogsTheTokenOrThePrivateKey(CapturedOutput output) {
-        String token = issuer.issue(new UserId(1L), new Email("alice@example.com"));
+        String token = issuer.issue(new UserId(1L), new Email("alice@example.com"), "session-1");
 
         assertThat(output.getAll()).doesNotContain(token).doesNotContain("PRIVATE KEY");
     }

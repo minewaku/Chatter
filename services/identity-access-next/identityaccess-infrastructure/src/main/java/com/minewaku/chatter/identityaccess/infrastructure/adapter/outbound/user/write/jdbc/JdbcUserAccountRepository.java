@@ -1,6 +1,6 @@
 package com.minewaku.chatter.identityaccess.infrastructure.adapter.outbound.user.write.jdbc;
 
-import com.minewaku.chatter.identityaccess.user.internal.exception.DuplicateUserAccountException;
+import com.minewaku.chatter.identityaccess.user.api.exception.DuplicateUserAccountException;
 import com.minewaku.chatter.identityaccess.user.internal.model.Email;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserAccount;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserId;

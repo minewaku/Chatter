@@ -10,8 +10,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.minewaku.chatter.identityaccess.authentication.api.command.LogoutOtherSessionsUseCase;
+import com.minewaku.chatter.identityaccess.authentication.api.exception.AuthenticationFailedException;
 import com.minewaku.chatter.identityaccess.authentication.internal.application.command.LogoutOtherSessionsService;
-import com.minewaku.chatter.identityaccess.authentication.internal.exception.AuthenticationFailedException;
 import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

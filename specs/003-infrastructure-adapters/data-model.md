@@ -83,10 +83,10 @@ Source of truth for `AuthenticationSession`. All keys expire at `expiresAt + ide
 | `create(session, rawToken)` | Atomically write hash, token pointer, sorted-set entry and expiries. |
 | `findByPresentedToken(raw)` | Pointer → hash. Returns expired and revoked records too. |
 | `findBySessionId(id)` | Hash → model. |
-| `touchIfUsable(id, now)` | If hash exists, `revokedAt` absent and `now < expiresAt`: set `lastUsedAt = max(lastUsedAt, now)`, return true. Otherwise false. |
-| `revokeBySessionId(userId, id, now)` | If hash exists, owned by `userId`, `revokedAt` absent: set it, return true. |
-| `revokeOtherSessions(userId, current, now)` | For every other retained session of the user with `revokedAt` absent: set it. Return count. |
-| `revokeAllByUserId(userId, now)` | Same for every retained session. Return count. |
+| `rotate(id, presented, new, now, newExpiresAt)` | If hash exists, `revokedAt` absent, `now < expiresAt` and the presented credential's pointer names this session: delete that pointer, create the new pointer, set `tokenDigest`, `expiresAt = newExpiresAt`, `lastUsedAt = max(lastUsedAt, now)`, recompute key lifetimes (new expiry + retention), return true. Otherwise change nothing, false. One Lua script (`session-rotate.lua`). Replaces `touchIfUsable` (spec 004). |
+| `revokeBySessionId(userId, id, now)` | If hash exists, owned by `userId`, `revokedAt` absent: set it, return true. In the same script also `SET <prefix>access-revoked:<userId>:<id> <now micros> PX <access-token-ttl>` (spec 004; revocation entry, nothing is written when the session was not newly revoked). |
+| `revokeOtherSessions(userId, current, now)` | For every other retained session of the user with `revokedAt` absent: set it and write its revocation entry. Return count. |
+| `revokeAllByUserId(userId, now)` | Same for every retained session (nothing kept). Return count. |
 | `findByUserId(userId)` (view) | Read all ids in the sorted set, drop and prune ids whose hash expired, sort by `issuedAt` descending then `sessionId` ascending, map to `SessionView`. |
 
 ## 4. Non-persisted adapter configuration objects

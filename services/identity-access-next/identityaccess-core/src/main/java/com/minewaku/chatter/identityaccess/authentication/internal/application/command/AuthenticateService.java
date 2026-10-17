@@ -1,7 +1,7 @@
 package com.minewaku.chatter.identityaccess.authentication.internal.application.command;
 
 import com.minewaku.chatter.identityaccess.authentication.api.command.AuthenticateUseCase;
-import com.minewaku.chatter.identityaccess.authentication.internal.exception.AuthenticationFailedException;
+import com.minewaku.chatter.identityaccess.authentication.api.exception.AuthenticationFailedException;
 import com.minewaku.chatter.identityaccess.authentication.internal.model.AuthenticationSession;
 import com.minewaku.chatter.identityaccess.authentication.internal.port.AccessTokenIssuer;
 import com.minewaku.chatter.identityaccess.authentication.internal.port.RefreshTokenGenerator;
@@ -49,7 +49,7 @@ public class AuthenticateService implements AuthenticateUseCase {
         String refreshToken = refreshTokens.generate();
         AuthenticationSession session = AuthenticationSession.issue(
                 sessionIds.nextId(), account.id(), device.label(), clock.instant(), sessionLifetime);
-        String accessToken = accessTokens.issue(account.id(), account.email());
+        String accessToken = accessTokens.issue(account.id(), account.email(), session.sessionId());
 
         sessions.create(session, refreshToken);
         return new Authenticated(accessToken, refreshToken);

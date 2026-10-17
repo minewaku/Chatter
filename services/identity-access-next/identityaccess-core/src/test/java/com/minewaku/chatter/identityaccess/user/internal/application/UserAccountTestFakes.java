@@ -1,9 +1,9 @@
 package com.minewaku.chatter.identityaccess.user.internal.application;
 
 import com.minewaku.chatter.identityaccess.shared.port.TimeBasedIdGenerator;
+import com.minewaku.chatter.identityaccess.user.api.exception.DuplicateUserAccountException;
 import com.minewaku.chatter.identityaccess.user.api.query.FindUserByEmailUseCase;
 import com.minewaku.chatter.identityaccess.user.api.query.FindUserByIdUseCase;
-import com.minewaku.chatter.identityaccess.user.internal.exception.DuplicateUserAccountException;
 import com.minewaku.chatter.identityaccess.user.internal.model.Email;
 import com.minewaku.chatter.identityaccess.user.internal.model.PasswordHash;
 import com.minewaku.chatter.identityaccess.user.internal.model.PlainPassword;

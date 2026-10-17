@@ -6,9 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.minewaku.chatter.identityaccess.authentication.api.exception.AuthenticationFailedException;
 import com.minewaku.chatter.identityaccess.authentication.api.query.FindSessionsQuery;
 import com.minewaku.chatter.identityaccess.authentication.internal.application.query.FindSessionsService;
-import com.minewaku.chatter.identityaccess.authentication.internal.exception.AuthenticationFailedException;
 import java.lang.reflect.RecordComponent;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;

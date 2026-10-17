@@ -1,8 +1,8 @@
 package com.minewaku.chatter.identityaccess.authentication.internal.application.command;
 
 import com.minewaku.chatter.identityaccess.authentication.api.command.LogoutOtherSessionsUseCase;
+import com.minewaku.chatter.identityaccess.authentication.api.exception.AuthenticationFailedException;
 import com.minewaku.chatter.identityaccess.authentication.internal.application.AccountVerifier;
-import com.minewaku.chatter.identityaccess.authentication.internal.exception.AuthenticationFailedException;
 import com.minewaku.chatter.identityaccess.authentication.internal.model.AuthenticationSession;
 import com.minewaku.chatter.identityaccess.authentication.internal.port.repository.AuthenticationSessionRepository;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserAccount;

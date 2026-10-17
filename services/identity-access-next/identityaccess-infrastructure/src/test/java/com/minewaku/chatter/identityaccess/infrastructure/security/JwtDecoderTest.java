@@ -35,7 +35,8 @@ class JwtDecoderTest {
 
     private static String issue(JwtProperties properties, Instant at) {
         Clock clock = Clock.fixed(at, ZoneOffset.UTC);
-        return new JwtAccessTokenIssuer(properties, clock).issue(new UserId(77L), new Email("alice@example.com"));
+        return new JwtAccessTokenIssuer(properties, clock)
+                .issue(new UserId(77L), new Email("alice@example.com"), "session-1");
     }
 
     private Instant now() {

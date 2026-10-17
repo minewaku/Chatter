@@ -43,7 +43,7 @@ Defaults live in `identityaccess-start/src/main/resources/application.yml`. Ever
 | `identity-access.security.jwt.public-key` | `${IDENTITY_ACCESS_JWT_PUBLIC_KEY}` (required, no fallback) | PEM text or location of an X.509 PEM |
 | `identity-access.security.jwt.issuer` | `identity-access` | Checked on every incoming credential |
 | `identity-access.security.jwt.audience` | `chatter` | Checked on every incoming credential |
-| `identity-access.security.jwt.access-token-ttl` | `PT15M` | |
+| `identity-access.security.jwt.access-token-ttl` | `PT15M` | Lifetime of an access credential; also the lifetime of the revocation entry written when a session is revoked (spec 004). Credentials carry the session id in claim `sid`; a credential without it is refused. |
 
 Missing or malformed keys, or a key pair that does not match, stop start-up with a message naming the property.
 

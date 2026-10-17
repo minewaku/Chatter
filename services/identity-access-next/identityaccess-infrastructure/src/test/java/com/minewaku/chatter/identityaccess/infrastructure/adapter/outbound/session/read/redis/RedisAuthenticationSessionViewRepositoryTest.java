@@ -45,7 +45,7 @@ class RedisAuthenticationSessionViewRepositoryTest extends RedisTestSupport {
     void viewCarriesTheStoredFields() {
         AuthenticationSession original = session("v1", 1L, now);
         writer.create(original, "raw-v1");
-        writer.touchIfUsable("v1", now.plusSeconds(3));
+        writer.rotate("v1", "raw-v1", "raw-v1b", now.plusSeconds(3), original.expiresAt());
         writer.create(session("v2", 1L, now.minusSeconds(60)), "raw-v2");
         writer.revokeBySessionId(new UserId(1L), "v2", now.plusSeconds(4));
 

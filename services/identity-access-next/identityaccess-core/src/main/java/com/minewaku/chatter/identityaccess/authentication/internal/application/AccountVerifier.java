@@ -1,6 +1,6 @@
 package com.minewaku.chatter.identityaccess.authentication.internal.application;
 
-import com.minewaku.chatter.identityaccess.authentication.internal.exception.AuthenticationFailedException;
+import com.minewaku.chatter.identityaccess.authentication.api.exception.AuthenticationFailedException;
 import com.minewaku.chatter.identityaccess.user.internal.model.PlainPassword;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserAccount;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserId;

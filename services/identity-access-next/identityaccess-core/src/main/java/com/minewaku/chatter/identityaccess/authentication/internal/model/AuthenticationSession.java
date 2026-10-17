@@ -14,7 +14,7 @@ public final class AuthenticationSession {
     private final UserId userId;
     private final String deviceInfo;
     private final Instant issuedAt;
-    private final Instant expiresAt;
+    private Instant expiresAt;
     private Instant lastUsedAt;
     private Instant revokedAt;
 
@@ -80,6 +80,21 @@ public final class AuthenticationSession {
         if (lastUsedAt == null || now.isAfter(lastUsedAt)) {
             lastUsedAt = now;
         }
+    }
+
+    /**
+     * Renews the session on a successful refresh: it keeps its identifier and issue time, receives a new expiry and
+     * records the use. There is no limit on how often or how long a session can be renewed.
+     */
+    public void renew(Instant now, Instant newExpiresAt) {
+        if (!isUsable(now)) {
+            throw new IllegalStateException("Only a usable session can be renewed");
+        }
+        if (!newExpiresAt.isAfter(now)) {
+            throw new IllegalArgumentException("Renewed expiry must be after the renewal time");
+        }
+        expiresAt = newExpiresAt;
+        markUsed(now);
     }
 
     /** Sets revokedAt once; returns false when the session was already revoked. */

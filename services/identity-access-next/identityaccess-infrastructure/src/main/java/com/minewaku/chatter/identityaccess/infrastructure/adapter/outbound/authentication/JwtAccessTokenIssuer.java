@@ -37,13 +37,14 @@ public class JwtAccessTokenIssuer implements AccessTokenIssuer {
     }
 
     @Override
-    public String issue(UserId userId, Email email) {
+    public String issue(UserId userId, Email email, String sessionId) {
         Instant now = clock.instant();
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer(properties.issuer())
                 .audience(List.of(properties.audience()))
                 .subject(String.valueOf(userId.value()))
                 .claim("email", email.value())
+                .claim("sid", sessionId)
                 .issuedAt(now)
                 .expiresAt(now.plus(properties.accessTokenTtl()))
                 .build();

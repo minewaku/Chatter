@@ -9,8 +9,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.minewaku.chatter.identityaccess.authentication.api.command.AuthenticateUseCase;
+import com.minewaku.chatter.identityaccess.authentication.api.exception.AuthenticationFailedException;
 import com.minewaku.chatter.identityaccess.authentication.internal.application.command.AuthenticateService;
-import com.minewaku.chatter.identityaccess.authentication.internal.exception.AuthenticationFailedException;
 import com.minewaku.chatter.identityaccess.authentication.internal.model.AuthenticationSession;
 import com.minewaku.chatter.identityaccess.user.internal.model.AccountStatus;
 import com.minewaku.chatter.identityaccess.user.internal.model.Birthday;
@@ -55,6 +55,7 @@ class AuthenticateServiceTest {
         assertEquals(new UserId(42), session.userId());
         assertEquals(NOW, session.issuedAt());
         assertEquals(NOW.plus(Duration.ofDays(30)), session.expiresAt());
+        assertEquals(FIRST_SESSION_ID, accessTokens.lastSessionId);
     }
 
     @Test

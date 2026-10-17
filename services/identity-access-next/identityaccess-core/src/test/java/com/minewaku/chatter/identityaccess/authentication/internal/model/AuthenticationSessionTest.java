@@ -66,4 +66,46 @@ class AuthenticationSessionTest {
         session.revoke(NOW.plusSeconds(90));
         assertThrows(IllegalStateException.class, () -> session.markUsed(NOW.plusSeconds(120)));
     }
+
+    @Test
+    void renewal_gives_a_new_expiry_and_advances_last_use() {
+        AuthenticationSession session =
+                AuthenticationSession.issue(SESSION_ID, new UserId(42), "Laptop", NOW, LIFETIME);
+        Instant renewedAt = NOW.plus(Duration.ofDays(29));
+
+        session.renew(renewedAt, renewedAt.plus(LIFETIME));
+
+        assertEquals(renewedAt.plus(LIFETIME), session.expiresAt());
+        assertEquals(renewedAt, session.lastUsedAt());
+        assertEquals(NOW, session.issuedAt());
+    }
+
+    @Test
+    void renewal_has_no_upper_limit_on_total_age() {
+        AuthenticationSession session =
+                AuthenticationSession.issue(SESSION_ID, new UserId(42), "Laptop", NOW, LIFETIME);
+        Instant at = NOW;
+        for (int i = 0; i < 20; i++) {
+            at = at.plus(Duration.ofDays(29));
+            session.renew(at, at.plus(LIFETIME));
+        }
+
+        assertTrue(session.isUsable(at.plusSeconds(1)));
+        assertEquals(at.plus(LIFETIME), session.expiresAt());
+    }
+
+    @Test
+    void revoked_expired_or_backwards_renewal_is_rejected_and_changes_nothing() {
+        AuthenticationSession session =
+                AuthenticationSession.issue(SESSION_ID, new UserId(42), "Laptop", NOW, LIFETIME);
+        Instant expiry = session.expiresAt();
+
+        assertThrows(IllegalStateException.class, () -> session.renew(expiry, expiry.plus(LIFETIME)));
+        assertThrows(IllegalArgumentException.class, () -> session.renew(NOW.plusSeconds(5), NOW.plusSeconds(5)));
+        session.revoke(NOW.plusSeconds(10));
+        assertThrows(IllegalStateException.class, () -> session.renew(NOW.plusSeconds(20), NOW.plusSeconds(30)));
+
+        assertEquals(expiry, session.expiresAt());
+        assertEquals(null, session.lastUsedAt());
+    }
 }

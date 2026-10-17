@@ -106,6 +106,8 @@ public final class AuthenticationTestFakes {
         private final Map<String, String> sessionIdByToken = new HashMap<>();
         public int createCalls;
         public int revokeAllCalls;
+        public int rotateCalls;
+        public boolean failRotate;
         public boolean failOnCreate;
         public boolean failOnRevokeAll;
 
@@ -147,12 +149,23 @@ public final class AuthenticationTestFakes {
         }
 
         @Override
-        public boolean touchIfUsable(String sessionId, Instant now) {
+        public boolean rotate(
+                String sessionId,
+                String presentedRefreshToken,
+                String newRefreshToken,
+                Instant now,
+                Instant newExpiresAt) {
+            rotateCalls++;
             AuthenticationSession session = sessions.get(sessionId);
-            if (session == null || !session.isUsable(now)) {
+            if (failRotate
+                    || session == null
+                    || !session.isUsable(now)
+                    || !sessionId.equals(sessionIdByToken.get(presentedRefreshToken))) {
                 return false;
             }
-            session.markUsed(now);
+            sessionIdByToken.remove(presentedRefreshToken);
+            sessionIdByToken.put(newRefreshToken, sessionId);
+            session.renew(now, newExpiresAt);
             return true;
         }
 
@@ -239,14 +252,16 @@ public final class AuthenticationTestFakes {
     public static final class RecordingAccessTokenIssuer implements AccessTokenIssuer {
         public int issueCalls;
         public boolean failOnIssue;
+        public String lastSessionId;
         private int next = 1;
 
         @Override
-        public String issue(UserId userId, Email email) {
+        public String issue(UserId userId, Email email, String sessionId) {
             if (failOnIssue) {
                 throw new IllegalStateException("token issuer unavailable");
             }
             issueCalls++;
+            lastSessionId = sessionId;
             return "access-" + next++;
         }
     }

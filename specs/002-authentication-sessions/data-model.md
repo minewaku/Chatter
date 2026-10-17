@@ -43,7 +43,7 @@ The association ends when the record is no longer retained. Session expiry or re
 
 `AuthenticationSession.userId` refers to the existing user account. `UserAccount.isAccessible()` is the source of truth for eligibility; only `ACTIVE` returns true. `PENDING_VERIFICATION`, `LOCKED`, `SUSPENDED`, and `DELETED` cannot sign in, renew, or manage sessions. Successful password changes, suspensions, and soft deletions revoke all retained sessions for that account. A no-op password change or rejected account transition does not revoke them.
 
-The account's email at issue time is supplied to `AccessTokenIssuer` with its `UserId`. An access credential already issued before revocation is not itself a session record and is not promised immediate invalidation by this feature.
+The account's email at issue time is supplied to `AccessTokenIssuer` with its `UserId`. An access credential already issued before revocation is not itself a session record. Spec 004 adds a `sid` claim naming the session and short-lived revocation entries so that it is refused from the next request (FR-030).
 
 ## DeviceInfo and SessionView
 

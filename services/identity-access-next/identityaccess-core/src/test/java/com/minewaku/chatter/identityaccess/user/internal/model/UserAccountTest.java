@@ -7,8 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.minewaku.chatter.identityaccess.user.internal.exception.InvalidAccountStateTransitionException;
-import com.minewaku.chatter.identityaccess.user.internal.exception.InvalidCredentialsException;
+import com.minewaku.chatter.identityaccess.user.api.exception.InvalidAccountStateTransitionException;
+import com.minewaku.chatter.identityaccess.user.api.exception.InvalidCredentialsException;
 import com.minewaku.chatter.identityaccess.user.internal.port.PasswordHasher;
 import java.time.Instant;
 import java.time.LocalDate;

@@ -6,7 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.minewaku.chatter.identityaccess.infrastructure.support.AccountFixtures;
 import com.minewaku.chatter.identityaccess.infrastructure.support.JdbcTestConfiguration;
 import com.minewaku.chatter.identityaccess.infrastructure.support.PostgreSqlTestSupport;
-import com.minewaku.chatter.identityaccess.user.internal.exception.DuplicateUserAccountException;
+import com.minewaku.chatter.identityaccess.user.api.exception.DuplicateUserAccountException;
 import com.minewaku.chatter.identityaccess.user.internal.model.Email;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserAccount;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserId;

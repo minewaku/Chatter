@@ -19,6 +19,8 @@ import com.minewaku.chatter.identityaccess.user.api.command.ReinstateUserAccount
 import com.minewaku.chatter.identityaccess.user.api.command.SoftDeleteUserAccountUseCase;
 import com.minewaku.chatter.identityaccess.user.api.command.SuspendUserAccountUseCase;
 import com.minewaku.chatter.identityaccess.user.api.command.UnlockUserAccountUseCase;
+import com.minewaku.chatter.identityaccess.user.api.exception.DuplicateUserAccountException;
+import com.minewaku.chatter.identityaccess.user.api.exception.InvalidAccountStateTransitionException;
 import com.minewaku.chatter.identityaccess.user.api.query.FindUserByEmailUseCase;
 import com.minewaku.chatter.identityaccess.user.api.query.FindUserByIdUseCase;
 import com.minewaku.chatter.identityaccess.user.internal.application.command.ChangeEmailService;
@@ -32,8 +34,6 @@ import com.minewaku.chatter.identityaccess.user.internal.application.command.Sus
 import com.minewaku.chatter.identityaccess.user.internal.application.command.UnlockUserAccountService;
 import com.minewaku.chatter.identityaccess.user.internal.application.query.FindUserByEmailService;
 import com.minewaku.chatter.identityaccess.user.internal.application.query.FindUserByIdService;
-import com.minewaku.chatter.identityaccess.user.internal.exception.DuplicateUserAccountException;
-import com.minewaku.chatter.identityaccess.user.internal.exception.InvalidAccountStateTransitionException;
 import com.minewaku.chatter.identityaccess.user.internal.model.AccountStatus;
 import com.minewaku.chatter.identityaccess.user.internal.model.Birthday;
 import com.minewaku.chatter.identityaccess.user.internal.model.Email;

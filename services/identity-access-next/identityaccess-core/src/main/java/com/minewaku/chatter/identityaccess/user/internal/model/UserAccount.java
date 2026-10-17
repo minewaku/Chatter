@@ -1,7 +1,7 @@
 package com.minewaku.chatter.identityaccess.user.internal.model;
 
-import com.minewaku.chatter.identityaccess.user.internal.exception.InvalidAccountStateTransitionException;
-import com.minewaku.chatter.identityaccess.user.internal.exception.InvalidCredentialsException;
+import com.minewaku.chatter.identityaccess.user.api.exception.InvalidAccountStateTransitionException;
+import com.minewaku.chatter.identityaccess.user.api.exception.InvalidCredentialsException;
 import com.minewaku.chatter.identityaccess.user.internal.port.PasswordHasher;
 import java.time.Instant;
 import java.util.Objects;

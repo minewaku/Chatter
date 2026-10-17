@@ -7,5 +7,6 @@ public interface RefreshAccessTokenUseCase
 
     record Command(String refreshToken) {}
 
-    record Refreshed(String accessToken) {}
+    /** The new refresh credential replaces the presented one; it is returned only here. */
+    record Refreshed(String accessToken, String refreshToken) {}
 }

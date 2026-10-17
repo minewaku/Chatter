@@ -67,7 +67,7 @@ class SecurityChainTest {
                 audience,
                 Duration.ofMinutes(15));
         return new JwtAccessTokenIssuer(props, Clock.fixed(at, ZoneOffset.UTC))
-                .issue(new UserId(4242L), new Email("alice@example.com"));
+                .issue(new UserId(4242L), new Email("alice@example.com"), "session-1");
     }
 
     private static Instant now() {
@@ -109,6 +109,19 @@ class SecurityChainTest {
             mvc.perform(request).andExpect(status().isUnauthorized());
         }
         assertThat(probe.invocations.get()).isZero();
+    }
+
+    @Test
+    void expiredOrInvalidCredentialSentToAPublicEndpointIsIgnored() throws Exception {
+        String expired = token(PAIR, "identity-access", "chatter", now().minus(Duration.ofHours(1)));
+
+        mvc.perform(post("/api/v1/auth/register").header("Authorization", "Bearer " + expired))
+                .andExpect(status().isOk())
+                .andExpect(content().string("registered"));
+        mvc.perform(post("/api/v1/auth/register").header("Authorization", "Bearer garbage"))
+                .andExpect(status().isOk());
+        mvc.perform(get("/probe/protected").header("Authorization", "Bearer " + expired))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

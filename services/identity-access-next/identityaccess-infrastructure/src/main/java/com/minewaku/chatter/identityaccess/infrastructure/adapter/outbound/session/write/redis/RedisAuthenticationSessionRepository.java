@@ -6,6 +6,7 @@ import com.minewaku.chatter.identityaccess.infrastructure.adapter.outbound.sessi
 import com.minewaku.chatter.identityaccess.infrastructure.integration.redis.RedisKeyProperties;
 import com.minewaku.chatter.identityaccess.infrastructure.integration.redis.RedisScripts;
 import com.minewaku.chatter.identityaccess.infrastructure.integration.redis.RedisTime;
+import com.minewaku.chatter.identityaccess.infrastructure.security.JwtProperties;
 import com.minewaku.chatter.identityaccess.infrastructure.security.TokenDigest;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserId;
 import java.time.Instant;
@@ -27,7 +28,7 @@ import org.springframework.stereotype.Repository;
 public class RedisAuthenticationSessionRepository implements AuthenticationSessionRepository {
 
     private static final DefaultRedisScript<Long> CREATE = RedisScripts.load("session-create.lua", Long.class);
-    private static final DefaultRedisScript<Long> TOUCH = RedisScripts.load("session-touch.lua", Long.class);
+    private static final DefaultRedisScript<Long> ROTATE = RedisScripts.load("session-rotate.lua", Long.class);
     private static final DefaultRedisScript<Long> REVOKE_ONE = RedisScripts.load("session-revoke-one.lua", Long.class);
     private static final DefaultRedisScript<Long> REVOKE_MANY =
             RedisScripts.load("session-revoke-many.lua", Long.class);
@@ -38,11 +39,14 @@ public class RedisAuthenticationSessionRepository implements AuthenticationSessi
     private final String sessionKeyPrefix;
     private final String tokenKeyPrefix;
     private final String userKeyPrefix;
+    private final String revocationKeyPrefix;
+    private final String accessTokenTtlMillis;
 
     RedisAuthenticationSessionRepository(
             StringRedisTemplate redis,
             RedisKeyProperties keys,
             SessionProperties sessions,
+            JwtProperties jwt,
             SessionRecordMapper mapper) {
         this.redis = redis;
         this.mapper = mapper;
@@ -50,6 +54,8 @@ public class RedisAuthenticationSessionRepository implements AuthenticationSessi
         this.sessionKeyPrefix = keys.keyPrefix() + "session:";
         this.tokenKeyPrefix = keys.keyPrefix() + "session:token:";
         this.userKeyPrefix = keys.keyPrefix() + "session:user:";
+        this.revocationKeyPrefix = keys.keyPrefix() + "access-revoked:";
+        this.accessTokenTtlMillis = Long.toString(jwt.accessTokenTtl().toMillis());
     }
 
     @Override
@@ -100,15 +106,38 @@ public class RedisAuthenticationSessionRepository implements AuthenticationSessi
     }
 
     @Override
-    public boolean touchIfUsable(String sessionId, Instant now) {
-        Long result = redis.execute(TOUCH, List.of(sessionKeyPrefix + sessionId), micros(now));
+    public boolean rotate(
+            String sessionId, String presentedRefreshToken, String newRefreshToken, Instant now, Instant newExpiresAt) {
+        if (presentedRefreshToken == null || presentedRefreshToken.isBlank()) {
+            return false;
+        }
+        String newDigest = TokenDigest.sha256Hex(newRefreshToken);
+        long keyExpiryMillis = RedisTime.toMillisFloor(RedisTime.toMicros(newExpiresAt)) + retentionMillis;
+        Long result = redis.execute(
+                ROTATE,
+                List.of(
+                        sessionKeyPrefix + sessionId,
+                        tokenKeyPrefix + TokenDigest.sha256Hex(presentedRefreshToken),
+                        tokenKeyPrefix + newDigest),
+                sessionId,
+                newDigest,
+                micros(now),
+                micros(newExpiresAt),
+                Long.toString(keyExpiryMillis),
+                userKeyPrefix);
         return result != null && result == 1L;
     }
 
     @Override
     public boolean revokeBySessionId(UserId userId, String sessionId, Instant now) {
         Long result = redis.execute(
-                REVOKE_ONE, List.of(sessionKeyPrefix + sessionId), Long.toString(userId.value()), micros(now));
+                REVOKE_ONE,
+                List.of(sessionKeyPrefix + sessionId),
+                Long.toString(userId.value()),
+                micros(now),
+                sessionId,
+                revocationKeyPrefix,
+                accessTokenTtlMillis);
         return result != null && result == 1L;
     }
 
@@ -124,7 +153,14 @@ public class RedisAuthenticationSessionRepository implements AuthenticationSessi
 
     private int revokeMany(UserId userId, String keepSessionId, Instant now) {
         Long result = redis.execute(
-                REVOKE_MANY, List.of(userKeyPrefix + userId.value()), sessionKeyPrefix, keepSessionId, micros(now));
+                REVOKE_MANY,
+                List.of(userKeyPrefix + userId.value()),
+                sessionKeyPrefix,
+                keepSessionId,
+                micros(now),
+                Long.toString(userId.value()),
+                revocationKeyPrefix,
+                accessTokenTtlMillis);
         return result == null ? 0 : result.intValue();
     }
 

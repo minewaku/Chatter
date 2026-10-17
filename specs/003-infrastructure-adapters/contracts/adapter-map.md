@@ -37,7 +37,8 @@ infrastructure/
 │       ├── mail/             MailVerificationNotifier, VerificationLinkFactory, VerificationMailProperties
 │       └── write/redis/      RedisEmailVerificationRepository, VerificationRecord, VerificationRecordMapper
 ├── security/                 SecurityConfiguration, JwtDecoderConfiguration, JwtProperties,
-│                             SecurityProperties, PemKeys, TokenDigest
+│                             SecurityProperties, PemKeys, TokenDigest,
+│                             PublicEndpointBearerTokenResolver, RevokedAccessTokenFilter (spec 004)
 └── integration/
     ├── postgresql/           PostgreSqlConfiguration
     ├── redis/                RedisConfiguration, RedisKeyProperties
@@ -57,4 +58,4 @@ Rules enforced by the structure test:
 
 ## Behavioural contract
 
-Adapters implement the javadoc of each port exactly (for example, `AuthenticationSessionRepository.touchIfUsable` sets last-use only when unrevoked and `now` is before expiry). Shared adapter contract tests encode those sentences and run against the real stores.
+Adapters implement the javadoc of each port exactly (for example, `AuthenticationSessionRepository.rotate` renews only an unrevoked session that has not expired and whose presented credential belongs to it). Shared adapter contract tests encode those sentences and run against the real stores.

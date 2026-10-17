@@ -17,9 +17,9 @@ Absent account, wrong password, inaccessible account, or malformed password pres
 | Contract | Shape | Behavior |
 |----------|-------|----------|
 | `RefreshAccessTokenUseCase.Command` | `String refreshToken` | Present the existing opaque credential |
-| `RefreshAccessTokenUseCase.Refreshed` | `String accessToken` | Returned only for an unrevoked, unexpired session with an `ACTIVE` owner |
+| `RefreshAccessTokenUseCase.Refreshed` | `String accessToken`, `String refreshToken` | Returned only for an unrevoked, unexpired session with an `ACTIVE` owner (amended by spec 004: renewal rotates the refresh credential) |
 
-Successful renewal updates `lastUsedAt`, leaves the session and refresh credential unchanged, and returns no refresh credential. Blank, malformed, unknown, expired, revoked, or inactive-account presentations fail without issuing access.
+Successful renewal rotates the refresh credential: the session keeps its identifier and issue time, gets a new opaque refresh credential and a new full lifetime (`expiresAt = now + session lifetime`, with no cap on total age), updates `lastUsedAt`, and the presented credential stops working. Both credentials are returned. Blank, malformed, unknown, expired, revoked, or inactive-account presentations fail without issuing access.
 
 ## End the current session
 

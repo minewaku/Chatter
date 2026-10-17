@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.minewaku.chatter.identityaccess.authentication.internal.model.AuthenticationSession;
 import com.minewaku.chatter.identityaccess.infrastructure.adapter.outbound.session.SessionProperties;
 import com.minewaku.chatter.identityaccess.infrastructure.integration.redis.RedisKeyProperties;
+import com.minewaku.chatter.identityaccess.infrastructure.security.JwtProperties;
 import com.minewaku.chatter.identityaccess.infrastructure.security.TokenDigest;
 import com.minewaku.chatter.identityaccess.infrastructure.support.RedisTestSupport;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserId;
@@ -27,6 +28,7 @@ class RedisAuthenticationSessionRepositoryTest extends RedisTestSupport {
 
     private static final String PREFIX = "test:";
     private static final Duration RETENTION = Duration.ofDays(30);
+    private static final Duration ACCESS_TTL = Duration.ofMinutes(15);
 
     private StringRedisTemplate redis;
     private RedisAuthenticationSessionRepository repository;
@@ -36,12 +38,21 @@ class RedisAuthenticationSessionRepositoryTest extends RedisTestSupport {
     void setUp() {
         redis = newTemplate();
         flushAll(redis);
-        repository = new RedisAuthenticationSessionRepository(
+        repository = repositoryWithAccessTtl(ACCESS_TTL);
+        now = Instant.now().truncatedTo(ChronoUnit.MICROS);
+    }
+
+    private RedisAuthenticationSessionRepository repositoryWithAccessTtl(Duration accessTokenTtl) {
+        return new RedisAuthenticationSessionRepository(
                 redis,
                 new RedisKeyProperties(PREFIX),
                 new SessionProperties(Duration.ofDays(30), RETENTION),
+                new JwtProperties(null, null, null, null, accessTokenTtl),
                 new SessionRecordMapper());
-        now = Instant.now().truncatedTo(ChronoUnit.MICROS);
+    }
+
+    private String revocationKey(long userId, String sessionId) {
+        return PREFIX + "access-revoked:" + userId + ":" + sessionId;
     }
 
     private AuthenticationSession session(String id, long userId) {
@@ -91,29 +102,184 @@ class RedisAuthenticationSessionRepositoryTest extends RedisTestSupport {
     }
 
     @Test
-    void touchSetsLastUsedForALiveSessionAndNeverMovesItBackwards() {
-        repository.create(session("s3", 3L), "raw-3");
+    void rotationReplacesTheCredentialAndGivesTheSessionANewExpiry() {
+        repository.create(session("r1", 3L), "raw-old");
+        Instant at = now.plusSeconds(600);
+        Instant newExpiry = at.plus(Duration.ofDays(30));
 
-        assertThat(repository.touchIfUsable("s3", now.plusSeconds(10))).isTrue();
-        assertThat(repository.touchIfUsable("s3", now.plusSeconds(5))).isTrue();
+        boolean rotated = repository.rotate("r1", "raw-old", "raw-new", at, newExpiry);
 
-        assertThat(repository.findBySessionId("s3").orElseThrow().lastUsedAt()).isEqualTo(now.plusSeconds(10));
+        assertThat(rotated).isTrue();
+        assertThat(repository.findByPresentedToken("raw-old")).isEmpty();
+        AuthenticationSession renewed =
+                repository.findByPresentedToken("raw-new").orElseThrow();
+        assertThat(renewed.sessionId()).isEqualTo("r1");
+        assertThat(renewed.expiresAt()).isEqualTo(newExpiry);
+        assertThat(renewed.lastUsedAt()).isEqualTo(at);
+        assertThat(renewed.issuedAt()).isEqualTo(now);
+        assertThat(redis.opsForHash().get(PREFIX + "session:r1", "tokenDigest"))
+                .isEqualTo(TokenDigest.sha256Hex("raw-new"));
     }
 
     @Test
-    void touchIsFalseForUnknownRevokedAndExpiredSessions() {
-        repository.create(session("s4", 4L), "raw-4");
-        repository.create(session("s5", 4L), "raw-5");
-        repository.revokeBySessionId(new UserId(4L), "s5", now.plusSeconds(1));
+    void rotationRecomputesKeyLifetimesFromTheNewExpiry() {
+        repository.create(session("r2", 3L), "raw-a");
+        Instant at = now.plusSeconds(60);
+        Instant newExpiry = at.plus(Duration.ofDays(30));
 
-        assertThat(repository.touchIfUsable("missing", now)).isFalse();
-        assertThat(repository.touchIfUsable("s5", now.plusSeconds(2))).isFalse();
-        // expired exactly when now reaches expiresAt
-        assertThat(repository.touchIfUsable("s4", now.plus(Duration.ofHours(1)).minusNanos(1_000)))
-                .isTrue();
-        assertThat(repository.touchIfUsable("s4", now.plus(Duration.ofHours(1))))
+        repository.rotate("r2", "raw-a", "raw-b", at, newExpiry);
+
+        long expectedMillis = Duration.between(Instant.now(), newExpiry).toMillis() + RETENTION.toMillis();
+        for (String key : List.of(PREFIX + "session:r2", PREFIX + "session:token:" + TokenDigest.sha256Hex("raw-b"))) {
+            assertThat(redis.getExpire(key, TimeUnit.MILLISECONDS))
+                    .as(key)
+                    .isBetween(expectedMillis - 10_000, expectedMillis + 1_000);
+        }
+        assertThat(redis.hasKey(PREFIX + "session:token:" + TokenDigest.sha256Hex("raw-a")))
                 .isFalse();
-        assertThat(repository.touchIfUsable("s4", now.plus(Duration.ofHours(2))))
+    }
+
+    @Test
+    void rotationNeverMovesLastUseBackwards() {
+        repository.create(session("r3", 3L), "raw-1");
+        repository.rotate("r3", "raw-1", "raw-2", now.plusSeconds(100), now.plusSeconds(4_000));
+
+        repository.rotate("r3", "raw-2", "raw-3", now.plusSeconds(50), now.plusSeconds(4_000));
+
+        assertThat(repository.findBySessionId("r3").orElseThrow().lastUsedAt()).isEqualTo(now.plusSeconds(100));
+    }
+
+    @Test
+    void rotationIsFalseAndChangesNothingForUnknownRevokedExpiredAndForeignCredentials() {
+        repository.create(session("r4", 4L), "raw-r4");
+        repository.create(session("r5", 4L), "raw-r5");
+        repository.revokeBySessionId(new UserId(4L), "r5", now.plusSeconds(1));
+        Instant later = now.plusSeconds(30);
+
+        assertThat(repository.rotate("missing", "raw-r4", "n1", later, later.plusSeconds(60)))
+                .isFalse();
+        assertThat(repository.rotate("r5", "raw-r5", "n2", now.plusSeconds(2), later.plusSeconds(60)))
+                .isFalse();
+        // the credential belongs to another session
+        assertThat(repository.rotate("r4", "raw-r5", "n3", later, later.plusSeconds(60)))
+                .isFalse();
+        // unknown credential
+        assertThat(repository.rotate("r4", "nope", "n4", later, later.plusSeconds(60)))
+                .isFalse();
+        // expired exactly when now reaches expiresAt
+        assertThat(repository.rotate("r4", "raw-r4", "n5", now.plus(Duration.ofHours(1)), now.plus(Duration.ofDays(2))))
+                .isFalse();
+
+        assertThat(repository.findByPresentedToken("raw-r4").orElseThrow().lastUsedAt())
+                .isNull();
+        assertThat(repository.findByPresentedToken("raw-r5")).isPresent();
+        assertThat(repository.findByPresentedToken("n1")).isEmpty();
+    }
+
+    @Test
+    void onlyOneOfManyConcurrentRotationsWithTheSameCredentialSucceeds() throws Exception {
+        repository.create(session("r6", 5L), "raw-shared");
+        int threads = 8;
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService pool = Executors.newFixedThreadPool(threads);
+        try {
+            List<Future<Boolean>> futures = new ArrayList<>();
+            for (int i = 0; i < threads; i++) {
+                String next = "raw-next-" + i;
+                futures.add(pool.submit(() -> {
+                    start.await();
+                    return repository.rotate("r6", "raw-shared", next, now.plusSeconds(5), now.plusSeconds(4_000));
+                }));
+            }
+            start.countDown();
+            int successes = 0;
+            for (Future<Boolean> f : futures) {
+                if (f.get()) {
+                    successes++;
+                }
+            }
+            assertThat(successes).isEqualTo(1);
+            assertThat(repository.findByPresentedToken("raw-shared")).isEmpty();
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    @Test
+    void revokingOneSessionCreatesItsRevocationEntryWithTheAccessTokenLifetime() {
+        repository.create(session("v1", 20L), "raw-v1");
+        repository.create(session("v2", 20L), "raw-v2");
+
+        assertThat(repository.revokeBySessionId(new UserId(20L), "v1", now.plusSeconds(1)))
+                .isTrue();
+
+        assertThat(redis.hasKey(revocationKey(20L, "v1"))).isTrue();
+        assertThat(redis.hasKey(revocationKey(20L, "v2"))).isFalse();
+        assertThat(redis.getExpire(revocationKey(20L, "v1"), TimeUnit.MILLISECONDS))
+                .isBetween(1L, ACCESS_TTL.toMillis());
+    }
+
+    @Test
+    void aRepeatedOrRefusedRevokeCreatesNoEntryAndDoesNotResetTheLifetime() throws Exception {
+        repository.create(session("v3", 21L), "raw-v3");
+        repository.revokeBySessionId(new UserId(21L), "v3", now.plusSeconds(1));
+        Long first = redis.getExpire(revocationKey(21L, "v3"), TimeUnit.MILLISECONDS);
+        Thread.sleep(50);
+
+        assertThat(repository.revokeBySessionId(new UserId(21L), "v3", now.plusSeconds(2)))
+                .isFalse();
+        assertThat(repository.revokeBySessionId(new UserId(999L), "v3", now.plusSeconds(2)))
+                .isFalse();
+
+        assertThat(redis.getExpire(revocationKey(21L, "v3"), TimeUnit.MILLISECONDS))
+                .isLessThan(first);
+        assertThat(redis.keys(PREFIX + "access-revoked:*")).hasSize(1);
+    }
+
+    @Test
+    void revokingOthersCreatesAnEntryPerRevokedSessionAndSparesTheKeptOne() {
+        repository.create(session("k1", 22L), "raw-k1");
+        repository.create(session("k2", 22L), "raw-k2");
+        repository.create(session("k3", 22L), "raw-k3");
+
+        repository.revokeOtherSessions(new UserId(22L), "k1", now.plusSeconds(1));
+
+        assertThat(redis.hasKey(revocationKey(22L, "k1"))).isFalse();
+        assertThat(redis.hasKey(revocationKey(22L, "k2"))).isTrue();
+        assertThat(redis.hasKey(revocationKey(22L, "k3"))).isTrue();
+    }
+
+    @Test
+    void revokingAllCreatesAnEntryForEveryRevokedSessionAndNoneForAlreadyRevokedOnes() {
+        repository.create(session("m1", 23L), "raw-m1");
+        repository.create(session("m2", 23L), "raw-m2");
+        repository.create(session("m3", 23L), "raw-m3");
+        repository.revokeBySessionId(new UserId(23L), "m3", now.plusSeconds(1));
+        redis.delete(revocationKey(23L, "m3"));
+
+        int revoked = repository.revokeAllByUserId(new UserId(23L), now.plusSeconds(2));
+
+        assertThat(revoked).isEqualTo(2);
+        assertThat(redis.hasKey(revocationKey(23L, "m1"))).isTrue();
+        assertThat(redis.hasKey(revocationKey(23L, "m2"))).isTrue();
+        assertThat(redis.hasKey(revocationKey(23L, "m3"))).isFalse();
+    }
+
+    @Test
+    void revocationEntriesDisappearOnTheirOwnWhileTheSessionStaysRevoked() throws Exception {
+        RedisAuthenticationSessionRepository shortLived = repositoryWithAccessTtl(Duration.ofSeconds(1));
+        shortLived.create(session("t1", 24L), "raw-t1");
+
+        shortLived.revokeBySessionId(new UserId(24L), "t1", now.plusSeconds(1));
+        assertThat(redis.hasKey(revocationKey(24L, "t1"))).isTrue();
+
+        long deadline = System.currentTimeMillis() + 5_000;
+        while (redis.hasKey(revocationKey(24L, "t1")) && System.currentTimeMillis() < deadline) {
+            Thread.sleep(100);
+        }
+        assertThat(redis.hasKey(revocationKey(24L, "t1"))).isFalse();
+        assertThat(shortLived.findBySessionId("t1").orElseThrow().revokedAt()).isNotNull();
+        assertThat(shortLived.rotate("t1", "raw-t1", "raw-t1b", now.plusSeconds(5), now.plusSeconds(500)))
                 .isFalse();
     }
 
@@ -216,7 +382,8 @@ class RedisAuthenticationSessionRepositoryTest extends RedisTestSupport {
         flushAll(redis);
 
         assertThat(repository.findByPresentedToken("raw-gone")).isEmpty();
-        assertThat(repository.touchIfUsable("gone", now)).isFalse();
+        assertThat(repository.rotate("gone", "raw-gone", "raw-new", now, now.plusSeconds(60)))
+                .isFalse();
         assertThat(repository.revokeBySessionId(new UserId(12L), "gone", now)).isFalse();
     }
 }
