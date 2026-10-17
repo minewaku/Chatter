@@ -31,9 +31,14 @@ class PresentationArchitectureTest {
                     "org.flywaydb..");
 
     @ArchTest
-    static final ArchRule controllersLiveInCapabilityPackages = classes()
+    static final ArchRule controllersLiveInCapabilityPackages =
+            classes().that().areAnnotatedWith(RestController.class).should().resideInAPackage("..presentation.*.web..");
+
+    @ArchTest
+    static final ArchRule dtosDoNotDependOnWebLayer = noClasses()
             .that()
-            .areAnnotatedWith(RestController.class)
+            .resideInAPackage("..presentation.*.dto..")
             .should()
-            .resideInAnyPackage("..presentation.authentication..", "..presentation.session..", "..presentation.user..");
+            .dependOnClassesThat()
+            .resideInAPackage("..presentation.*.web..");
 }
