@@ -1,5 +1,7 @@
 # Core, Infrastructure, and Earlier-Spec Changes
 
+> **Superseded by [spec 006](../006-unify-email-ownership-proof/spec.md):** the `PendingEmailChange*` model, port, and Redis adapter rows below were replaced by one shared `EmailVerification` model, port, and adapter with a purpose. See spec 006, `contracts/core-and-infra-changes.md`.
+
 ## Core (`identityaccess-core`)
 
 | Change | Detail |

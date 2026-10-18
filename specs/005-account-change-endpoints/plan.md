@@ -98,7 +98,7 @@ identityaccess-start/src/main/resources/application.yml   # public endpoint + em
 identityaccess-start/src/test/java/.../e2e/               # extended AccountManagementE2eTest, new EmailChangeE2eTest
 ```
 
-**Structure Decision**: The pending-change logic sits in core's `user` package because it is a change to the user account, not a new account state, and the existing `emailverification` package only knows registration. Infrastructure follows the capability-first layout with a new `emailchange/write/redis` adapter folder; the mail notifier sits beside `MailVerificationNotifier` because they share a package-private exception, the link factory, and the properties. Presentation keeps the `user/web` + `user/dto` layout from the last refactor; the public confirm endpoint gets its own small controller so the protected `UserController` stays free of public routes.
+**Structure Decision** *(superseded by [spec 006](../006-unify-email-ownership-proof/spec.md): the proof now lives in `emailverification` for both purposes; only the request and confirm services stay in `user`)*: The pending-change logic sits in core's `user` package because it is a change to the user account, not a new account state, and the existing `emailverification` package only knows registration. Infrastructure follows the capability-first layout with a new `emailchange/write/redis` adapter folder; the mail notifier sits beside `MailVerificationNotifier` because they share a package-private exception, the link factory, and the properties. Presentation keeps the `user/web` + `user/dto` layout from the last refactor; the public confirm endpoint gets its own small controller so the protected `UserController` stays free of public routes.
 
 ## Complexity Tracking
 

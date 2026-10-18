@@ -53,10 +53,6 @@ public final class StructureRules {
                     "emailverification.internal.port.VerificationNotifier",
                     "MailVerificationNotifier",
                     "verification.mail"),
-            row(
-                    "user.internal.port.repository.PendingEmailChangeRepository",
-                    "RedisPendingEmailChangeRepository",
-                    "emailchange.write.redis"),
             row("user.internal.port.EmailChangeNotifier", "MailEmailChangeNotifier", "verification.mail"));
 
     private StructureRules() {}

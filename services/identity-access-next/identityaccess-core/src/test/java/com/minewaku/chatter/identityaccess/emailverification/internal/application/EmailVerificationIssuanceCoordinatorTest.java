@@ -3,6 +3,7 @@ package com.minewaku.chatter.identityaccess.emailverification.internal.applicati
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.minewaku.chatter.identityaccess.emailverification.internal.model.VerificationPurpose;
 import com.minewaku.chatter.identityaccess.user.internal.model.Email;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserId;
 import java.time.Clock;
@@ -18,21 +19,23 @@ class EmailVerificationIssuanceCoordinatorTest {
         var generator = new EmailVerificationTestFakes.Generator();
         var notifier = new EmailVerificationTestFakes.Notifier();
         var coordinator = new EmailVerificationIssuanceCoordinator(
-                Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC), generator, repository, notifier);
+                new EmailVerificationIssuer(
+                        Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC), generator, repository),
+                notifier);
 
         coordinator.issue(new UserId(1), new Email("person@example.com"));
 
         var saved = repository.records.get("token-1");
         var delivery = notifier.deliveries.getFirst();
         assertEquals("token-1", delivery.token());
+        assertEquals(VerificationPurpose.REGISTRATION, saved.purpose());
         assertEquals(saved.expiresAt(), delivery.expiresAt());
         assertEquals(Instant.parse("2026-01-02T00:00:00Z"), delivery.expiresAt());
         assertEquals(java.util.List.of("invalidate", "save"), repository.calls);
         assertEquals(java.util.List.of("notify"), notifier.calls);
         assertThrows(
                 IllegalArgumentException.class,
-                () -> new EmailVerificationIssuanceCoordinator(
-                        Clock.systemUTC(), Duration.ZERO, generator, repository, notifier));
+                () -> new EmailVerificationIssuer(Clock.systemUTC(), Duration.ZERO, generator, repository));
     }
 
     @Test
@@ -40,7 +43,8 @@ class EmailVerificationIssuanceCoordinatorTest {
         var generator = new EmailVerificationTestFakes.Generator();
         var repository = new EmailVerificationTestFakes.Repository();
         var notifier = new EmailVerificationTestFakes.Notifier();
-        var coordinator = new EmailVerificationIssuanceCoordinator(Clock.systemUTC(), generator, repository, notifier);
+        var coordinator = new EmailVerificationIssuanceCoordinator(
+                new EmailVerificationIssuer(Clock.systemUTC(), generator, repository), notifier);
         generator.failure = new IllegalStateException("generator");
         assertThrows(
                 IllegalStateException.class, () -> coordinator.issue(new UserId(1), new Email("person@example.com")));

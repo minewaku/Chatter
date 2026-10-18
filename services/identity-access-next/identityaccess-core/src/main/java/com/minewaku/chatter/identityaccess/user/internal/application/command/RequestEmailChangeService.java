@@ -1,17 +1,15 @@
 package com.minewaku.chatter.identityaccess.user.internal.application.command;
 
-import com.minewaku.chatter.identityaccess.shared.port.UniqueStringIdGenerator;
+import com.minewaku.chatter.identityaccess.emailverification.internal.application.EmailVerificationIssuer;
+import com.minewaku.chatter.identityaccess.emailverification.internal.model.EmailVerification;
+import com.minewaku.chatter.identityaccess.emailverification.internal.model.VerificationPurpose;
 import com.minewaku.chatter.identityaccess.user.api.command.RequestEmailChangeUseCase;
 import com.minewaku.chatter.identityaccess.user.api.exception.DuplicateUserAccountException;
 import com.minewaku.chatter.identityaccess.user.internal.model.Email;
-import com.minewaku.chatter.identityaccess.user.internal.model.PendingEmailChange;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserAccount;
 import com.minewaku.chatter.identityaccess.user.internal.port.EmailChangeNotifier;
 import com.minewaku.chatter.identityaccess.user.internal.port.PasswordHasher;
-import com.minewaku.chatter.identityaccess.user.internal.port.repository.PendingEmailChangeRepository;
 import com.minewaku.chatter.identityaccess.user.internal.port.repository.UserAccountRepository;
-import java.time.Clock;
-import java.time.Duration;
 import org.springframework.stereotype.Service;
 
 /**
@@ -21,30 +19,21 @@ import org.springframework.stereotype.Service;
 @Service
 public class RequestEmailChangeService extends UserAccountCommandService implements RequestEmailChangeUseCase {
 
-    /** Same lifetime as registration verification tokens. */
-    static final Duration LIFETIME = Duration.ofHours(24);
-
     private final UserAccountRepository repository;
     private final PasswordHasher passwordHasher;
-    private final PendingEmailChangeRepository pendingChanges;
+    private final EmailVerificationIssuer issuer;
     private final EmailChangeNotifier notifier;
-    private final Clock clock;
-    private final UniqueStringIdGenerator tokenGenerator;
 
     public RequestEmailChangeService(
             UserAccountRepository repository,
             PasswordHasher passwordHasher,
-            PendingEmailChangeRepository pendingChanges,
-            EmailChangeNotifier notifier,
-            Clock clock,
-            UniqueStringIdGenerator tokenGenerator) {
+            EmailVerificationIssuer issuer,
+            EmailChangeNotifier notifier) {
         super(repository);
         this.repository = repository;
         this.passwordHasher = passwordHasher;
-        this.pendingChanges = pendingChanges;
+        this.issuer = issuer;
         this.notifier = notifier;
-        this.clock = clock;
-        this.tokenGenerator = tokenGenerator;
     }
 
     @Override
@@ -57,10 +46,7 @@ public class RequestEmailChangeService extends UserAccountCommandService impleme
         if (repository.findByEmail(newEmail).isPresent()) {
             throw new DuplicateUserAccountException("User account already exists");
         }
-        pendingChanges.discardForUser(account.id());
-        PendingEmailChange change =
-                PendingEmailChange.issue(tokenGenerator.nextId(), account.id(), newEmail, clock, LIFETIME);
-        pendingChanges.save(change);
+        EmailVerification change = issuer.issue(VerificationPurpose.EMAIL_CHANGE, account.id(), newEmail);
         notifier.sendEmailChange(newEmail, change.rawToken(), change.expiresAt());
         return new Result(true);
     }

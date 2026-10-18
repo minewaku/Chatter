@@ -9,6 +9,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.minewaku.chatter.identityaccess.authentication.internal.application.AuthenticationSessionRevocationCoordinator;
 import com.minewaku.chatter.identityaccess.authentication.internal.application.AuthenticationTestFakes;
 import com.minewaku.chatter.identityaccess.emailverification.internal.application.EmailVerificationIssuanceCoordinator;
+import com.minewaku.chatter.identityaccess.emailverification.internal.application.EmailVerificationIssuer;
+import com.minewaku.chatter.identityaccess.emailverification.internal.application.EmailVerificationTestFakes;
+import com.minewaku.chatter.identityaccess.emailverification.internal.model.EmailVerification;
+import com.minewaku.chatter.identityaccess.emailverification.internal.model.VerificationPurpose;
 import com.minewaku.chatter.identityaccess.emailverification.internal.port.repository.EmailVerificationRepository;
 import com.minewaku.chatter.identityaccess.user.api.command.ChangePasswordUseCase;
 import com.minewaku.chatter.identityaccess.user.api.command.ChangeUsernameUseCase;
@@ -36,7 +40,6 @@ import com.minewaku.chatter.identityaccess.user.internal.application.query.FindU
 import com.minewaku.chatter.identityaccess.user.internal.model.AccountStatus;
 import com.minewaku.chatter.identityaccess.user.internal.model.Birthday;
 import com.minewaku.chatter.identityaccess.user.internal.model.Email;
-import com.minewaku.chatter.identityaccess.user.internal.model.PendingEmailChange;
 import com.minewaku.chatter.identityaccess.user.internal.model.PlainPassword;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserAccount;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserId;
@@ -58,8 +61,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 class UserAccountApplicationServiceTest {
 
     private static final String CURRENT_PASSWORD = "Password1!";
-    private static final UserAccountTestFakes.InMemoryPendingEmailChangeRepository NO_PENDING_CHANGES =
-            new UserAccountTestFakes.InMemoryPendingEmailChangeRepository();
+    private static final EmailVerificationTestFakes.Repository NO_PENDING_CHANGES =
+            new EmailVerificationTestFakes.Repository();
     private static final AuthenticationSessionRevocationCoordinator SESSION_REVOCATION =
             new AuthenticationSessionRevocationCoordinator(
                     new AuthenticationTestFakes.InMemorySessionRepository(),
@@ -161,9 +164,10 @@ class UserAccountApplicationServiceTest {
         UserAccountTestFakes.InMemoryRepository repository = new UserAccountTestFakes.InMemoryRepository();
         List<String> deliveries = new ArrayList<>();
         EmailVerificationIssuanceCoordinator issuance = new EmailVerificationIssuanceCoordinator(
-                Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC),
-                () -> "registration-token",
-                new EmptyVerificationRepository(),
+                new EmailVerificationIssuer(
+                        Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC),
+                        () -> "registration-token",
+                        new EmptyVerificationRepository()),
                 (email, token, expiresAt) -> deliveries.add(token));
 
         RegisterUserUseCase.Result registered =
@@ -324,13 +328,21 @@ class UserAccountApplicationServiceTest {
                 new UserAccountTestFakes.DeterministicPasswordHasher();
         UserAccountTestFakes.InMemoryRepository repository = new UserAccountTestFakes.InMemoryRepository();
         repository.add(activeAccount(hasher));
-        UserAccountTestFakes.InMemoryPendingEmailChangeRepository pending =
-                new UserAccountTestFakes.InMemoryPendingEmailChangeRepository();
-        pending.save(PendingEmailChange.issue(
+        EmailVerificationTestFakes.Repository pending = new EmailVerificationTestFakes.Repository();
+        Clock fixed = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC);
+        pending.save(EmailVerification.issue(
+                VerificationPurpose.EMAIL_CHANGE,
                 "pending-token",
                 new UserId(42),
                 new Email("new@example.com"),
-                Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC),
+                fixed,
+                Duration.ofHours(24)));
+        pending.save(EmailVerification.issue(
+                VerificationPurpose.REGISTRATION,
+                "registration-token",
+                new UserId(42),
+                new Email("person@example.com"),
+                fixed,
                 Duration.ofHours(24)));
         SoftDeleteUserAccountService service =
                 new SoftDeleteUserAccountService(repository, hasher, pending, SESSION_REVOCATION);
@@ -338,11 +350,12 @@ class UserAccountApplicationServiceTest {
         assertThrows(
                 InvalidCredentialsException.class,
                 () -> service.handle(new SoftDeleteUserAccountUseCase.Command(42, "WrongPassword3#")));
-        assertTrue(pending.outstandingFor(42).isPresent());
+        assertTrue(pending.outstandingFor(VerificationPurpose.EMAIL_CHANGE, 42).isPresent());
 
         assertTrue(service.handle(new SoftDeleteUserAccountUseCase.Command(42, CURRENT_PASSWORD))
                 .changed());
-        assertTrue(pending.outstandingFor(42).isEmpty());
+        assertTrue(pending.outstandingFor(VerificationPurpose.EMAIL_CHANGE, 42).isEmpty());
+        assertTrue(pending.outstandingFor(VerificationPurpose.REGISTRATION, 42).isPresent());
     }
 
     @Test
@@ -582,42 +595,24 @@ class UserAccountApplicationServiceTest {
 
     private EmailVerificationIssuanceCoordinator issuance() {
         return new EmailVerificationIssuanceCoordinator(
-                Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC),
-                () -> "test-token",
-                new EmailVerificationRepository() {
-                    @Override
-                    public void save(
-                            com.minewaku.chatter.identityaccess.emailverification.internal.model.EmailVerification
-                                    verification) {}
-
-                    @Override
-                    public java.util.Optional<
-                                    com.minewaku.chatter.identityaccess.emailverification.internal.model
-                                            .EmailVerification>
-                            findByPresentedToken(String token) {
-                        return java.util.Optional.empty();
-                    }
-
-                    @Override
-                    public void invalidateForUser(UserId userId) {}
-                },
+                new EmailVerificationIssuer(
+                        Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC),
+                        () -> "test-token",
+                        new EmptyVerificationRepository()),
                 (email, token, expiry) -> {});
     }
 
     private static final class EmptyVerificationRepository implements EmailVerificationRepository {
         @Override
-        public void save(
-                com.minewaku.chatter.identityaccess.emailverification.internal.model.EmailVerification verification) {}
+        public void save(EmailVerification verification) {}
 
         @Override
-        public java.util.Optional<
-                        com.minewaku.chatter.identityaccess.emailverification.internal.model.EmailVerification>
-                findByPresentedToken(String token) {
+        public java.util.Optional<EmailVerification> findByPresentedToken(VerificationPurpose purpose, String token) {
             return java.util.Optional.empty();
         }
 
         @Override
-        public void invalidateForUser(UserId userId) {}
+        public void invalidateForUser(VerificationPurpose purpose, UserId userId) {}
     }
 
     private enum ExpectedEffect {

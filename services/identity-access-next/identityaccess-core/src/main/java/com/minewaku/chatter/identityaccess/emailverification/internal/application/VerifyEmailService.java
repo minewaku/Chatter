@@ -2,6 +2,7 @@ package com.minewaku.chatter.identityaccess.emailverification.internal.applicati
 
 import com.minewaku.chatter.identityaccess.emailverification.command.VerifyEmailUseCase;
 import com.minewaku.chatter.identityaccess.emailverification.internal.model.EmailVerification;
+import com.minewaku.chatter.identityaccess.emailverification.internal.model.VerificationPurpose;
 import com.minewaku.chatter.identityaccess.emailverification.internal.port.repository.EmailVerificationRepository;
 import com.minewaku.chatter.identityaccess.user.internal.model.AccountStatus;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserAccount;
@@ -25,8 +26,9 @@ public class VerifyEmailService implements VerifyEmailUseCase {
     @Transactional
     public Result handle(Command command) {
         if (command == null || command.token() == null || command.token().isBlank()) return new InvalidOrExpired();
-        EmailVerification verification =
-                verificationRepository.findByPresentedToken(command.token()).orElse(null);
+        EmailVerification verification = verificationRepository
+                .findByPresentedToken(VerificationPurpose.REGISTRATION, command.token())
+                .orElse(null);
         if (verification == null) return new InvalidOrExpired();
         var now = clock.instant();
         if (verification.isExpired(now)) return new InvalidOrExpired();

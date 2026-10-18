@@ -11,6 +11,7 @@ import lombok.Getter;
 @Getter
 public final class EmailVerification {
 
+    private final VerificationPurpose purpose;
     private final String rawToken;
     private final UserId userId;
     private final Email email;
@@ -19,7 +20,14 @@ public final class EmailVerification {
     private Instant verifiedAt;
 
     private EmailVerification(
-            String rawToken, UserId userId, Email email, Instant createdAt, Instant expiresAt, Instant verifiedAt) {
+            VerificationPurpose purpose,
+            String rawToken,
+            UserId userId,
+            Email email,
+            Instant createdAt,
+            Instant expiresAt,
+            Instant verifiedAt) {
+        this.purpose = Objects.requireNonNull(purpose, "purpose is required");
         this.rawToken = requireText(rawToken, "raw token is required");
         this.userId = Objects.requireNonNull(userId, "user id is required");
         this.email = Objects.requireNonNull(email, "email is required");
@@ -34,16 +42,23 @@ public final class EmailVerification {
         this.verifiedAt = verifiedAt;
     }
 
-    public static EmailVerification issue(String rawToken, UserId userId, Email email, Clock clock, Duration lifetime) {
+    public static EmailVerification issue(
+            VerificationPurpose purpose, String rawToken, UserId userId, Email email, Clock clock, Duration lifetime) {
         Objects.requireNonNull(clock, "clock is required");
         requirePositive(lifetime);
         Instant createdAt = clock.instant();
-        return new EmailVerification(rawToken, userId, email, createdAt, createdAt.plus(lifetime), null);
+        return new EmailVerification(purpose, rawToken, userId, email, createdAt, createdAt.plus(lifetime), null);
     }
 
     public static EmailVerification reconstitute(
-            String rawToken, UserId userId, Email email, Instant createdAt, Instant expiresAt, Instant verifiedAt) {
-        return new EmailVerification(rawToken, userId, email, createdAt, expiresAt, verifiedAt);
+            VerificationPurpose purpose,
+            String rawToken,
+            UserId userId,
+            Email email,
+            Instant createdAt,
+            Instant expiresAt,
+            Instant verifiedAt) {
+        return new EmailVerification(purpose, rawToken, userId, email, createdAt, expiresAt, verifiedAt);
     }
 
     public static void requirePositive(Duration lifetime) {

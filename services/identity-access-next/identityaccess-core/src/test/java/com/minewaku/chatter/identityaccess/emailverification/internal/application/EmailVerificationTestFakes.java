@@ -1,6 +1,7 @@
 package com.minewaku.chatter.identityaccess.emailverification.internal.application;
 
 import com.minewaku.chatter.identityaccess.emailverification.internal.model.EmailVerification;
+import com.minewaku.chatter.identityaccess.emailverification.internal.model.VerificationPurpose;
 import com.minewaku.chatter.identityaccess.emailverification.internal.port.VerificationNotifier;
 import com.minewaku.chatter.identityaccess.emailverification.internal.port.repository.EmailVerificationRepository;
 import com.minewaku.chatter.identityaccess.shared.port.UniqueStringIdGenerator;
@@ -13,13 +14,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-final class EmailVerificationTestFakes {
+public final class EmailVerificationTestFakes {
     private EmailVerificationTestFakes() {}
 
-    static final class Repository implements EmailVerificationRepository {
-        final Map<String, EmailVerification> records = new LinkedHashMap<>();
-        final List<String> calls = new ArrayList<>();
-        RuntimeException failure;
+    /** Records are keyed by raw token; a lookup also requires the purpose to match, as the real repository does. */
+    public static final class Repository implements EmailVerificationRepository {
+        public final Map<String, EmailVerification> records = new LinkedHashMap<>();
+        public final List<String> calls = new ArrayList<>();
+        public RuntimeException failure;
 
         @Override
         public void save(EmailVerification verification) {
@@ -29,24 +31,33 @@ final class EmailVerificationTestFakes {
         }
 
         @Override
-        public Optional<EmailVerification> findByPresentedToken(String token) {
+        public Optional<EmailVerification> findByPresentedToken(VerificationPurpose purpose, String token) {
             calls.add("find");
-            return Optional.ofNullable(records.get(token));
+            return Optional.ofNullable(records.get(token)).filter(found -> found.purpose() == purpose);
         }
 
         @Override
-        public void invalidateForUser(UserId userId) {
+        public void invalidateForUser(VerificationPurpose purpose, UserId userId) {
             calls.add("invalidate");
             records.entrySet()
-                    .removeIf(entry -> entry.getValue().userId().equals(userId)
+                    .removeIf(entry -> entry.getValue().purpose() == purpose
+                            && entry.getValue().userId().equals(userId)
                             && !entry.getValue().isVerified());
+        }
+
+        /** The user's unverified proof of this purpose, if any. */
+        public Optional<EmailVerification> outstandingFor(VerificationPurpose purpose, long userId) {
+            return records.values().stream()
+                    .filter(found ->
+                            found.purpose() == purpose && found.userId().value() == userId && !found.isVerified())
+                    .findFirst();
         }
     }
 
-    static final class Generator implements UniqueStringIdGenerator {
-        final List<String> values = new ArrayList<>(List.of("token-1", "token-2", "token-3"));
-        int calls;
-        RuntimeException failure;
+    public static final class Generator implements UniqueStringIdGenerator {
+        public final List<String> values = new ArrayList<>(List.of("token-1", "token-2", "token-3"));
+        public int calls;
+        public RuntimeException failure;
 
         @Override
         public String nextId() {
@@ -56,7 +67,7 @@ final class EmailVerificationTestFakes {
         }
     }
 
-    static final class Notifier implements VerificationNotifier {
+    public static final class Notifier implements VerificationNotifier {
         record Delivery(Email email, String token, Instant expiresAt) {}
 
         final List<Delivery> deliveries = new ArrayList<>();

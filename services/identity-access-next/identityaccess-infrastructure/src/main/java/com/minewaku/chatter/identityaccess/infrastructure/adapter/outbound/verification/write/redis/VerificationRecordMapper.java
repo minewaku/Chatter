@@ -1,6 +1,7 @@
 package com.minewaku.chatter.identityaccess.infrastructure.adapter.outbound.verification.write.redis;
 
 import com.minewaku.chatter.identityaccess.emailverification.internal.model.EmailVerification;
+import com.minewaku.chatter.identityaccess.emailverification.internal.model.VerificationPurpose;
 import com.minewaku.chatter.identityaccess.infrastructure.integration.redis.RedisTime;
 import com.minewaku.chatter.identityaccess.user.internal.model.Email;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserId;
@@ -19,8 +20,9 @@ class VerificationRecordMapper {
     }
 
     /** The raw token comes from the value the caller presented; it is never read back from Redis. */
-    EmailVerification toModel(VerificationRecord record, String presentedToken) {
+    EmailVerification toModel(VerificationRecord record, VerificationPurpose purpose, String presentedToken) {
         return EmailVerification.reconstitute(
+                purpose,
                 presentedToken,
                 new UserId(record.userId()),
                 new Email(record.email()),

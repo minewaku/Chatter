@@ -1,10 +1,11 @@
 package com.minewaku.chatter.identityaccess.user.internal.application.command;
 
+import com.minewaku.chatter.identityaccess.emailverification.internal.model.EmailVerification;
+import com.minewaku.chatter.identityaccess.emailverification.internal.model.VerificationPurpose;
+import com.minewaku.chatter.identityaccess.emailverification.internal.port.repository.EmailVerificationRepository;
 import com.minewaku.chatter.identityaccess.user.api.command.ConfirmEmailChangeUseCase;
 import com.minewaku.chatter.identityaccess.user.api.exception.DuplicateUserAccountException;
-import com.minewaku.chatter.identityaccess.user.internal.model.PendingEmailChange;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserAccount;
-import com.minewaku.chatter.identityaccess.user.internal.port.repository.PendingEmailChangeRepository;
 import com.minewaku.chatter.identityaccess.user.internal.port.repository.UserAccountRepository;
 import java.time.Clock;
 import java.time.Instant;
@@ -21,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class ConfirmEmailChangeService implements ConfirmEmailChangeUseCase {
 
-    @NonNull private final PendingEmailChangeRepository pendingChanges;
+    @NonNull private final EmailVerificationRepository verifications;
 
     @NonNull private final UserAccountRepository userRepository;
 
@@ -33,42 +34,43 @@ public class ConfirmEmailChangeService implements ConfirmEmailChangeUseCase {
         if (command == null || command.token() == null || command.token().isBlank()) {
             return new InvalidOrExpired();
         }
-        PendingEmailChange change =
-                pendingChanges.findByPresentedToken(command.token()).orElse(null);
+        EmailVerification change = verifications
+                .findByPresentedToken(VerificationPurpose.EMAIL_CHANGE, command.token())
+                .orElse(null);
         Instant now = clock.instant();
         if (change == null || change.isExpired(now)) {
             return new InvalidOrExpired();
         }
-        if (change.isConfirmed()) {
+        if (change.isVerified()) {
             return new AlreadyConfirmed();
         }
         UserAccount account = userRepository.findById(change.userId()).orElse(null);
         if (account == null || !account.isAccessible()) {
             return new InvalidOrExpired();
         }
-        if (account.email().equals(change.newEmail())) {
+        if (account.email().equals(change.email())) {
             // an earlier attempt applied the change but did not get to record it
             markConfirmed(change, now);
             return new AlreadyConfirmed();
         }
-        if (userRepository.findByEmail(change.newEmail()).isPresent()) {
-            pendingChanges.discardForUser(account.id());
+        if (userRepository.findByEmail(change.email()).isPresent()) {
+            verifications.invalidateForUser(VerificationPurpose.EMAIL_CHANGE, account.id());
             throw new DuplicateUserAccountException("User account already exists");
         }
-        account.applyVerifiedEmail(change.newEmail());
+        account.applyVerifiedEmail(change.email());
         try {
             userRepository.save(account);
         } catch (DuplicateUserAccountException e) {
-            pendingChanges.discardForUser(account.id());
+            verifications.invalidateForUser(VerificationPurpose.EMAIL_CHANGE, account.id());
             throw e;
         }
         markConfirmed(change, now);
         return new Confirmed(account.id().value());
     }
 
-    private void markConfirmed(PendingEmailChange change, Instant now) {
-        if (change.confirm(now)) {
-            pendingChanges.save(change);
+    private void markConfirmed(EmailVerification change, Instant now) {
+        if (change.verify(now)) {
+            verifications.save(change);
         }
     }
 }

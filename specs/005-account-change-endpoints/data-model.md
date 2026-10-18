@@ -26,6 +26,8 @@ A taken address is signalled by throwing the existing `DuplicateUserAccountExcep
 
 ## PendingEmailChange (core model, `user.internal.model`)
 
+> **Superseded by [spec 006](../006-unify-email-ownership-proof/spec.md):** this model was merged into `EmailVerification` (`emailverification.internal.model`) with a `VerificationPurpose`. See the data model of spec 006.
+
 | Field | Meaning |
 |-------|---------|
 | `rawToken` | The emailed secret. Held in memory only; never stored |

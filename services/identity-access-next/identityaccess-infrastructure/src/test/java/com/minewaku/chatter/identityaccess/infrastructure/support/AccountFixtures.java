@@ -44,7 +44,18 @@ public final class AccountFixtures {
     }
 
     public static EmailVerification verification(long userId, String rawToken) {
+        return verification(
+                com.minewaku.chatter.identityaccess.emailverification.internal.model.VerificationPurpose.REGISTRATION,
+                userId,
+                rawToken);
+    }
+
+    public static EmailVerification verification(
+            com.minewaku.chatter.identityaccess.emailverification.internal.model.VerificationPurpose purpose,
+            long userId,
+            String rawToken) {
         return EmailVerification.issue(
+                purpose,
                 rawToken,
                 new UserId(userId),
                 new Email("verify" + userId + "@example.com"),

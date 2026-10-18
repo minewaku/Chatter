@@ -6,6 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.minewaku.chatter.identityaccess.emailverification.internal.application.EmailVerificationIssuer;
+import com.minewaku.chatter.identityaccess.emailverification.internal.application.EmailVerificationTestFakes;
+import com.minewaku.chatter.identityaccess.emailverification.internal.model.EmailVerification;
+import com.minewaku.chatter.identityaccess.emailverification.internal.model.VerificationPurpose;
 import com.minewaku.chatter.identityaccess.user.api.command.ConfirmEmailChangeUseCase;
 import com.minewaku.chatter.identityaccess.user.api.command.RequestEmailChangeUseCase;
 import com.minewaku.chatter.identityaccess.user.api.exception.DuplicateUserAccountException;
@@ -36,7 +40,7 @@ class EmailChangeApplicationServiceTest {
 
     private UserAccountTestFakes.DeterministicPasswordHasher hasher;
     private UserAccountTestFakes.InMemoryRepository accounts;
-    private UserAccountTestFakes.InMemoryPendingEmailChangeRepository pending;
+    private EmailVerificationTestFakes.Repository pending;
     private UserAccountTestFakes.RecordingEmailChangeNotifier notifier;
     private MutableClock clock;
     private RequestEmailChangeService request;
@@ -46,11 +50,14 @@ class EmailChangeApplicationServiceTest {
     void setUp() {
         hasher = new UserAccountTestFakes.DeterministicPasswordHasher();
         accounts = new UserAccountTestFakes.InMemoryRepository();
-        pending = new UserAccountTestFakes.InMemoryPendingEmailChangeRepository();
+        pending = new EmailVerificationTestFakes.Repository();
         notifier = new UserAccountTestFakes.RecordingEmailChangeNotifier();
         clock = new MutableClock(START);
         request = new RequestEmailChangeService(
-                accounts, hasher, pending, notifier, clock, new UserAccountTestFakes.SequentialTokenGenerator());
+                accounts,
+                hasher,
+                new EmailVerificationIssuer(clock, new UserAccountTestFakes.SequentialTokenGenerator(), pending),
+                notifier);
         confirm = new ConfirmEmailChangeService(pending, accounts, clock);
         accounts.add(account(42, "person@example.com", "person_42", AccountStatus.ACTIVE));
     }
@@ -97,7 +104,9 @@ class EmailChangeApplicationServiceTest {
         assertEquals(START.plus(Duration.ofHours(24)), delivery.expiresAt());
         assertEquals(
                 new Email("new@example.com"),
-                pending.outstandingFor(42).orElseThrow().newEmail());
+                pending.outstandingFor(VerificationPurpose.EMAIL_CHANGE, 42)
+                        .orElseThrow()
+                        .email());
         assertEquals(0, accounts.saveCalls);
     }
 
@@ -106,7 +115,7 @@ class EmailChangeApplicationServiceTest {
         RequestEmailChangeUseCase.Result result = ask(" PERSON@example.com ");
 
         assertFalse(result.requested());
-        assertTrue(pending.byToken.isEmpty());
+        assertTrue(pending.records.isEmpty());
         assertTrue(notifier.deliveries.isEmpty());
     }
 
@@ -116,7 +125,7 @@ class EmailChangeApplicationServiceTest {
 
         assertThrows(DuplicateUserAccountException.class, () -> ask("Taken@Example.com"));
 
-        assertTrue(pending.byToken.isEmpty());
+        assertTrue(pending.records.isEmpty());
         assertTrue(notifier.deliveries.isEmpty());
     }
 
@@ -135,8 +144,9 @@ class EmailChangeApplicationServiceTest {
                 () -> request.handle(new RequestEmailChangeUseCase.Command(42, "wrong", "second@example.com")));
 
         assertEquals(1, notifier.deliveries.size());
-        assertTrue(pending.findByPresentedToken(firstToken).isPresent());
-        assertTrue(pending.outstandingFor(42).isPresent());
+        assertTrue(pending.findByPresentedToken(VerificationPurpose.EMAIL_CHANGE, firstToken)
+                .isPresent());
+        assertTrue(pending.outstandingFor(VerificationPurpose.EMAIL_CHANGE, 42).isPresent());
     }
 
     @Test
@@ -146,8 +156,9 @@ class EmailChangeApplicationServiceTest {
         ask("second@example.com");
         String secondToken = latestToken();
 
-        assertEquals(1, pending.byToken.size());
-        assertTrue(pending.findByPresentedToken(firstToken).isEmpty());
+        assertEquals(1, pending.records.size());
+        assertTrue(pending.findByPresentedToken(VerificationPurpose.EMAIL_CHANGE, firstToken)
+                .isEmpty());
         assertInstanceOf(ConfirmEmailChangeUseCase.InvalidOrExpired.class, confirmToken(firstToken));
         assertInstanceOf(ConfirmEmailChangeUseCase.Confirmed.class, confirmToken(secondToken));
         assertEquals("second@example.com", emailOf(42));
@@ -161,7 +172,8 @@ class EmailChangeApplicationServiceTest {
 
         assertThrows(DuplicateUserAccountException.class, () -> ask("taken@example.com"));
 
-        assertTrue(pending.findByPresentedToken(firstToken).isPresent());
+        assertTrue(pending.findByPresentedToken(VerificationPurpose.EMAIL_CHANGE, firstToken)
+                .isPresent());
     }
 
     @Test
@@ -184,7 +196,9 @@ class EmailChangeApplicationServiceTest {
 
         assertEquals(new ConfirmEmailChangeUseCase.Confirmed(42), result);
         assertEquals("new@example.com", emailOf(42));
-        assertTrue(pending.findByPresentedToken(token).orElseThrow().isConfirmed());
+        assertTrue(pending.findByPresentedToken(VerificationPurpose.EMAIL_CHANGE, token)
+                .orElseThrow()
+                .isVerified());
         assertEquals(1, accounts.saveCalls);
     }
 
@@ -223,7 +237,7 @@ class EmailChangeApplicationServiceTest {
         assertThrows(DuplicateUserAccountException.class, () -> confirmToken(token));
 
         assertEquals("person@example.com", emailOf(42));
-        assertTrue(pending.outstandingFor(42).isEmpty());
+        assertTrue(pending.outstandingFor(VerificationPurpose.EMAIL_CHANGE, 42).isEmpty());
         assertInstanceOf(ConfirmEmailChangeUseCase.InvalidOrExpired.class, confirmToken(token));
     }
 
@@ -236,7 +250,7 @@ class EmailChangeApplicationServiceTest {
 
         assertThrows(DuplicateUserAccountException.class, () -> confirmToken(token));
 
-        assertTrue(pending.outstandingFor(42).isEmpty());
+        assertTrue(pending.outstandingFor(VerificationPurpose.EMAIL_CHANGE, 42).isEmpty());
     }
 
     @Test
@@ -258,18 +272,38 @@ class EmailChangeApplicationServiceTest {
 
         assertInstanceOf(ConfirmEmailChangeUseCase.AlreadyConfirmed.class, confirmToken(token));
 
-        assertTrue(pending.findByPresentedToken(token).orElseThrow().isConfirmed());
+        assertTrue(pending.findByPresentedToken(VerificationPurpose.EMAIL_CHANGE, token)
+                .orElseThrow()
+                .isVerified());
+    }
+
+    @Test
+    void a_registration_proof_cannot_confirm_an_email_change() {
+        EmailVerification registration = EmailVerification.issue(
+                VerificationPurpose.REGISTRATION,
+                "registration-token",
+                new UserId(42),
+                new Email("new@example.com"),
+                clock,
+                Duration.ofHours(24));
+        pending.save(registration);
+
+        assertInstanceOf(ConfirmEmailChangeUseCase.InvalidOrExpired.class, confirmToken("registration-token"));
+
+        assertEquals("person@example.com", emailOf(42));
+        assertFalse(registration.isVerified());
     }
 
     @Test
     void the_token_lifetime_is_the_registration_lifetime() {
         assertEquals(
-                com.minewaku.chatter.identityaccess.emailverification.internal.application
-                        .EmailVerificationIssuanceCoordinator.DEFAULT_LIFETIME,
+                com.minewaku.chatter.identityaccess.emailverification.internal.application.EmailVerificationIssuer
+                        .LIFETIME,
                 Duration.ofHours(24));
         ask("new@example.com");
 
-        var change = pending.outstandingFor(42).orElseThrow();
+        var change =
+                pending.outstandingFor(VerificationPurpose.EMAIL_CHANGE, 42).orElseThrow();
         assertEquals(Duration.ofHours(24), Duration.between(change.createdAt(), change.expiresAt()));
     }
 

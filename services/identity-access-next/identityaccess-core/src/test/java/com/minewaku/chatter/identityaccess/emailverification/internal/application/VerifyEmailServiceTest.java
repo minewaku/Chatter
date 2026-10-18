@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.minewaku.chatter.identityaccess.emailverification.command.VerifyEmailUseCase;
 import com.minewaku.chatter.identityaccess.emailverification.internal.model.EmailVerification;
+import com.minewaku.chatter.identityaccess.emailverification.internal.model.VerificationPurpose;
 import com.minewaku.chatter.identityaccess.user.internal.model.AccountStatus;
 import com.minewaku.chatter.identityaccess.user.internal.model.Birthday;
 import com.minewaku.chatter.identityaccess.user.internal.model.Email;
@@ -67,6 +68,28 @@ class VerifyEmailServiceTest {
     }
 
     @Test
+    void an_email_change_proof_cannot_activate_a_registration() {
+        UserAccount account = account(AccountStatus.PENDING_VERIFICATION, "person@example.com");
+        accounts.add(account);
+        EmailVerification emailChange = EmailVerification.reconstitute(
+                VerificationPurpose.EMAIL_CHANGE,
+                "change-token",
+                account.id(),
+                new Email("person@example.com"),
+                NOW.minusSeconds(10),
+                NOW.plusSeconds(3600),
+                null);
+        verifications.records.put("change-token", emailChange);
+
+        assertInstanceOf(
+                VerifyEmailUseCase.InvalidOrExpired.class,
+                service.handle(new VerifyEmailUseCase.Command("change-token")));
+
+        assertEquals(AccountStatus.PENDING_VERIFICATION, account.status());
+        assertEquals(false, emailChange.isVerified());
+    }
+
+    @Test
     void propagates_token_and_account_save_failures() {
         UserAccount account = account(AccountStatus.PENDING_VERIFICATION, "person@example.com");
         accounts.add(account);
@@ -81,7 +104,8 @@ class VerifyEmailServiceTest {
 
     private static EmailVerification verification(
             String token, UserId id, String email, Instant used, Instant expires) {
-        return EmailVerification.reconstitute(token, id, new Email(email), NOW.minusSeconds(10), expires, used);
+        return EmailVerification.reconstitute(
+                VerificationPurpose.REGISTRATION, token, id, new Email(email), NOW.minusSeconds(10), expires, used);
     }
 
     private static UserAccount account(AccountStatus status, String email) {
