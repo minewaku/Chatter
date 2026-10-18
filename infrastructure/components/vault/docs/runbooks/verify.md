@@ -2,12 +2,11 @@
 
 ```bash
 vault kv get secret/identityaccess
+vault read database/creds/identityaccess-postgresql-approle
 ```
 
-Use the corresponding Vault path to inspect other stored secrets.
+Use the corresponding path for other services (`secret/profile`, `secret/message`, `secret/common/jwt/rs256`). See [bootstrap](bootstrap.md) for setting `VAULT_ADDR` and `VAULT_TOKEN`, or the Docker fallback when the CLI is not installed.
 
-# UI
+## UI
 
-Vault UI is available at `http://localhost:5002`.
-
-Authenticate using the token produced during Vault initialization.
+Vault UI is available at `http://localhost:5002`. Sign in with the token from `infrastructure/components/vault/.vault-init`.

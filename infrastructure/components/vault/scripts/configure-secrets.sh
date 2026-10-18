@@ -1,169 +1,152 @@
 #!/usr/bin/env bash
+# Push secrets from .env into Vault.
+#
+# Usage: configure-secrets.sh [--no-db] [service ...]
+#   services: identityaccess profile apigateway message jwt   (default: all)
+#   --no-db   only write KV secrets and JWT keys; skip the database engine config
+#             (use it while the databases are down or the *_VAULT_* credentials are placeholders)
+#
+# .env.example is the manifest: every variable it lists for a service must be set.
+# Variables named <SERVICE>_<GROUP>_<FIELD> become key <group>.<field> in secret/<service>;
+# *_DB_VAULT_* and *_SCYLLA_VAULT_* configure the database engine instead.
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel)"
+source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
-set -a
-source "$ROOT_DIR/.env"
-set +a
+ALL_SERVICES=(identityaccess profile apigateway message jwt)
+declare -A POSTGRES_PORT=([identityaccess]=5440 [profile]=5441 [message]=5442)
+declare -A HAS_SCYLLA=([message]=1)
 
-# Identity Access service secrets
-: "${IDENTITYACCESS_DEBEZIUM_USERNAME:?Missing IDENTITYACCESS_DEBEZIUM_USERNAME}"
-: "${IDENTITYACCESS_DEBEZIUM_PASSWORD:?Missing IDENTITYACCESS_DEBEZIUM_PASSWORD}"
-: "${IDENTITYACCESS_MAIL_USERNAME:?Missing IDENTITYACCESS_MAIL_USERNAME}"
-: "${IDENTITYACCESS_MAIL_PASSWORD:?Missing IDENTITYACCESS_MAIL_PASSWORD}"
-: "${IDENTITYACCESS_REDIS_USERNAME:?Missing IDENTITYACCESS_REDIS_USERNAME}"
-: "${IDENTITYACCESS_REDIS_PASSWORD:?Missing IDENTITYACCESS_REDIS_PASSWORD}"
-: "${IDENTITYACCESS_REFRESH_SALT:?Missing IDENTITYACCESS_REFRESH_SALT}"
-: "${IDENTITYACCESS_REFRESH_PASSWORD:?Missing IDENTITYACCESS_REFRESH_PASSWORD}"
-: "${IDENTITYACCESS_DB_VAULT_USERNAME:?Missing IDENTITYACCESS_DB_VAULT_USERNAME}"
-: "${IDENTITYACCESS_DB_VAULT_PASSWORD:?Missing IDENTITYACCESS_DB_VAULT_PASSWORD}"
+JWT_PRIVATE_KEY="$ASSETS_DIR/keys/private-key.pem"
+JWT_PUBLIC_KEY="$ASSETS_DIR/keys/public-key.pem"
 
-# Profile service secrets
-: "${PROFILE_DEBEZIUM_USERNAME:?Missing PROFILE_DEBEZIUM_USERNAME}"
-: "${PROFILE_DEBEZIUM_PASSWORD:?Missing PROFILE_DEBEZIUM_PASSWORD}"
-: "${PROFILE_REDIS_USERNAME:?Missing PROFILE_REDIS_USERNAME}"
-: "${PROFILE_REDIS_PASSWORD:?Missing PROFILE_REDIS_PASSWORD}"
-: "${PROFILE_CLOUDINARY_CLOUD_NAME:?Missing PROFILE_CLOUDINARY_CLOUD_NAME}"
-: "${PROFILE_CLOUDINARY_API_KEY:?Missing PROFILE_CLOUDINARY_API_KEY}"
-: "${PROFILE_CLOUDINARY_API_SECRET:?Missing PROFILE_CLOUDINARY_API_SECRET}"
-: "${PROFILE_CLOUDINARY_SECURE:?Missing PROFILE_CLOUDINARY_SECURE}"
-: "${PROFILE_DB_VAULT_USERNAME:?Missing PROFILE_DB_VAULT_USERNAME}"
-: "${PROFILE_DB_VAULT_PASSWORD:?Missing PROFILE_DB_VAULT_PASSWORD}"
+services=()
+with_db=true
+for arg in "$@"; do
+  case $arg in
+    --no-db) with_db=false ;;
+    -*) die "unknown option '$arg'" ;;
+    *) services+=("$arg") ;;
+  esac
+done
+(( ${#services[@]} > 0 )) || services=("${ALL_SERVICES[@]}")
 
-# API Gateway service secrets
-: "${APIGATEWAY_REDIS_USERNAME:?Missing APIGATEWAY_REDIS_USERNAME}"
-: "${APIGATEWAY_REDIS_PASSWORD:?Missing APIGATEWAY_REDIS_PASSWORD}"
+load_config
 
-# Message service secrets
-: "${MESSAGE_DEBEZIUM_USERNAME:?Missing MESSAGE_DEBEZIUM_USERNAME}"
-: "${MESSAGE_DEBEZIUM_PASSWORD:?Missing MESSAGE_DEBEZIUM_PASSWORD}"
-: "${MESSAGE_REDIS_USERNAME:?Missing MESSAGE_REDIS_USERNAME}"
-: "${MESSAGE_REDIS_PASSWORD:?Missing MESSAGE_REDIS_PASSWORD}"
-: "${MESSAGE_CLOUDINARY_CLOUD_NAME:?Missing MESSAGE_CLOUDINARY_CLOUD_NAME}"
-: "${MESSAGE_CLOUDINARY_API_KEY:?Missing MESSAGE_CLOUDINARY_API_KEY}"
-: "${MESSAGE_CLOUDINARY_API_SECRET:?Missing MESSAGE_CLOUDINARY_API_SECRET}"
-: "${MESSAGE_CLOUDINARY_SECURE:?Missing MESSAGE_CLOUDINARY_SECURE}"
-: "${MESSAGE_DB_VAULT_USERNAME:?Missing MESSAGE_DB_VAULT_USERNAME}"
-: "${MESSAGE_DB_VAULT_PASSWORD:?Missing MESSAGE_DB_VAULT_PASSWORD}"
-: "${MESSAGE_SCYLLA_VAULT_USERNAME:?Missing MESSAGE_SCYLLA_VAULT_USERNAME}"
-: "${MESSAGE_SCYLLA_VAULT_PASSWORD:?Missing MESSAGE_SCYLLA_VAULT_PASSWORD}"
+# ---- validate everything before writing anything
+for svc in "${services[@]}"; do
+  if [[ $svc == jwt ]]; then
+    need_file "$JWT_PRIVATE_KEY"
+    need_file "$JWT_PUBLIC_KEY"
+    continue
+  fi
+  [[ " ${ALL_SERVICES[*]} " == *" $svc "* ]] || die "unknown service '$svc' (known: ${ALL_SERVICES[*]})"
+  mapfile -t vars < <(manifest_vars "${svc^^}")
+  (( ${#vars[@]} > 0 )) || die "no ${svc^^}_* variables in .env.example"
+  for v in "${vars[@]}"; do
+    if ! $with_db && [[ $v == *_DB_VAULT_* || $v == *_SCYLLA_VAULT_* ]]; then continue; fi
+    need_var "$v"
+  done
+  if ! $with_db; then continue; fi
+  if [[ -n ${POSTGRES_PORT[$svc]:-} ]]; then
+    need_file "$ASSETS_DIR/sql/postgresql-role-orm.sql"
+    need_file "$ASSETS_DIR/sql/postgresql-revoke-orm.sql"
+    need_file "$ASSETS_DIR/sql/postgresql-renew-orm.sql"
+  fi
+  if [[ -n ${HAS_SCYLLA[$svc]:-} ]]; then
+    need_file "$ASSETS_DIR/cql/cassandra-role-orm.cql"
+    need_file "$ASSETS_DIR/cql/cassandra-revoke-orm.cql"
+  fi
+done
+fail_if_missing
 
+require_unsealed_vault
+ensure_engine secret kv-v2
+ensure_engine database database
 
-# KV secrets
+# ---- writers
 
-vault kv put secret/identityaccess \
-  debezium.username="$IDENTITYACCESS_DEBEZIUM_USERNAME" \
-  debezium.password="$IDENTITYACCESS_DEBEZIUM_PASSWORD" \
-  mail.username="$IDENTITYACCESS_MAIL_USERNAME" \
-  mail.password="$IDENTITYACCESS_MAIL_PASSWORD" \
-  redis.username="$IDENTITYACCESS_REDIS_USERNAME" \
-  redis.password="$IDENTITYACCESS_REDIS_PASSWORD" \
-  refresh.salt="$IDENTITYACCESS_REFRESH_SALT" \
-  refresh.password="$IDENTITYACCESS_REFRESH_PASSWORD"
+configure_kv() {
+  local svc=$1 prefix=${1^^} var field pairs=()
+  while IFS= read -r var; do
+    [[ $var == *_DB_VAULT_* || $var == *_SCYLLA_VAULT_* ]] && continue
+    field="${var#"${prefix}_"}"
+    field="${field,,}"
+    field="${field/_/.}"
+    pairs+=("$field=${!var}")
+  done < <(manifest_vars "$prefix")
+  (( ${#pairs[@]} > 0 )) || return 0
+  kv_upsert "$svc" "$(json_obj "${pairs[@]}")"
+  log "kv: secret/$svc (${#pairs[@]} keys)"
+}
 
-vault kv put secret/profile \
-  debezium.username="$PROFILE_DEBEZIUM_USERNAME" \
-  debezium.password="$PROFILE_DEBEZIUM_PASSWORD" \
-  redis.username="$PROFILE_REDIS_USERNAME" \
-  redis.password="$PROFILE_REDIS_PASSWORD" \
-  cloudinary.cloud_name="$PROFILE_CLOUDINARY_CLOUD_NAME" \
-  cloudinary.api_key="$PROFILE_CLOUDINARY_API_KEY" \
-  cloudinary.api_secret="$PROFILE_CLOUDINARY_API_SECRET" \
-  cloudinary.secure="$PROFILE_CLOUDINARY_SECURE"
+configure_postgres() {
+  local svc=$1 port=$2 prefix=${1^^}
+  local db="$svc-postgresql" role="$svc-postgresql-approle"
+  local user_var="${prefix}_DB_VAULT_USERNAME" pass_var="${prefix}_DB_VAULT_PASSWORD"
 
-vault kv put secret/apigateway \
-  redis.username="$APIGATEWAY_REDIS_USERNAME" \
-  redis.password="$APIGATEWAY_REDIS_PASSWORD"
+  vault_write "database/config/$db" "$(json_obj \
+    plugin_name=postgresql-database-plugin \
+    "connection_url=postgresql://{{username}}:{{password}}@$svc-postgresql-chatter:$port/chatter?sslmode=disable" \
+    "allowed_roles=$role" \
+    "username=${!user_var}" \
+    "password=${!pass_var}")"
 
-vault kv put secret/message \
-  debezium.username="$MESSAGE_DEBEZIUM_USERNAME" \
-  debezium.password="$MESSAGE_DEBEZIUM_PASSWORD" \
-  redis.username="$MESSAGE_REDIS_USERNAME" \
-  redis.password="$MESSAGE_REDIS_PASSWORD" \
-  cloudinary.cloud_name="$MESSAGE_CLOUDINARY_CLOUD_NAME" \
-  cloudinary.api_key="$MESSAGE_CLOUDINARY_API_KEY" \
-  cloudinary.api_secret="$MESSAGE_CLOUDINARY_API_SECRET" \
-  cloudinary.secure="$MESSAGE_CLOUDINARY_SECURE"
+  vault_write "database/roles/$role" "$(json_obj \
+    "db_name=$db" \
+    "creation_statements=$(< "$ASSETS_DIR/sql/postgresql-role-orm.sql")" \
+    "revocation_statements=$(< "$ASSETS_DIR/sql/postgresql-revoke-orm.sql")" \
+    "renewal_statements=$(< "$ASSETS_DIR/sql/postgresql-renew-orm.sql")" \
+    default_ttl=1h \
+    max_ttl=24h)"
+  log "database: $db -> role $role"
+}
 
+configure_scylla() {
+  local svc=$1 prefix=${1^^}
+  local db="$svc-scylladb" role="$svc-scylladb-approle"
+  local user_var="${prefix}_SCYLLA_VAULT_USERNAME" pass_var="${prefix}_SCYLLA_VAULT_PASSWORD"
 
-# Identity Access PostgreSQL
+  vault_write "database/config/$db" "$(json_obj \
+    plugin_name=cassandra-database-plugin \
+    "hosts=$svc-scylladb-chatter" \
+    port:=9052 \
+    protocol_version:=4 \
+    tls:=false \
+    "allowed_roles=$role" \
+    "username=${!user_var}" \
+    "password=${!pass_var}")"
 
-vault write database/config/identityaccess-postgresql \
-  plugin_name="postgresql-database-plugin" \
-  connection_url="postgresql://{{username}}:{{password}}@identityaccess-postgresql-chatter:5440/chatter?sslmode=disable" \
-  allowed_roles="identityaccess-postgresql-approle" \
-  username="$IDENTITYACCESS_DB_VAULT_USERNAME" \
-  password="$IDENTITYACCESS_DB_VAULT_PASSWORD"
+  vault_write "database/roles/$role" "$(json_obj \
+    "db_name=$db" \
+    "creation_statements=$(< "$ASSETS_DIR/cql/cassandra-role-orm.cql")" \
+    "revocation_statements=$(< "$ASSETS_DIR/cql/cassandra-revoke-orm.cql")" \
+    default_ttl=1h \
+    max_ttl=24h)"
+  log "database: $db -> role $role"
+}
 
-vault write database/roles/identityaccess-postgresql-approle \
-  db_name="identityaccess-postgresql" \
-  creation_statements=@"$ROOT_DIR/infrastructure/components/vault/assets/sql/postgresql-role-orm.sql" \
-  revocation_statements=@"$ROOT_DIR/infrastructure/components/vault/assets/sql/postgresql-revoke-orm.sql" \
-  renewal_statements=@"$ROOT_DIR/infrastructure/components/vault/assets/sql/postgresql-renew-orm.sql" \
-  default_ttl=1h \
-  max_ttl=24h
+configure_jwt() {
+  local private_key public_key
+  IFS= read -r -d '' private_key < "$JWT_PRIVATE_KEY" || true
+  IFS= read -r -d '' public_key < "$JWT_PUBLIC_KEY" || true
+  kv_upsert common/jwt/rs256 "$(json_obj "private-key=$private_key" "public-key=$public_key")"
+  log "kv: secret/common/jwt/rs256"
+}
 
+for svc in "${services[@]}"; do
+  if [[ $svc == jwt ]]; then
+    configure_jwt
+    continue
+  fi
+  configure_kv "$svc"
+  if ! $with_db; then continue; fi
+  if [[ -n ${POSTGRES_PORT[$svc]:-} ]]; then
+    configure_postgres "$svc" "${POSTGRES_PORT[$svc]}"
+  fi
+  if [[ -n ${HAS_SCYLLA[$svc]:-} ]]; then
+    configure_scylla "$svc"
+  fi
+done
 
-# Profile PostgreSQL
-
-vault write database/config/profile-postgresql \
-  plugin_name="postgresql-database-plugin" \
-  connection_url="postgresql://{{username}}:{{password}}@profile-postgresql-chatter:5441/chatter?sslmode=disable" \
-  allowed_roles="profile-postgresql-approle" \
-  username="$PROFILE_DB_VAULT_USERNAME" \
-  password="$PROFILE_DB_VAULT_PASSWORD"
-
-vault write database/roles/profile-postgresql-approle \
-  db_name="profile-postgresql" \
-  creation_statements=@"$ROOT_DIR/infrastructure/components/vault/assets/sql/postgresql-role-orm.sql" \
-  revocation_statements=@"$ROOT_DIR/infrastructure/components/vault/assets/sql/postgresql-revoke-orm.sql" \
-  renewal_statements=@"$ROOT_DIR/infrastructure/components/vault/assets/sql/postgresql-renew-orm.sql" \
-  default_ttl=1h \
-  max_ttl=24h
-
-
-# Message PostgreSQL
-
-vault write database/config/message-postgresql \
-  plugin_name="postgresql-database-plugin" \
-  connection_url="postgresql://{{username}}:{{password}}@message-postgresql-chatter:5442/chatter?sslmode=disable" \
-  allowed_roles="message-postgresql-approle" \
-  username="$MESSAGE_DB_VAULT_USERNAME" \
-  password="$MESSAGE_DB_VAULT_PASSWORD"
-
-vault write database/roles/message-postgresql-approle \
-  db_name="message-postgresql" \
-  creation_statements=@"$ROOT_DIR/infrastructure/components/vault/assets/sql/postgresql-role-orm.sql" \
-  revocation_statements=@"$ROOT_DIR/infrastructure/components/vault/assets/sql/postgresql-revoke-orm.sql" \
-  renewal_statements=@"$ROOT_DIR/infrastructure/components/vault/assets/sql/postgresql-renew-orm.sql" \
-  default_ttl=1h \
-  max_ttl=24h
-
-
-# Message ScyllaDB
-
-vault write database/config/message-scylladb \
-  plugin_name="cassandra-database-plugin" \
-  hosts="message-scylladb-chatter" \
-  port="9052" \
-  protocol_version=4 \
-  username="$MESSAGE_SCYLLA_VAULT_USERNAME" \
-  password="$MESSAGE_SCYLLA_VAULT_PASSWORD" \
-  tls=false \
-  allowed_roles="message-scylladb-approle"
-
-vault write database/roles/message-scylladb-approle \
-  db_name="message-scylladb" \
-  creation_statements=@"$ROOT_DIR/infrastructure/components/vault/assets/cql/cassandra-role-orm.cql" \
-  revocation_statements=@"$ROOT_DIR/infrastructure/components/vault/assets/cql/cassandra-revoke-orm.cql" \
-  default_ttl=1h \
-  max_ttl=24h
-
-
-# Shared JWT keys
-
-vault kv put secret/common/jwt/rs256 \
-  private-key=@"$ROOT_DIR/infrastructure/components/vault/assets/keys/private-key.pem" \
-  public-key=@"$ROOT_DIR/infrastructure/components/vault/assets/keys/public-key.pem"
+log "Done: ${services[*]}"

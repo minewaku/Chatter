@@ -1,2 +1,2 @@
--- Chỉ cần xóa role, các bảng/dữ liệu do role này tạo ra trong keyspace vẫn an toàn
+-- Dropping the role is enough; tables and data it created in the keyspace stay intact
 DROP ROLE IF EXISTS '{{name}}';

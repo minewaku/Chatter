@@ -4,9 +4,15 @@
 
 ## Store the credentials
 
-Vault must be running, unsealed, and you must be logged in (`vault login`, or `export VAULT_ADDR=http://localhost:5002 VAULT_TOKEN=...`).
+Vault must be running and unsealed ([bootstrap](bootstrap.md)).
 
-Either let `scripts/configure-secrets.sh` write them from `IDENTITYACCESS_MAIL_USERNAME` and `IDENTITYACCESS_MAIL_PASSWORD` in the repository `.env`, or update just those two keys without touching the rest of `secret/identityaccess`:
+Set `IDENTITYACCESS_MAIL_USERNAME` and `IDENTITYACCESS_MAIL_PASSWORD` in `infrastructure/components/vault/.env`, then push them:
+
+```bash
+infrastructure/components/vault/scripts/configure-secrets.sh identityaccess
+```
+
+Or update just those two keys without touching the rest of `secret/identityaccess` (`VAULT_ADDR` and `VAULT_TOKEN` as in [bootstrap](bootstrap.md)):
 
 ```bash
 vault kv patch secret/identityaccess \
@@ -21,7 +27,7 @@ For Gmail the password must be an app password, not the account password.
 The service reads `secret/identityaccess` through Spring Cloud Vault, so it needs a token:
 
 ```bash
-export VAULT_TOKEN=<token that can read secret/identityaccess>   # or run `vault login` to create ~/.vault-token
+export VAULT_TOKEN=<token that can read secret/identityaccess>   # local dev: the value in .vault-init, or run `vault login`
 export VAULT_HOST=localhost VAULT_PORT=5002                       # defaults
 ```
 

@@ -1,51 +1,42 @@
 # Vault Bootstrap
 
-Initialize the local Vault instance.
+Start a local Vault, initialise it on first run, and unseal it.
 
-> Run from the repository root.
+> Run from anywhere inside the repository.
 
-## Start
-
-```bash
-docker compose \
-  -p vault_service_chatter \
-  --project-directory infrastructure/components/vault \
-  -f infrastructure/components/vault/docker-compose.yml \
-  up -d
-```
-
-## Initialize
+## One command
 
 ```bash
-vault operator init -key-shares=1 -key-threshold=1
+infrastructure/components/vault/scripts/start.sh
 ```
 
-Store the generated:
+It will:
 
-* Unseal key
-* Initial root token
+1. Start the `vault-chatter` container and wait until it answers.
+2. On first run, run `vault operator init -key-shares=1 -key-threshold=1` and save the unseal key and root token to `infrastructure/components/vault/.vault-init` (mode 600, gitignored).
+3. Unseal Vault if it is sealed and check that the token works.
 
-## Unseal
+Add `--configure` to also push the secrets from `.env` ([configure secrets](configure-secrets.md)).
+
+`VAULT_UNSEAL_KEY` and `VAULT_TOKEN` set in `.env` or the environment take precedence over `.vault-init`.
+
+## Use the CLI yourself
 
 ```bash
-vault operator unseal
+export VAULT_ADDR=http://127.0.0.1:5002
+export VAULT_TOKEN=$(sed -n 's/^VAULT_TOKEN=//p' infrastructure/components/vault/.vault-init)
 ```
 
-Provide the generated unseal key.
+If the `vault` binary is not installed: `docker exec -i -e VAULT_TOKEN vault-chatter vault <command>`.
 
-## Login
+## Troubleshooting
 
-```bash
-vault login <root_token>
-```
-
-## Enable Secret Engines
-
-```bash
-vault secrets enable -path=secret kv-v2
-vault secrets enable database
-```
+| Symptom | Fix |
+|---------|-----|
+| `Vault is not initialised but .vault-init exists` | `data/` was deleted but `.vault-init` was not; see [reset](reset.md). |
+| `Vault is sealed and VAULT_UNSEAL_KEY is not set` | Restore `.vault-init` or set `VAULT_UNSEAL_KEY` in `.env`. |
+| `Vault did not become reachable` | `docker logs vault-chatter`; check that port 5002 is free. |
 
 ## Next
 
-Configure application secrets and database roles using [configure-secrets.md](configure-secrets.md).
+[Configure service secrets](configure-secrets.md).

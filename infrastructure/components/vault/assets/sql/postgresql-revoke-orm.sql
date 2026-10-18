@@ -1,8 +1,8 @@
--- Sang tên đổi chủ toàn bộ bảng/sequence do role này tạo ra cho tài khoản admin cố định ('vault' hoặc 'postgres')
+-- Hand every object owned by this role to the fixed admin account ('vault')
 REASSIGN OWNED BY "{{name}}" TO vault;
 
--- Xóa mọi quyền phụ thuộc còn lại
+-- Drop any remaining privileges
 DROP OWNED BY "{{name}}";
 
--- Xóa role an toàn
+-- Drop the role safely
 DROP ROLE IF EXISTS "{{name}}";

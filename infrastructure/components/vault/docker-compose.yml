@@ -1,5 +1,3 @@
-version: '3.8'
-
 networks:
   chatter-net:
     name: chatter-net
@@ -7,10 +5,11 @@ networks:
 
 services:
   vault-chatter:
-    image: hashicorp/vault:1.17
+    image: hashicorp/vault:1.17.6
     container_name: vault-chatter
     environment:
       VAULT_ADDR: http://127.0.0.1:5002
+      # The image entrypoint writes this to /vault/config/local.json
       VAULT_LOCAL_CONFIG: |
         {
           "listener": {
@@ -28,13 +27,17 @@ services:
         }
 
     cap_add:
-      - IPC_LOCK                     # prevent swapping from secret to disk
+      - IPC_LOCK                     # prevent swapping secrets to disk
     ports:
-      - "5002:5002"
+      - "127.0.0.1:5002:5002"        # local only; Vault runs without TLS
     volumes:
-      - ./config:/vault/config # map from config to host
-      - ./data:/vault/file     # map from data to host
-      - ./assets:/vault/tmp    # expose asset templates inside container
+      - ./data:/vault/file           # file storage backend (gitignored)
+    healthcheck:
+      # sealed and uninitialised Vault still count as healthy: the container is up and answering
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:5002/v1/sys/health?sealedcode=200&uninitcode=200"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
     networks:
       - chatter-net
     command: server

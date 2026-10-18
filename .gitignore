@@ -62,6 +62,8 @@ hs_err_pid*
 
 # Vault local file storage backend
 /infrastructure/components/vault/data/
+# Unseal key and root token written by vault/scripts/start.sh on first run
+/infrastructure/components/vault/.vault-init*
 
 # ==========================================
 # 4. ENVIRONMENT & SECURITY (SECRETS)
@@ -69,6 +71,7 @@ hs_err_pid*
 # Vital rule: Never push environment variables or local configs
 .env
 .env.*
+!.env.example
 *.properties.local
 *.yml.local
 local.properties
