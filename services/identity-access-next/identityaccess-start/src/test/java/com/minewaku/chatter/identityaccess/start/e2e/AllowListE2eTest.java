@@ -19,6 +19,7 @@ class AllowListE2eTest extends E2eSupport {
             "/api/v*/auth/logout",
             "/api/v*/auth/verification/resend",
             "/api/v*/auth/verification/confirm",
+            "/api/v*/users/email-change/confirm",
             "/swagger-ui/**",
             "/swagger-ui.html",
             "/v3/api-docs/**");
@@ -29,7 +30,9 @@ class AllowListE2eTest extends E2eSupport {
             new String[] {"POST", "/sessions/some-session/revoke", "{\"currentPassword\":\"x\"}"},
             new String[] {"POST", "/sessions/revoke-others", "{\"currentPassword\":\"x\"}"},
             new String[] {"PUT", "/users/@me/password", "{\"currentPassword\":\"x\",\"newPassword\":\"y\"}"},
-            new String[] {"DELETE", "/users/@me", null});
+            new String[] {"PUT", "/users/@me/username", "{\"username\":\"x\"}"},
+            new String[] {"POST", "/users/@me/email-change", "{\"newEmail\":\"a@b.co\",\"currentPassword\":\"x\"}"},
+            new String[] {"POST", "/users/@me/close", "{\"currentPassword\":\"x\"}"});
 
     @Autowired
     SecurityProperties securityProperties;

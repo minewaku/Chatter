@@ -16,6 +16,7 @@ class OpenApiE2eTest extends E2eSupport {
             "POST /api/v1/auth/authenticate",
             "POST /api/v1/auth/verification/resend",
             "GET /api/v1/auth/verification/confirm",
+            "GET /api/v1/users/email-change/confirm",
             "POST /api/v1/auth/refresh",
             "POST /api/v1/auth/logout");
 
@@ -24,7 +25,9 @@ class OpenApiE2eTest extends E2eSupport {
             "POST /api/v1/sessions/{sessionId}/revoke",
             "POST /api/v1/sessions/revoke-others",
             "PUT /api/v1/users/@me/password",
-            "DELETE /api/v1/users/@me");
+            "PUT /api/v1/users/@me/username",
+            "POST /api/v1/users/@me/email-change",
+            "POST /api/v1/users/@me/close");
 
     private JsonNode document() {
         ApiResponse response = api().getRoot("/v3/api-docs");
@@ -45,12 +48,12 @@ class OpenApiE2eTest extends E2eSupport {
     }
 
     @Test
-    void documentationIsPublicAndListsExactlyTheElevenOperations() {
+    void documentationIsPublicAndListsExactlyTheDocumentedOperations() {
         List<String> operations = operations(document());
 
         Set<String> expected = new TreeSet<>(PUBLIC_OPERATIONS);
         expected.addAll(PROTECTED_OPERATIONS);
-        assertThat(operations).containsExactlyInAnyOrderElementsOf(expected).hasSize(11);
+        assertThat(operations).containsExactlyInAnyOrderElementsOf(expected);
     }
 
     @Test

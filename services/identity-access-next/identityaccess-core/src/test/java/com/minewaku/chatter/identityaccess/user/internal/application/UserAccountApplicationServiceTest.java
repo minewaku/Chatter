@@ -10,7 +10,6 @@ import com.minewaku.chatter.identityaccess.authentication.internal.application.A
 import com.minewaku.chatter.identityaccess.authentication.internal.application.AuthenticationTestFakes;
 import com.minewaku.chatter.identityaccess.emailverification.internal.application.EmailVerificationIssuanceCoordinator;
 import com.minewaku.chatter.identityaccess.emailverification.internal.port.repository.EmailVerificationRepository;
-import com.minewaku.chatter.identityaccess.user.api.command.ChangeEmailUseCase;
 import com.minewaku.chatter.identityaccess.user.api.command.ChangePasswordUseCase;
 import com.minewaku.chatter.identityaccess.user.api.command.ChangeUsernameUseCase;
 import com.minewaku.chatter.identityaccess.user.api.command.LockUserAccountUseCase;
@@ -21,9 +20,9 @@ import com.minewaku.chatter.identityaccess.user.api.command.SuspendUserAccountUs
 import com.minewaku.chatter.identityaccess.user.api.command.UnlockUserAccountUseCase;
 import com.minewaku.chatter.identityaccess.user.api.exception.DuplicateUserAccountException;
 import com.minewaku.chatter.identityaccess.user.api.exception.InvalidAccountStateTransitionException;
+import com.minewaku.chatter.identityaccess.user.api.exception.InvalidCredentialsException;
 import com.minewaku.chatter.identityaccess.user.api.query.FindUserByEmailUseCase;
 import com.minewaku.chatter.identityaccess.user.api.query.FindUserByIdUseCase;
-import com.minewaku.chatter.identityaccess.user.internal.application.command.ChangeEmailService;
 import com.minewaku.chatter.identityaccess.user.internal.application.command.ChangePasswordService;
 import com.minewaku.chatter.identityaccess.user.internal.application.command.ChangeUsernameService;
 import com.minewaku.chatter.identityaccess.user.internal.application.command.LockUserAccountService;
@@ -37,11 +36,13 @@ import com.minewaku.chatter.identityaccess.user.internal.application.query.FindU
 import com.minewaku.chatter.identityaccess.user.internal.model.AccountStatus;
 import com.minewaku.chatter.identityaccess.user.internal.model.Birthday;
 import com.minewaku.chatter.identityaccess.user.internal.model.Email;
+import com.minewaku.chatter.identityaccess.user.internal.model.PendingEmailChange;
 import com.minewaku.chatter.identityaccess.user.internal.model.PlainPassword;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserAccount;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserId;
 import com.minewaku.chatter.identityaccess.user.internal.model.Username;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -57,6 +58,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 class UserAccountApplicationServiceTest {
 
     private static final String CURRENT_PASSWORD = "Password1!";
+    private static final UserAccountTestFakes.InMemoryPendingEmailChangeRepository NO_PENDING_CHANGES =
+            new UserAccountTestFakes.InMemoryPendingEmailChangeRepository();
     private static final AuthenticationSessionRevocationCoordinator SESSION_REVOCATION =
             new AuthenticationSessionRevocationCoordinator(
                     new AuthenticationTestFakes.InMemorySessionRepository(),
@@ -77,9 +80,9 @@ class UserAccountApplicationServiceTest {
             (repository, hasher, userId) -> new ReinstateUserAccountService(repository)
                     .handle(new ReinstateUserAccountUseCase.Command(userId))
                     .changed();
-    private static final ExistingAccountCommand SOFT_DELETE =
-            (repository, hasher, userId) -> new SoftDeleteUserAccountService(repository, SESSION_REVOCATION)
-                    .handle(new SoftDeleteUserAccountUseCase.Command(userId))
+    private static final ExistingAccountCommand SOFT_DELETE = (repository, hasher, userId) ->
+            new SoftDeleteUserAccountService(repository, hasher, NO_PENDING_CHANGES, SESSION_REVOCATION)
+                    .handle(new SoftDeleteUserAccountUseCase.Command(userId, CURRENT_PASSWORD))
                     .changed();
     private static final ExistingAccountCommand CHANGE_PASSWORD =
             (repository, hasher, userId) -> new ChangePasswordService(repository, hasher, SESSION_REVOCATION)
@@ -90,20 +93,12 @@ class UserAccountApplicationServiceTest {
                     .handle(new ChangePasswordUseCase.Command(userId, CURRENT_PASSWORD, CURRENT_PASSWORD))
                     .changed();
     private static final ExistingAccountCommand CHANGE_USERNAME =
-            (repository, hasher, userId) -> new ChangeUsernameService(repository, hasher)
-                    .handle(new ChangeUsernameUseCase.Command(userId, CURRENT_PASSWORD, "new_person"))
+            (repository, hasher, userId) -> new ChangeUsernameService(repository)
+                    .handle(new ChangeUsernameUseCase.Command(userId, "new_person"))
                     .changed();
     private static final ExistingAccountCommand KEEP_USERNAME =
-            (repository, hasher, userId) -> new ChangeUsernameService(repository, hasher)
-                    .handle(new ChangeUsernameUseCase.Command(userId, CURRENT_PASSWORD, "person_42"))
-                    .changed();
-    private static final ExistingAccountCommand CHANGE_EMAIL =
-            (repository, hasher, userId) -> new ChangeEmailService(repository, hasher)
-                    .handle(new ChangeEmailUseCase.Command(userId, CURRENT_PASSWORD, "new@example.com"))
-                    .changed();
-    private static final ExistingAccountCommand KEEP_EMAIL =
-            (repository, hasher, userId) -> new ChangeEmailService(repository, hasher)
-                    .handle(new ChangeEmailUseCase.Command(userId, CURRENT_PASSWORD, " PERSON@example.com "))
+            (repository, hasher, userId) -> new ChangeUsernameService(repository)
+                    .handle(new ChangeUsernameUseCase.Command(userId, "person_42"))
                     .changed();
 
     @Test
@@ -127,34 +122,35 @@ class UserAccountApplicationServiceTest {
     }
 
     @Test
-    void change_username_and_email_save_only_for_new_values() {
+    void change_username_saves_only_for_new_values() {
         UserAccountTestFakes.DeterministicPasswordHasher hasher =
                 new UserAccountTestFakes.DeterministicPasswordHasher();
         UserAccountTestFakes.InMemoryRepository repository = new UserAccountTestFakes.InMemoryRepository();
         repository.add(activeAccount(hasher));
-        ChangeUsernameService usernameService = new ChangeUsernameService(repository, hasher);
+        ChangeUsernameService usernameService = new ChangeUsernameService(repository);
 
         assertTrue(usernameService
-                .handle(new ChangeUsernameUseCase.Command(42, CURRENT_PASSWORD, "new_person"))
+                .handle(new ChangeUsernameUseCase.Command(42, "new_person"))
                 .changed());
         assertFalse(usernameService
-                .handle(new ChangeUsernameUseCase.Command(42, CURRENT_PASSWORD, "new_person"))
+                .handle(new ChangeUsernameUseCase.Command(42, "new_person"))
                 .changed());
         assertEquals(1, repository.saveCalls);
+    }
 
-        UserAccountTestFakes.InMemoryRepository emailRepository = new UserAccountTestFakes.InMemoryRepository();
-        emailRepository.add(activeAccount(hasher));
-        ChangeEmailService emailService = new ChangeEmailService(emailRepository, hasher);
-        ChangeEmailUseCase.Result unchanged =
-                emailService.handle(new ChangeEmailUseCase.Command(42, CURRENT_PASSWORD, " PERSON@example.com "));
-        ChangeEmailUseCase.Result changed =
-                emailService.handle(new ChangeEmailUseCase.Command(42, CURRENT_PASSWORD, "New@Example.com"));
+    @Test
+    void a_username_held_by_another_account_surfaces_as_a_duplicate() {
+        UserAccountTestFakes.DeterministicPasswordHasher hasher =
+                new UserAccountTestFakes.DeterministicPasswordHasher();
+        UserAccountTestFakes.InMemoryRepository repository = new UserAccountTestFakes.InMemoryRepository();
+        UserAccount account = activeAccount(hasher);
+        repository.add(account);
+        repository.duplicateOnNextSave = true;
+        repository.accountToExposeAfterDuplicate = account;
 
-        assertFalse(unchanged.changed());
-        assertFalse(unchanged.verificationRequired());
-        assertTrue(changed.changed());
-        assertTrue(changed.verificationRequired());
-        assertEquals(1, emailRepository.saveCalls);
+        assertThrows(DuplicateUserAccountException.class, () -> new ChangeUsernameService(repository)
+                .handle(new ChangeUsernameUseCase.Command(42, "taken_name")));
+        assertEquals(1, repository.saveCalls);
     }
 
     @Test
@@ -249,12 +245,12 @@ class UserAccountApplicationServiceTest {
         assertFalse(new ReinstateUserAccountService(repository)
                 .handle(new ReinstateUserAccountUseCase.Command(42))
                 .changed());
-        assertTrue(new SoftDeleteUserAccountService(repository, SESSION_REVOCATION)
-                .handle(new SoftDeleteUserAccountUseCase.Command(42))
+        assertTrue(new SoftDeleteUserAccountService(repository, hasher, NO_PENDING_CHANGES, SESSION_REVOCATION)
+                .handle(new SoftDeleteUserAccountUseCase.Command(42, CURRENT_PASSWORD))
                 .changed());
-        assertFalse(new SoftDeleteUserAccountService(repository, SESSION_REVOCATION)
-                .handle(new SoftDeleteUserAccountUseCase.Command(42))
-                .changed());
+        assertThrows(InvalidCredentialsException.class, () -> new SoftDeleteUserAccountService(
+                        repository, hasher, NO_PENDING_CHANGES, SESSION_REVOCATION)
+                .handle(new SoftDeleteUserAccountUseCase.Command(42, CURRENT_PASSWORD)));
         assertEquals(5, repository.saveCalls);
     }
 
@@ -290,13 +286,95 @@ class UserAccountApplicationServiceTest {
                 .handle(new SuspendUserAccountUseCase.Command(42))
                 .changed());
         assertEquals(2, sessions.revokeAllCalls);
-        assertTrue(new SoftDeleteUserAccountService(repository, revocation)
-                .handle(new SoftDeleteUserAccountUseCase.Command(42))
+        assertTrue(new SoftDeleteUserAccountService(repository, hasher, NO_PENDING_CHANGES, revocation)
+                .handle(new SoftDeleteUserAccountUseCase.Command(42, "NewPassword2@"))
                 .changed());
         assertEquals(3, sessions.revokeAllCalls);
         assertEquals(
                 AuthenticationTestFakes.NOW,
                 sessions.get("0190f3a0-0000-7000-8000-000000000001").revokedAt());
+    }
+
+    @Test
+    void close_with_a_wrong_password_is_refused_without_touching_the_account_or_any_session() {
+        UserAccountTestFakes.DeterministicPasswordHasher hasher =
+                new UserAccountTestFakes.DeterministicPasswordHasher();
+        UserAccountTestFakes.InMemoryRepository repository = new UserAccountTestFakes.InMemoryRepository();
+        UserAccount account = activeAccount(hasher);
+        repository.add(account);
+        AuthenticationTestFakes.InMemorySessionRepository sessions =
+                new AuthenticationTestFakes.InMemorySessionRepository();
+        AuthenticationSessionRevocationCoordinator revocation = new AuthenticationSessionRevocationCoordinator(
+                sessions, AuthenticationTestFakes.clockAt(AuthenticationTestFakes.NOW));
+        SoftDeleteUserAccountService service =
+                new SoftDeleteUserAccountService(repository, hasher, NO_PENDING_CHANGES, revocation);
+
+        assertThrows(
+                InvalidCredentialsException.class,
+                () -> service.handle(new SoftDeleteUserAccountUseCase.Command(42, "WrongPassword3#")));
+
+        assertEquals(AccountStatus.ACTIVE, account.status());
+        assertEquals(0, repository.saveCalls);
+        assertEquals(0, sessions.revokeAllCalls);
+    }
+
+    @Test
+    void closing_the_account_discards_its_pending_email_change_but_a_wrong_password_does_not() {
+        UserAccountTestFakes.DeterministicPasswordHasher hasher =
+                new UserAccountTestFakes.DeterministicPasswordHasher();
+        UserAccountTestFakes.InMemoryRepository repository = new UserAccountTestFakes.InMemoryRepository();
+        repository.add(activeAccount(hasher));
+        UserAccountTestFakes.InMemoryPendingEmailChangeRepository pending =
+                new UserAccountTestFakes.InMemoryPendingEmailChangeRepository();
+        pending.save(PendingEmailChange.issue(
+                "pending-token",
+                new UserId(42),
+                new Email("new@example.com"),
+                Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC),
+                Duration.ofHours(24)));
+        SoftDeleteUserAccountService service =
+                new SoftDeleteUserAccountService(repository, hasher, pending, SESSION_REVOCATION);
+
+        assertThrows(
+                InvalidCredentialsException.class,
+                () -> service.handle(new SoftDeleteUserAccountUseCase.Command(42, "WrongPassword3#")));
+        assertTrue(pending.outstandingFor(42).isPresent());
+
+        assertTrue(service.handle(new SoftDeleteUserAccountUseCase.Command(42, CURRENT_PASSWORD))
+                .changed());
+        assertTrue(pending.outstandingFor(42).isEmpty());
+    }
+
+    @Test
+    void close_with_a_password_that_could_never_be_valid_is_a_wrong_password_not_a_malformed_request() {
+        UserAccountTestFakes.DeterministicPasswordHasher hasher =
+                new UserAccountTestFakes.DeterministicPasswordHasher();
+        UserAccountTestFakes.InMemoryRepository repository = new UserAccountTestFakes.InMemoryRepository();
+        repository.add(activeAccount(hasher));
+        SoftDeleteUserAccountService service =
+                new SoftDeleteUserAccountService(repository, hasher, NO_PENDING_CHANGES, SESSION_REVOCATION);
+
+        assertThrows(
+                InvalidCredentialsException.class,
+                () -> service.handle(new SoftDeleteUserAccountUseCase.Command(42, "wrong")));
+        assertEquals(0, repository.saveCalls);
+    }
+
+    @Test
+    void closing_an_already_closed_account_is_refused_by_the_password_check() {
+        UserAccountTestFakes.DeterministicPasswordHasher hasher =
+                new UserAccountTestFakes.DeterministicPasswordHasher();
+        UserAccountTestFakes.InMemoryRepository repository = new UserAccountTestFakes.InMemoryRepository();
+        UserAccount closed = activeAccount(hasher);
+        closed.softDelete();
+        repository.add(closed);
+        SoftDeleteUserAccountService service =
+                new SoftDeleteUserAccountService(repository, hasher, NO_PENDING_CHANGES, SESSION_REVOCATION);
+
+        assertThrows(
+                InvalidCredentialsException.class,
+                () -> service.handle(new SoftDeleteUserAccountUseCase.Command(42, CURRENT_PASSWORD)));
+        assertEquals(0, repository.saveCalls);
     }
 
     @Test
@@ -431,8 +509,6 @@ class UserAccountApplicationServiceTest {
                 Arguments.of("reinstate is an active no-op", AccountStatus.ACTIVE, ExpectedEffect.NO_OP, REINSTATE),
                 Arguments.of("reinstate rejects locked", AccountStatus.LOCKED, ExpectedEffect.REJECTED, REINSTATE),
                 Arguments.of("soft delete changes active", AccountStatus.ACTIVE, ExpectedEffect.CHANGED, SOFT_DELETE),
-                Arguments.of(
-                        "soft delete is a deleted no-op", AccountStatus.DELETED, ExpectedEffect.NO_OP, SOFT_DELETE),
                 Arguments.of("password changes active", AccountStatus.ACTIVE, ExpectedEffect.CHANGED, CHANGE_PASSWORD),
                 Arguments.of("password is an active no-op", AccountStatus.ACTIVE, ExpectedEffect.NO_OP, KEEP_PASSWORD),
                 Arguments.of(
@@ -443,10 +519,11 @@ class UserAccountApplicationServiceTest {
                 Arguments.of("username changes active", AccountStatus.ACTIVE, ExpectedEffect.CHANGED, CHANGE_USERNAME),
                 Arguments.of("username is an active no-op", AccountStatus.ACTIVE, ExpectedEffect.NO_OP, KEEP_USERNAME),
                 Arguments.of("username rejects locked", AccountStatus.LOCKED, ExpectedEffect.REJECTED, CHANGE_USERNAME),
-                Arguments.of("email changes active", AccountStatus.ACTIVE, ExpectedEffect.CHANGED, CHANGE_EMAIL),
-                Arguments.of("email is an active no-op", AccountStatus.ACTIVE, ExpectedEffect.NO_OP, KEEP_EMAIL),
                 Arguments.of(
-                        "email rejects suspended", AccountStatus.SUSPENDED, ExpectedEffect.REJECTED, CHANGE_EMAIL));
+                        "username rejects suspended",
+                        AccountStatus.SUSPENDED,
+                        ExpectedEffect.REJECTED,
+                        CHANGE_USERNAME));
     }
 
     private static Stream<Arguments> existingAccountCommands() {
@@ -457,8 +534,7 @@ class UserAccountApplicationServiceTest {
                 Arguments.of("reinstate missing account", REINSTATE),
                 Arguments.of("soft delete missing account", SOFT_DELETE),
                 Arguments.of("change password missing account", CHANGE_PASSWORD),
-                Arguments.of("change username missing account", CHANGE_USERNAME),
-                Arguments.of("change email missing account", CHANGE_EMAIL));
+                Arguments.of("change username missing account", CHANGE_USERNAME));
     }
 
     private UserAccount pendingAccount(UserAccountTestFakes.DeterministicPasswordHasher hasher) {

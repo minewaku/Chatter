@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Confirm your new Chatter email</title>
+</head>
+<body>
+<p>Someone asked to use this address for a Chatter account.</p>
+<p>Confirm your new email address by opening the link below. It expires at <span th:text="${expiresAt}">2026-01-01 00:00 UTC</span>.</p>
+<p><a th:href="${link}" th:text="${link}">confirmation link</a></p>
+<p>If you did not ask to change your Chatter email, ignore this message and the account stays as it is.</p>
+</body>
+</html>

@@ -17,6 +17,7 @@ public record SecurityProperties(List<String> publicEndpoints, Cors cors) {
             "/api/v*/auth/logout",
             "/api/v*/auth/verification/resend",
             "/api/v*/auth/verification/confirm",
+            "/api/v*/users/email-change/confirm",
             "/swagger-ui/**",
             "/swagger-ui.html",
             "/v3/api-docs/**");

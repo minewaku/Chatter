@@ -118,8 +118,10 @@ public class UserAccount {
         return true;
     }
 
-    public boolean changeUsername(PlainPassword currentPassword, Username newUsername, PasswordHasher passwordHasher) {
-        verifyAccessibleCredentials(currentPassword, passwordHasher, "change username");
+    public boolean changeUsername(Username newUsername) {
+        if (!isAccessible()) {
+            throw new InvalidAccountStateTransitionException(status, "change username");
+        }
         if (username.equals(newUsername)) {
             return false;
         }
@@ -128,14 +130,21 @@ public class UserAccount {
         return true;
     }
 
-    public boolean changeEmail(PlainPassword currentPassword, Email newEmail, PasswordHasher passwordHasher) {
+    /**
+     * Checks that this account may ask to move to {@code newEmail}. Returns false when it is already the current
+     * email. Nothing is changed: the email only moves once the new address is verified.
+     */
+    public boolean authorizeEmailChange(PlainPassword currentPassword, Email newEmail, PasswordHasher passwordHasher) {
         verifyAccessibleCredentials(currentPassword, passwordHasher, "change email");
-        if (email.equals(newEmail)) {
-            return false;
+        return !email.equals(newEmail);
+    }
+
+    public void applyVerifiedEmail(Email newEmail) {
+        if (!isAccessible()) {
+            throw new InvalidAccountStateTransitionException(status, "confirm email change");
         }
         email = newEmail;
         markUpdated();
-        return true;
     }
 
     private void verifyAccessibleCredentials(
@@ -146,6 +155,14 @@ public class UserAccount {
         if (!passwordHasher.matches(currentPassword, passwordHash)) {
             throw new InvalidCredentialsException("Current password is incorrect");
         }
+    }
+
+    /** Closes the account on the owner's request. Unlike the other credential-checked operations, any status may close. */
+    public boolean close(PlainPassword currentPassword, PasswordHasher passwordHasher) {
+        if (!passwordHasher.matches(currentPassword, passwordHash)) {
+            throw new InvalidCredentialsException("Current password is incorrect");
+        }
+        return softDelete();
     }
 
     public boolean softDelete() {

@@ -18,6 +18,8 @@ public enum ErrorCode {
     ACCOUNT_ALREADY_EXISTS(HttpStatus.CONFLICT, "An account with these details already exists."),
     VERIFICATION_PENDING(HttpStatus.CONFLICT, "The account is awaiting email verification."),
     PASSWORD_UNCHANGED(HttpStatus.CONFLICT, "The password was not changed."),
+    USERNAME_UNCHANGED(HttpStatus.CONFLICT, "The username was not changed."),
+    EMAIL_UNCHANGED(HttpStatus.CONFLICT, "The email was not changed."),
     UNSUPPORTED_MEDIA_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "The content type is not supported."),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred."),
     SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "The service is temporarily unavailable.");

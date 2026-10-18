@@ -64,7 +64,12 @@ class MailVerificationNotifierTest {
         @Bean
         VerificationMailProperties properties() {
             return new VerificationMailProperties(
-                    "sender@chatter.test", "Please verify", "https://chatter.test", "/confirm");
+                    "sender@chatter.test",
+                    "Please verify",
+                    "https://chatter.test",
+                    "/confirm",
+                    "Confirm the new address",
+                    "/confirm-email-change");
         }
 
         @Bean

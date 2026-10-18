@@ -10,15 +10,24 @@ public class VerificationLinkFactory {
 
     private final String base;
     private final String path;
+    private final String emailChangePath;
 
     VerificationLinkFactory(VerificationMailProperties properties) {
         this.base = stripTrailingSlash(properties.publicBaseUrl());
         this.path =
                 properties.confirmPath().startsWith("/") ? properties.confirmPath() : "/" + properties.confirmPath();
+        this.emailChangePath = properties.emailChangeConfirmPath().startsWith("/")
+                ? properties.emailChangeConfirmPath()
+                : "/" + properties.emailChangeConfirmPath();
     }
 
     public String linkFor(String rawToken) {
         return base + path + "?token=" + URLEncoder.encode(rawToken, StandardCharsets.UTF_8);
+    }
+
+    /** The link mailed to a new address to confirm an email change. */
+    public String emailChangeLinkFor(String rawToken) {
+        return base + emailChangePath + "?token=" + URLEncoder.encode(rawToken, StandardCharsets.UTF_8);
     }
 
     private static String stripTrailingSlash(String url) {

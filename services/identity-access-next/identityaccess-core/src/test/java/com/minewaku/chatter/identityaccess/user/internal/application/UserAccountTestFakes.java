@@ -1,19 +1,26 @@
 package com.minewaku.chatter.identityaccess.user.internal.application;
 
 import com.minewaku.chatter.identityaccess.shared.port.TimeBasedIdGenerator;
+import com.minewaku.chatter.identityaccess.shared.port.UniqueStringIdGenerator;
 import com.minewaku.chatter.identityaccess.user.api.exception.DuplicateUserAccountException;
 import com.minewaku.chatter.identityaccess.user.api.query.FindUserByEmailUseCase;
 import com.minewaku.chatter.identityaccess.user.api.query.FindUserByIdUseCase;
 import com.minewaku.chatter.identityaccess.user.internal.model.Email;
 import com.minewaku.chatter.identityaccess.user.internal.model.PasswordHash;
+import com.minewaku.chatter.identityaccess.user.internal.model.PendingEmailChange;
 import com.minewaku.chatter.identityaccess.user.internal.model.PlainPassword;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserAccount;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserId;
 import com.minewaku.chatter.identityaccess.user.internal.model.Username;
+import com.minewaku.chatter.identityaccess.user.internal.port.EmailChangeNotifier;
 import com.minewaku.chatter.identityaccess.user.internal.port.PasswordHasher;
 import com.minewaku.chatter.identityaccess.user.internal.port.query.UserAccountQueryRepository;
+import com.minewaku.chatter.identityaccess.user.internal.port.repository.PendingEmailChangeRepository;
 import com.minewaku.chatter.identityaccess.user.internal.port.repository.UserAccountRepository;
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -64,6 +71,56 @@ final class UserAccountTestFakes {
             }
             add(account);
             return account;
+        }
+    }
+
+    static final class InMemoryPendingEmailChangeRepository implements PendingEmailChangeRepository {
+        final Map<String, PendingEmailChange> byToken = new LinkedHashMap<>();
+        int saveCalls;
+        int discardCalls;
+
+        @Override
+        public void save(PendingEmailChange change) {
+            saveCalls++;
+            byToken.put(change.rawToken(), change);
+        }
+
+        @Override
+        public Optional<PendingEmailChange> findByPresentedToken(String token) {
+            return Optional.ofNullable(byToken.get(token));
+        }
+
+        @Override
+        public void discardForUser(UserId userId) {
+            discardCalls++;
+            byToken.values().removeIf(change -> change.userId().equals(userId) && !change.isConfirmed());
+        }
+
+        /** The outstanding (unconfirmed) change of a user, if any. */
+        Optional<PendingEmailChange> outstandingFor(long userId) {
+            return byToken.values().stream()
+                    .filter(change -> change.userId().value() == userId && !change.isConfirmed())
+                    .findFirst();
+        }
+    }
+
+    static final class RecordingEmailChangeNotifier implements EmailChangeNotifier {
+        record Delivery(Email email, String token, Instant expiresAt) {}
+
+        final List<Delivery> deliveries = new ArrayList<>();
+
+        @Override
+        public void sendEmailChange(Email newEmail, String rawToken, Instant expiresAt) {
+            deliveries.add(new Delivery(newEmail, rawToken, expiresAt));
+        }
+    }
+
+    static final class SequentialTokenGenerator implements UniqueStringIdGenerator {
+        private int issued;
+
+        @Override
+        public String nextId() {
+            return "email-change-token-" + (++issued);
         }
     }
 

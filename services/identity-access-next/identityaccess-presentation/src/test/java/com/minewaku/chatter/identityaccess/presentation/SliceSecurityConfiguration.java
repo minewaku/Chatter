@@ -43,7 +43,8 @@ public class SliceSecurityConfiguration {
                                 "/api/v*/auth/refresh",
                                 "/api/v*/auth/logout",
                                 "/api/v*/auth/verification/resend",
-                                "/api/v*/auth/verification/confirm")
+                                "/api/v*/auth/verification/confirm",
+                                "/api/v*/users/email-change/confirm")
                         .permitAll()
                         .anyRequest()
                         .authenticated())

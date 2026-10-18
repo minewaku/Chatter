@@ -99,6 +99,20 @@ class SecretLeakageE2eTest extends E2eSupport {
                         "/users/@me/password",
                         Map.of("currentPassword", WRONG_PASSWORD_SENTINEL, "newPassword", NEW_PASSWORD_SENTINEL),
                         accessToken));
+        record(api().post("/users/@me/close", Map.of("currentPassword", WRONG_PASSWORD_SENTINEL), accessToken));
+        String changeTarget = uniqueEmail();
+        record(api().post(
+                        "/users/@me/email-change",
+                        Map.of("newEmail", changeTarget, "currentPassword", WRONG_PASSWORD_SENTINEL),
+                        accessToken));
+        ApiResponse accepted = api().post(
+                        "/users/@me/email-change",
+                        Map.of("newEmail", changeTarget, "currentPassword", PASSWORD_SENTINEL),
+                        accessToken);
+        record(accepted);
+        String emailChangeToken = mail.latestTokenFor(changeTarget).orElseThrow();
+        record(api().get("/users/email-change/confirm?token=" + emailChangeToken, null));
+        record(api().get("/users/email-change/confirm?token=" + emailChangeToken, null));
         record(api().post("/auth/logout", Map.of("refreshToken", renewedRefresh)));
         record(api().post("/auth/verification/resend", Map.of("email", email)));
 
@@ -109,6 +123,8 @@ class SecretLeakageE2eTest extends E2eSupport {
                 WRONG_PASSWORD_SENTINEL,
                 WEAK_PASSWORD_SENTINEL,
                 verificationToken,
+                emailChangeToken,
+                changeTarget,
                 refreshToken,
                 renewedRefresh,
                 accessToken)) {
@@ -121,7 +137,9 @@ class SecretLeakageE2eTest extends E2eSupport {
                     NEW_PASSWORD_SENTINEL,
                     WRONG_PASSWORD_SENTINEL,
                     WEAK_PASSWORD_SENTINEL,
-                    verificationToken)) {
+                    verificationToken,
+                    emailChangeToken,
+                    changeTarget)) {
                 assertThat(response.body()).doesNotContain(secret);
             }
             if (!refreshIssuingResponses.contains(response)) {

@@ -80,18 +80,16 @@ public abstract class E2eSupport {
 
     /** Registers an account, confirms the emailed token, and returns its email. */
     protected String registerVerifiedAccount() {
+        return registerVerifiedAccount(uniqueUsername());
+    }
+
+    /** Same as {@link #registerVerifiedAccount()} with a chosen username. */
+    protected String registerVerifiedAccount(String username) {
         String email = uniqueEmail();
         ApiResponse registered = api().post(
                         "/auth/register",
                         java.util.Map.of(
-                                "email",
-                                email,
-                                "username",
-                                uniqueUsername(),
-                                "birthday",
-                                "1999-01-01",
-                                "password",
-                                PASSWORD));
+                                "email", email, "username", username, "birthday", "1999-01-01", "password", PASSWORD));
         if (registered.status() != 201) {
             throw new IllegalStateException("registration failed with " + registered.status());
         }

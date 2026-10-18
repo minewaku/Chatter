@@ -16,7 +16,7 @@ Base path `/api/v1`. All bodies are `application/json; charset=UTF-8`. Timestamp
 | 8 | `POST /sessions/{sessionId}/revoke` | protected | `204` no body | `LogoutSessionUseCase` |
 | 9 | `POST /sessions/revoke-others` | protected | `200` `{revokedCount}` | `LogoutOtherSessionsUseCase` |
 | 10 | `PUT /users/@me/password` | protected | `204` no body | `ChangePasswordUseCase` |
-| 11 | `DELETE /users/@me` | protected | `204` no body | `SoftDeleteUserAccountUseCase` |
+| 11 | `POST /users/@me/close` | protected | `204` no body | `SoftDeleteUserAccountUseCase` |
 
 The public set (rows 1-6) plus `/swagger-ui/**`, `/swagger-ui.html`, `/v3/api-docs/**` equals the `identity-access.security.public-endpoints` allow-list in `application.yml`. Public endpoints ignore any `Authorization` header (FR-035).
 
@@ -116,7 +116,7 @@ Request `{"currentPassword","newPassword"}`.
 
 ## 11. Close own account
 
-No body. Target is always the access credential's `sub`. `Result(changed=true|false)` both give `204` (idempotent). All of the account's sessions are revoked by core, so the access credential stops working from the next request.
+Changed by [spec 005](../../005-account-change-endpoints/contracts/http-api.md): `POST /users/@me/close` with `{"currentPassword": "..."}`. Target is always the access credential's `sub`. A wrong password is `403 reauthentication_failed` and does not end the session; a missing or blank one is `400 validation_failed`. On success all of the account's sessions are revoked by core, so the access credential stops working from the next request. `DELETE /users/@me` no longer exists.
 
 ## Cross-cutting rules
 

@@ -89,7 +89,7 @@ A signed-in person changes their password or closes their account. Changing the 
 1. **Given** a signed-in caller who supplies the correct current password and an acceptable new one, **When** they change the password, **Then** the change is confirmed and the response contains neither password.
 2. **Given** a wrong current password, **When** they change it, **Then** the request is refused and nothing changes.
 3. **Given** a new password that violates password rules, **When** the caller submits it, **Then** the response is a validation error that names the field and not the value.
-4. **Given** a signed-in caller, **When** they close their own account, **Then** the account is soft-deleted and the response is success with no body. The target account is always the one named by the access credential.
+4. **Given** a signed-in caller, **When** they close their own account, **Then** the account is soft-deleted and the response is success with no body. The target account is always the one named by the access credential. *(Superseded by [spec 005](../005-account-change-endpoints/spec.md): closing now needs the current password.)*
 
 ---
 
@@ -143,7 +143,7 @@ Every failure from every endpoint has the same JSON shape with a stable machine-
   - end one session: `POST /api/v1/sessions/{sessionId}/revoke`
   - end all other sessions: `POST /api/v1/sessions/revoke-others`
   - change own password: `PUT /api/v1/users/@me/password`
-  - close own account: `DELETE /api/v1/users/@me`
+  - close own account: `POST /api/v1/users/@me/close` with `{"currentPassword": "..."}` (was `DELETE /api/v1/users/@me`; see [spec 005](../005-account-change-endpoints/spec.md))
 - **FR-003**: The public set in FR-001, plus API documentation, MUST be exactly the allow-list that the security configuration from spec 003 FR-012 permits. Any other path MUST require a valid access credential.
 - **FR-004**: The old endpoints that were unimplemented stubs (end one session, end other sessions) MUST be real in this feature, and the old cookie-based credential transport MUST NOT be carried over.
 
@@ -160,7 +160,7 @@ Every failure from every endpoint has the same JSON shape with a stable machine-
 - **FR-013**: Ending one session MUST accept `{"currentPassword": "..."}`. It MUST respond `204` when newly revoked, and `404` with code `session_not_found` when the core reports not revoked, with no information on ownership.
 - **FR-014**: Ending all other sessions MUST accept `{"currentPassword": "..."}`. The current session MUST be the one named by the caller's access credential, never a client-supplied identifier. It MUST respond `200` with `{"revokedCount": n}`.
 - **FR-015**: Changing a password MUST accept `{"currentPassword": "...", "newPassword": "..."}` and respond `204` when changed, or `409` with code `password_unchanged` when the core reports no change.
-- **FR-016**: Closing an account MUST take its target only from the authenticated credential's subject and respond `204`.
+- **FR-016**: Closing an account MUST take its target only from the authenticated credential's subject and respond `204`. Spec 005 adds that it MUST also be confirmed with the current password and moves it to `POST /api/v1/users/@me/close`.
 
 **Errors**
 
