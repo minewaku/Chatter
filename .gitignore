@@ -185,3 +185,6 @@ README.html
 
 # identity-access-next local development signing keys
 services/identity-access-next/.local/
+
+# local mail credentials for identity-access-next (address on line 1, app password on line 2)
+services/identity-access-next/email.txt

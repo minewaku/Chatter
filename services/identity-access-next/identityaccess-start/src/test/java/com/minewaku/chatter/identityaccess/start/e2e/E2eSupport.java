@@ -18,7 +18,10 @@ import org.testcontainers.utility.DockerImageName;
  * Base for end-to-end tests: the whole service (core, infrastructure, presentation) on a random port against real
  * PostgreSQL 17 and Redis 7 containers shared by all subclasses, with an in-memory mail sender.
  */
-@SpringBootTest(classes = StartApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(
+        classes = StartApplication.class,
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = "spring.cloud.vault.enabled=false")
 @Import(E2eSupport.MailConfiguration.class)
 public abstract class E2eSupport {
 
