@@ -15,6 +15,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Repository;
@@ -27,8 +29,12 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class RedisAuthenticationSessionRepository implements AuthenticationSessionRepository {
 
+    private static final Logger log = LoggerFactory.getLogger(RedisAuthenticationSessionRepository.class);
+
     private static final DefaultRedisScript<Long> CREATE = RedisScripts.load("session-create.lua", Long.class);
     private static final DefaultRedisScript<Long> ROTATE = RedisScripts.load("session-rotate.lua", Long.class);
+    private static final DefaultRedisScript<String> REVOKE_REUSED =
+            RedisScripts.load("session-revoke-reused.lua", String.class);
     private static final DefaultRedisScript<Long> REVOKE_ONE = RedisScripts.load("session-revoke-one.lua", Long.class);
     private static final DefaultRedisScript<Long> REVOKE_MANY =
             RedisScripts.load("session-revoke-many.lua", Long.class);
@@ -39,6 +45,7 @@ public class RedisAuthenticationSessionRepository implements AuthenticationSessi
     private final String sessionKeyPrefix;
     private final String tokenKeyPrefix;
     private final String userKeyPrefix;
+    private final String replacedKeyPrefix;
     private final String revocationKeyPrefix;
     private final String accessTokenTtlMillis;
 
@@ -54,6 +61,7 @@ public class RedisAuthenticationSessionRepository implements AuthenticationSessi
         this.sessionKeyPrefix = keys.keyPrefix() + "session:";
         this.tokenKeyPrefix = keys.keyPrefix() + "session:token:";
         this.userKeyPrefix = keys.keyPrefix() + "session:user:";
+        this.replacedKeyPrefix = keys.keyPrefix() + "session:replaced:";
         this.revocationKeyPrefix = keys.keyPrefix() + "access-revoked:";
         this.accessTokenTtlMillis = Long.toString(jwt.accessTokenTtl().toMillis());
     }
@@ -112,20 +120,47 @@ public class RedisAuthenticationSessionRepository implements AuthenticationSessi
             return false;
         }
         String newDigest = TokenDigest.sha256Hex(newRefreshToken);
+        String presentedDigest = TokenDigest.sha256Hex(presentedRefreshToken);
         long keyExpiryMillis = RedisTime.toMillisFloor(RedisTime.toMicros(newExpiresAt)) + retentionMillis;
+        long replacedExpiryMillis = RedisTime.toMillisFloor(RedisTime.toMicros(now)) + retentionMillis;
         Long result = redis.execute(
                 ROTATE,
                 List.of(
                         sessionKeyPrefix + sessionId,
-                        tokenKeyPrefix + TokenDigest.sha256Hex(presentedRefreshToken),
-                        tokenKeyPrefix + newDigest),
+                        tokenKeyPrefix + presentedDigest,
+                        tokenKeyPrefix + newDigest,
+                        replacedKeyPrefix + presentedDigest),
                 sessionId,
                 newDigest,
                 micros(now),
                 micros(newExpiresAt),
                 Long.toString(keyExpiryMillis),
-                userKeyPrefix);
+                userKeyPrefix,
+                Long.toString(replacedExpiryMillis));
         return result != null && result == 1L;
+    }
+
+    @Override
+    public boolean revokeOnReuse(String presentedRefreshToken, Instant now) {
+        if (presentedRefreshToken == null || presentedRefreshToken.isBlank()) {
+            return false;
+        }
+        String revoked = redis.execute(
+                REVOKE_REUSED,
+                List.of(replacedKeyPrefix + TokenDigest.sha256Hex(presentedRefreshToken)),
+                sessionKeyPrefix,
+                micros(now),
+                revocationKeyPrefix,
+                accessTokenTtlMillis);
+        if (revoked == null) {
+            return false;
+        }
+        int separator = revoked.indexOf(':');
+        log.warn(
+                "Refresh reuse detected: session revoked reason=refresh-reuse sessionId={} userId={}",
+                revoked.substring(separator + 1),
+                revoked.substring(0, separator));
+        return true;
     }
 
     @Override

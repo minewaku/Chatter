@@ -25,6 +25,15 @@ public interface AuthenticationSessionRepository {
             String sessionId, String presentedRefreshToken, String newRefreshToken, Instant now, Instant newExpiresAt);
 
     /**
+     * Called when a presented refresh credential matched no current session. If the credential was replaced by an
+     * earlier renewal and its session is still unrevoked and unexpired at {@code now}, revokes that session and returns
+     * true; otherwise changes nothing and returns false. A blank credential returns false. A session newly revoked
+     * here must also make the access credentials issued for it unusable for the access credential lifetime, and the
+     * adapter records the event (adapter obligation, same as {@link #revokeBySessionId}).
+     */
+    boolean revokeOnReuse(String presentedRefreshToken, Instant now);
+
+    /**
      * Sets revokedAt once for an owned, retained, unrevoked record. A session newly revoked by this call, or by
      * either revoke method below, must also make the access credentials issued for it unusable for the access
      * credential lifetime (adapter obligation).

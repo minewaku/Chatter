@@ -104,10 +104,13 @@ public final class AuthenticationTestFakes {
     public static final class InMemorySessionRepository implements AuthenticationSessionRepository {
         private final Map<String, AuthenticationSession> sessions = new LinkedHashMap<>();
         private final Map<String, String> sessionIdByToken = new HashMap<>();
+        private final Map<String, String> replacedByToken = new HashMap<>();
         public int createCalls;
         public int revokeAllCalls;
         public int rotateCalls;
+        public int revokeOnReuseCalls;
         public boolean failRotate;
+        public boolean failOnRevokeOnReuse;
         public boolean failOnCreate;
         public boolean failOnRevokeAll;
 
@@ -164,9 +167,26 @@ public final class AuthenticationTestFakes {
                 return false;
             }
             sessionIdByToken.remove(presentedRefreshToken);
+            replacedByToken.put(presentedRefreshToken, sessionId);
             sessionIdByToken.put(newRefreshToken, sessionId);
             session.renew(now, newExpiresAt);
             return true;
+        }
+
+        @Override
+        public boolean revokeOnReuse(String presentedRefreshToken, Instant now) {
+            revokeOnReuseCalls++;
+            if (failOnRevokeOnReuse) {
+                throw new IllegalStateException("session store unavailable");
+            }
+            if (presentedRefreshToken == null || presentedRefreshToken.isBlank()) {
+                return false;
+            }
+            AuthenticationSession session = sessions.get(replacedByToken.get(presentedRefreshToken));
+            if (session == null || !session.isUsable(now)) {
+                return false;
+            }
+            return session.revoke(now);
         }
 
         @Override

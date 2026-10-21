@@ -11,6 +11,7 @@ import com.minewaku.chatter.identityaccess.user.internal.port.repository.UserAcc
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Optional;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,11 @@ import org.springframework.transaction.annotation.Transactional;
  * Renews access: issues a new access credential and rotates the refresh credential, giving the session a new full
  * lifetime. The access credential is issued before the rotation so that a failing issuer leaves the session and the
  * presented credential untouched; an unsuccessful rotation discards the issued access credential unseen.
+ *
+ * <p>A credential that matches no current session is refused like any other unusable one, but first the store is asked
+ * whether it is one that an earlier renewal replaced. If so, its session is revoked: a replaced credential coming back
+ * means two parties hold the same session. A request that found the credential current and then lost the rotation to a
+ * simultaneous renewal is only refused; it never reaches that check.
  */
 @Service
 @RequiredArgsConstructor
@@ -44,9 +50,13 @@ public class RefreshAccessTokenService implements RefreshAccessTokenUseCase {
             throw new AuthenticationFailedException();
         }
         Instant now = clock.instant();
-        AuthenticationSession session = sessions.findByPresentedToken(command.refreshToken())
-                .filter(candidate -> candidate.isUsable(now))
-                .orElseThrow(AuthenticationFailedException::new);
+        Optional<AuthenticationSession> found = sessions.findByPresentedToken(command.refreshToken());
+        if (found.isEmpty()) {
+            sessions.revokeOnReuse(command.refreshToken(), now);
+            throw new AuthenticationFailedException();
+        }
+        AuthenticationSession session =
+                found.filter(candidate -> candidate.isUsable(now)).orElseThrow(AuthenticationFailedException::new);
         UserAccount owner = userRepository
                 .findById(session.userId())
                 .filter(UserAccount::isAccessible)

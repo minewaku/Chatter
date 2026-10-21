@@ -2,6 +2,7 @@ package com.minewaku.chatter.identityaccess.start.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.minewaku.chatter.identityaccess.infrastructure.security.TokenDigest;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -84,7 +85,6 @@ class SecretLeakageE2eTest extends E2eSupport {
 
         ApiResponse renewed = recordIssuing(api().post("/auth/refresh", Map.of("refreshToken", refreshToken)));
         String renewedRefresh = renewed.text("refreshToken");
-        record(api().post("/auth/refresh", Map.of("refreshToken", refreshToken)));
         record(api().get("/sessions", accessToken));
         record(api().post(
                         "/sessions/" + sid + "/revoke",
@@ -113,10 +113,18 @@ class SecretLeakageE2eTest extends E2eSupport {
         String emailChangeToken = mail.latestTokenFor(changeTarget).orElseThrow();
         record(api().get("/users/email-change/confirm?token=" + emailChangeToken, null));
         record(api().get("/users/email-change/confirm?token=" + emailChangeToken, null));
+        // replaying the replaced credential ends the session, so it comes after every call that needs the session
+        record(api().post("/auth/refresh", Map.of("refreshToken", refreshToken)));
         record(api().post("/auth/logout", Map.of("refreshToken", renewedRefresh)));
         record(api().post("/auth/verification/resend", Map.of("email", email)));
 
         String logs = output.getAll();
+        assertThat(logs.split("reason=refresh-reuse", -1).length - 1)
+                .as("exactly one reuse record")
+                .isEqualTo(1);
+        assertThat(logs).contains("sessionId=" + sid);
+        assertThat(logs).doesNotContain(TokenDigest.sha256Hex(refreshToken));
+        assertThat(logs).doesNotContain(TokenDigest.sha256Hex(renewedRefresh));
         for (String secret : List.of(
                 PASSWORD_SENTINEL,
                 NEW_PASSWORD_SENTINEL,

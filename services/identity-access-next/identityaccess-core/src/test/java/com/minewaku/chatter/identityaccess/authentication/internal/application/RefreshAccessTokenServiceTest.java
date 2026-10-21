@@ -139,6 +139,146 @@ class RefreshAccessTokenServiceTest {
         assertEquals(0, sessions.rotateCalls);
     }
 
+    // ---- reuse of a replaced credential (spec 009, user story 1) ----
+
+    private static final String OTHER_SESSION_ID = "0190f3a0-0000-7000-8000-000000000002";
+
+    private String renew(String credential, Instant at) {
+        return service(at)
+                .handle(new RefreshAccessTokenUseCase.Command(credential))
+                .refreshToken();
+    }
+
+    private AuthenticationFailedException refused(String credential, Instant at) {
+        return assertThrows(AuthenticationFailedException.class, () -> service(at)
+                .handle(new RefreshAccessTokenUseCase.Command(credential)));
+    }
+
+    @Test
+    void a_replaced_credential_is_refused_and_revokes_its_session() {
+        renew("refresh-seed", NOW.plusSeconds(60));
+
+        refused("refresh-seed", NOW.plusSeconds(120));
+
+        assertEquals(1, sessions.revokeOnReuseCalls);
+        assertEquals(NOW.plusSeconds(120), sessions.get(SESSION_ID).revokedAt());
+        assertTrue(sessions.findByPresentedToken("refresh-1").isPresent());
+        refused("refresh-1", NOW.plusSeconds(180));
+    }
+
+    @Test
+    void every_earlier_credential_of_a_session_counts_as_reuse_not_only_the_latest() {
+        String second = renew("refresh-seed", NOW.plusSeconds(60));
+        String third = renew(second, NOW.plusSeconds(120));
+        renew(third, NOW.plusSeconds(180));
+
+        refused("refresh-seed", NOW.plusSeconds(240));
+
+        assertEquals(NOW.plusSeconds(240), sessions.get(SESSION_ID).revokedAt());
+    }
+
+    @Test
+    void the_refusal_for_a_replaced_credential_is_the_same_as_for_an_unknown_one() {
+        renew("refresh-seed", NOW.plusSeconds(60));
+
+        AuthenticationFailedException replaced = refused("refresh-seed", NOW.plusSeconds(120));
+        AuthenticationFailedException unknown = refused("never-issued", NOW.plusSeconds(120));
+
+        assertEquals(unknown.getClass(), replaced.getClass());
+        assertEquals(unknown.getMessage(), replaced.getMessage());
+    }
+
+    @Test
+    void reuse_revokes_only_its_own_session_and_leaves_the_accounts_other_sessions_usable() {
+        sessions.seed(AuthenticationTestFakes.session(OTHER_SESSION_ID, 42, NOW), "refresh-other");
+        renew("refresh-seed", NOW.plusSeconds(60));
+
+        refused("refresh-seed", NOW.plusSeconds(120));
+
+        assertEquals(null, sessions.get(OTHER_SESSION_ID).revokedAt());
+        assertTrue(sessions.get(OTHER_SESSION_ID).isUsable(NOW.plusSeconds(121)));
+        renew("refresh-other", NOW.plusSeconds(130));
+    }
+
+    @Test
+    void reuse_of_a_credential_whose_session_is_already_revoked_or_expired_changes_nothing() {
+        renew("refresh-seed", NOW.plusSeconds(60));
+        sessions.get(SESSION_ID).revoke(NOW.plusSeconds(90));
+
+        refused("refresh-seed", NOW.plusSeconds(120));
+
+        assertEquals(NOW.plusSeconds(90), sessions.get(SESSION_ID).revokedAt());
+
+        sessions.seed(AuthenticationTestFakes.session(OTHER_SESSION_ID, 42, NOW), "other-seed");
+        renew("other-seed", NOW.plusSeconds(60));
+        Instant afterExpiry = NOW.plusSeconds(60).plus(LIFETIME).plusSeconds(1);
+
+        refused("other-seed", afterExpiry);
+
+        assertEquals(null, sessions.get(OTHER_SESSION_ID).revokedAt());
+    }
+
+    @Test
+    void a_failing_session_store_during_the_reuse_check_propagates_and_issues_nothing() {
+        renew("refresh-seed", NOW.plusSeconds(60));
+        int issuedBefore = accessTokens.issueCalls;
+        sessions.failOnRevokeOnReuse = true;
+
+        assertThrows(IllegalStateException.class, () -> service(NOW.plusSeconds(120))
+                .handle(new RefreshAccessTokenUseCase.Command("refresh-seed")));
+
+        assertEquals(issuedBefore, accessTokens.issueCalls);
+    }
+
+    // ---- normal use is unaffected (spec 009, user story 2) ----
+
+    @Test
+    void a_successful_renewal_makes_no_reuse_check() {
+        String credential = "refresh-seed";
+        for (int i = 1; i <= 5; i++) {
+            credential = renew(credential, NOW.plusSeconds(60L * i));
+        }
+
+        assertEquals(0, sessions.revokeOnReuseCalls);
+        assertEquals(null, sessions.get(SESSION_ID).revokedAt());
+    }
+
+    @Test
+    void blank_and_never_issued_credentials_revoke_no_session() {
+        sessions.seed(AuthenticationTestFakes.session(OTHER_SESSION_ID, 42, NOW), "refresh-other");
+
+        refused("never-issued", NOW.plusSeconds(60));
+        refused(" ", NOW.plusSeconds(60));
+        assertThrows(AuthenticationFailedException.class, () -> service(NOW.plusSeconds(60))
+                .handle(new RefreshAccessTokenUseCase.Command(null)));
+
+        assertEquals(null, sessions.get(SESSION_ID).revokedAt());
+        assertEquals(null, sessions.get(OTHER_SESSION_ID).revokedAt());
+    }
+
+    @Test
+    void the_loser_of_a_simultaneous_renewal_is_refused_without_a_reuse_check_and_the_session_survives() {
+        sessions.failRotate = true;
+
+        refused("refresh-seed", NOW.plusSeconds(60));
+
+        assertEquals(0, sessions.revokeOnReuseCalls);
+        assertEquals(null, sessions.get(SESSION_ID).revokedAt());
+        sessions.failRotate = false;
+        renew("refresh-seed", NOW.plusSeconds(120));
+    }
+
+    @Test
+    void an_inaccessible_owner_is_refused_without_a_reuse_check() {
+        UserAccount account = users.findById(new com.minewaku.chatter.identityaccess.user.internal.model.UserId(42))
+                .orElseThrow();
+        account.suspend();
+
+        refused("refresh-seed", NOW.plusSeconds(60));
+
+        assertEquals(0, sessions.revokeOnReuseCalls);
+    }
+
     private RefreshAccessTokenService service(Instant now) {
         return new RefreshAccessTokenService(sessions, users, accessTokens, refreshTokens, clockAt(now), LIFETIME);
     }

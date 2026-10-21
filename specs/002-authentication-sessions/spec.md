@@ -120,7 +120,7 @@ When an account holder changes their password, or an account is suspended or del
 - **FR-012**: A successful password change, suspension, or deletion MUST revoke every session for that account before the account change is reported as successful. Rejected changes MUST leave sessions unchanged. Reinstatement MUST NOT restore revoked sessions.
 - **FR-013**: Access credentials MUST represent the authenticated account and its email at issuance. A failed sign-in or renewal MUST never issue an access credential.
 - **FR-014**: Session behavior MUST use the same account accessibility rule as other protected account actions: only `ACTIVE` accounts can sign in, renew access, or manage their sessions.
-- **FR-015**: The feature MUST NOT add refresh-credential rotation, generations, grace periods, or replay-detection behavior.
+- **FR-015**: The feature MUST NOT add refresh-credential rotation, generations, grace periods, or replay-detection behavior. (Rotation was added by spec 004; replay detection was added by spec 009.)
 
 ### Key Entities *(include if feature involves data)*
 
