@@ -4,8 +4,8 @@ Runs `cloudflared` so remote clients can access the local Docker network (Kafka 
 
 ## Quick Start
 
-```powershell
-$env:TUNNEL_TOKEN="<token from Zero Trust > Networks > Tunnels>"
+```bash
+cp .env.example .env     # set CLOUDFLARE_TUNNEL_TOKEN (Zero Trust > Networks > Tunnels); .env is gitignored
 docker compose -p cloudflared_chatter -f docker-compose.yml up -d
 ```
 

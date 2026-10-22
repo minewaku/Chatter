@@ -5,10 +5,9 @@
    - Copy the generated token.
 
 2. **Set the Token**  
-   ```powershell
-   $env:TUNNEL_TOKEN="<your token>"
+   ```bash
+   cp .env.example .env    # then set CLOUDFLARE_TUNNEL_TOKEN; .env is gitignored
    ```
-   or add it to an `.env` file consumed by Docker Compose.
 
 3. **Start the Tunnel**  
    ```powershell

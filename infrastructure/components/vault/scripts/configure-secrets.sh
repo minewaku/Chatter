@@ -1,10 +1,15 @@
 #!/usr/bin/env bash
 # Push secrets from .env into Vault.
 #
-# Usage: configure-secrets.sh [--no-db] [service ...]
-#   services: identityaccess profile apigateway message jwt   (default: all)
-#   --no-db   only write KV secrets and JWT keys; skip the database engine config
-#             (use it while the databases are down or the *_VAULT_* credentials are placeholders)
+# Usage: configure-secrets.sh [--no-db] [--no-scylla] [service ...]
+#   services:   identityaccess profile apigateway message jwt   (default: all)
+#   --no-db     only write KV secrets and JWT keys; skip the database engine config
+#               (use it while the databases are down or the *_VAULT_* credentials are placeholders)
+#   --no-scylla skip the ScyllaDB config of the message service only
+#
+# All services share the PostgreSQL instance of infrastructure/components/postgresql: each gets its
+# own Vault database config and role, built from its prefixed <SERVICE>_DB_VAULT_* credentials.
+# Override the target with VAULT_POSTGRES_HOST / VAULT_POSTGRES_PORT / VAULT_POSTGRES_DB.
 #
 # .env.example is the manifest: every variable it lists for a service must be set.
 # Variables named <SERVICE>_<GROUP>_<FIELD> become key <group>.<field> in secret/<service>;
@@ -14,17 +19,22 @@ set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 ALL_SERVICES=(identityaccess profile apigateway message jwt)
-declare -A POSTGRES_PORT=([identityaccess]=5440 [profile]=5441 [message]=5442)
+declare -A HAS_POSTGRES=([identityaccess]=1 [profile]=1 [message]=1)
 declare -A HAS_SCYLLA=([message]=1)
+POSTGRES_HOST="${VAULT_POSTGRES_HOST:-postgresql-chatter}"
+POSTGRES_PORT="${VAULT_POSTGRES_PORT:-5432}"
+POSTGRES_DB="${VAULT_POSTGRES_DB:-chatter}"
 
 JWT_PRIVATE_KEY="$ASSETS_DIR/keys/private-key.pem"
 JWT_PUBLIC_KEY="$ASSETS_DIR/keys/public-key.pem"
 
 services=()
 with_db=true
+with_scylla=true
 for arg in "$@"; do
   case $arg in
     --no-db) with_db=false ;;
+    --no-scylla) with_scylla=false ;;
     -*) die "unknown option '$arg'" ;;
     *) services+=("$arg") ;;
   esac
@@ -45,15 +55,16 @@ for svc in "${services[@]}"; do
   (( ${#vars[@]} > 0 )) || die "no ${svc^^}_* variables in .env.example"
   for v in "${vars[@]}"; do
     if ! $with_db && [[ $v == *_DB_VAULT_* || $v == *_SCYLLA_VAULT_* ]]; then continue; fi
+    if ! $with_scylla && [[ $v == *_SCYLLA_VAULT_* ]]; then continue; fi
     need_var "$v"
   done
   if ! $with_db; then continue; fi
-  if [[ -n ${POSTGRES_PORT[$svc]:-} ]]; then
+  if [[ -n ${HAS_POSTGRES[$svc]:-} ]]; then
     need_file "$ASSETS_DIR/sql/postgresql-role-orm.sql"
     need_file "$ASSETS_DIR/sql/postgresql-revoke-orm.sql"
     need_file "$ASSETS_DIR/sql/postgresql-renew-orm.sql"
   fi
-  if [[ -n ${HAS_SCYLLA[$svc]:-} ]]; then
+  if $with_scylla && [[ -n ${HAS_SCYLLA[$svc]:-} ]]; then
     need_file "$ASSETS_DIR/cql/cassandra-role-orm.cql"
     need_file "$ASSETS_DIR/cql/cassandra-revoke-orm.cql"
   fi
@@ -81,13 +92,13 @@ configure_kv() {
 }
 
 configure_postgres() {
-  local svc=$1 port=$2 prefix=${1^^}
+  local svc=$1 prefix=${1^^}
   local db="$svc-postgresql" role="$svc-postgresql-approle"
   local user_var="${prefix}_DB_VAULT_USERNAME" pass_var="${prefix}_DB_VAULT_PASSWORD"
 
   vault_write "database/config/$db" "$(json_obj \
     plugin_name=postgresql-database-plugin \
-    "connection_url=postgresql://{{username}}:{{password}}@$svc-postgresql-chatter:$port/chatter?sslmode=disable" \
+    "connection_url=postgresql://{{username}}:{{password}}@$POSTGRES_HOST:$POSTGRES_PORT/$POSTGRES_DB?sslmode=disable" \
     "allowed_roles=$role" \
     "username=${!user_var}" \
     "password=${!pass_var}")"
@@ -141,10 +152,10 @@ for svc in "${services[@]}"; do
   fi
   configure_kv "$svc"
   if ! $with_db; then continue; fi
-  if [[ -n ${POSTGRES_PORT[$svc]:-} ]]; then
-    configure_postgres "$svc" "${POSTGRES_PORT[$svc]}"
+  if [[ -n ${HAS_POSTGRES[$svc]:-} ]]; then
+    configure_postgres "$svc"
   fi
-  if [[ -n ${HAS_SCYLLA[$svc]:-} ]]; then
+  if $with_scylla && [[ -n ${HAS_SCYLLA[$svc]:-} ]]; then
     configure_scylla "$svc"
   fi
 done

@@ -3,14 +3,27 @@ services:
     image: redis:7
     container_name: redis-chatter
     restart: unless-stopped
-    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    # Credentials come from .env, not from redis.conf. requirepass sets the password of the
+    # default user (which must stay enabled, see redis.conf); --user adds the named ACL user.
+    command:
+      - redis-server
+      - /usr/local/etc/redis/redis.conf
+      - --requirepass
+      - ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
+      - --user
+      - ${REDIS_USERNAME:?set REDIS_USERNAME in .env}
+      - "on"
+      - ">${REDIS_PASSWORD}"
+      - "~*"
+      - "&*"
+      - "+@all"
     ports:
       - "${REDIS_PORT:-6379}:6379"
     volumes:
       - ./config/redis.conf:/usr/local/etc/redis/redis.conf:ro
       - ./data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "--user", "admin", "--pass", "123456", "--no-auth-warning", "ping"]
+      test: ["CMD", "redis-cli", "--user", "${REDIS_USERNAME}", "--pass", "${REDIS_PASSWORD}", "--no-auth-warning", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5

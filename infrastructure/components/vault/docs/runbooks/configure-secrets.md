@@ -24,14 +24,20 @@ infrastructure/components/vault/scripts/configure-secrets.sh identityaccess    #
 
 Add `--no-db` to write only KV secrets and JWT keys, skipping the database engine (useful while the databases are down or the `*_VAULT_*` credentials are still placeholders).
 
+Add `--no-scylla` to skip only the message service's ScyllaDB config (there is no Scylla component under `infrastructure/components` yet).
+
 Services: `identityaccess`, `profile`, `apigateway`, `message`, `jwt`. All inputs are validated before anything is written, and missing variables are listed together. The script enables the `secret` (kv-v2) and `database` engines when absent.
+
+## Copying infrastructure credentials
+
+Credentials of shared infrastructure live in the component's own `.env` (`../postgresql/.env`, `../redis/.env`) because its docker-compose reads them. Copy them into `vault/.env` under every service prefix; after rotating one, update both files and re-run `configure-secrets.sh`.
 
 ## Naming convention
 
 | Variable | Result |
 |----------|--------|
 | `<SERVICE>_<GROUP>_<FIELD>` | `secret/<service>`, key `<group>.<field>` (e.g. `IDENTITYACCESS_MAIL_PASSWORD` -> `mail.password`; `PROFILE_CLOUDINARY_API_KEY` -> `cloudinary.api_key`) |
-| `<SERVICE>_DB_VAULT_USERNAME/PASSWORD` | Admin account for `database/config/<service>-postgresql` and role `<service>-postgresql-approle` |
+| `<SERVICE>_DB_VAULT_USERNAME/PASSWORD` | Admin account for `database/config/<service>-postgresql` and role `<service>-postgresql-approle`. Every service connects to the one shared instance (`postgresql-chatter:5432/chatter`, override with `VAULT_POSTGRES_HOST/PORT/DB`), so the values are the same under each prefix |
 | `MESSAGE_SCYLLA_VAULT_USERNAME/PASSWORD` | Same for `message-scylladb` |
 | `assets/keys/*.pem` | `secret/common/jwt/rs256` (`private-key`, `public-key`) |
 

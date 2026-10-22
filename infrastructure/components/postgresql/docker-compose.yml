@@ -4,15 +4,15 @@ services:
     container_name: postgresql-chatter
     restart: unless-stopped
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: 123456
-      POSTGRES_DB: chatter
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-chatter}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - ./data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin -d chatter"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB:-chatter}"]
       interval: 10s
       timeout: 5s
       retries: 5

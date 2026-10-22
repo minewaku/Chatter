@@ -10,8 +10,8 @@ services:
     container_name: cloudflared-chatter
     restart: always
     environment:
-      # Bạn lấy Token này từ trang: Zero Trust -> Networks -> Tunnels
-      - TUNNEL_TOKEN=YOUR_CLOUDFLARE_TUNNEL_TOKEN_HERE
+      # Token from Zero Trust -> Networks -> Tunnels, set in .env
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:?set CLOUDFLARE_TUNNEL_TOKEN in .env}
     command: tunnel --no-autoupdate run
     networks:
       - chatter-net
