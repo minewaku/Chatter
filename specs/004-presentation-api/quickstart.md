@@ -6,7 +6,7 @@ Run from the repository root unless stated. Prerequisites: Docker, JDK 21, `open
 
 ## 1. Stacks, keys, mail catcher
 
-Start PostgreSQL and Redis from `infrastructure/components` (skip if they already run), create the development key pair under `services/identity-access-next/.local/`, export `IDENTITY_ACCESS_JWT_PRIVATE_KEY` and `IDENTITY_ACCESS_JWT_PUBLIC_KEY`, and start Mailpit exactly as in the 003 quickstart. The service must refuse to start without the keys. The old `presentation/user/.local/*.pem` files are not used.
+Start PostgreSQL and Redis from `infrastructure/components` (skip if they already run), create the development key pair under `services/identity-access-next/.local/`, export `IDENTITY_ACCESS_JWT_PRIVATE_KEY` and `IDENTITY_ACCESS_JWT_PUBLIC_KEY`, and start Mailpit exactly as in the 003 quickstart. The service must refuse to start without the keys. (Superseded by spec 008: the keys are now read from Vault at `secret/common/jwt/rs256`, and these two variables are no longer read.) The old `presentation/user/.local/*.pem` files are not used.
 
 ## 2. Automated checks
 

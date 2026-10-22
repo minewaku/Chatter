@@ -6,9 +6,9 @@ Base path `/api/v1`. All bodies are `application/json; charset=UTF-8`. Timestamp
 
 | # | Method and path | Access | Success | Core use case |
 |---|-----------------|--------|---------|---------------|
-| 1 | `POST /auth/register` | public | `201` `{userId}` | `RegisterUserUseCase` |
+| 1 | `POST /auth/register` | public | `201` `{userId}` (amended by 007: also `verificationMailSent`) | `RegisterUserUseCase` |
 | 2 | `POST /auth/authenticate` | public | `200` token pair | `AuthenticateUseCase` |
-| 3 | `POST /auth/verification/resend` | public | `202` no body | `RequestEmailVerificationUseCase` |
+| 3 | `POST /auth/verification/resend` | public | `202` no body (amended by 007: `429 too_many_attempts` when asked for too often) | `RequestEmailVerificationUseCase` |
 | 4 | `GET /auth/verification/confirm?token=` | public | `200` `{status}` | `VerifyEmailUseCase` |
 | 5 | `POST /auth/refresh` | public | `200` token pair | `RefreshAccessTokenUseCase` |
 | 6 | `POST /auth/logout` | public | `204` no body | `LogoutCurrentSessionUseCase` |
