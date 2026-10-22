@@ -24,48 +24,38 @@
         </dependency>
 
 
-        <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.springframework.boot</groupId>
-                    <artifactId>spring-boot-starter-logging</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
-        
-        <!-- https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-starter-netflix-eureka-client -->
+
+        <!-- Secrets (mail credentials) are read from Vault KV at startup -->
         <dependency>
-          <groupId>org.springframework.cloud</groupId>
-          <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-vault-config</artifactId>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-devtools -->
         <dependency>
-          <groupId>org.springframework.boot</groupId>
-          <artifactId>spring-boot-devtools</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
         </dependency>
-
-        <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-actuator -->
         <dependency>
-          <groupId>org.springframework.boot</groupId>
-          <artifactId>spring-boot-starter-actuator</artifactId>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
         </dependency>
-
-
-
-        <!--
-          ENV RELATED PACKAGES
-        -->
-        
-        <!-- https://mvnrepository.com/artifact/me.paulschwarz/springboot3-dotenv -->
         <dependency>
-            <groupId>me.paulschwarz</groupId>
-            <artifactId>springboot3-dotenv</artifactId>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-junit-jupiter</artifactId>
+            <scope>test</scope>
         </dependency>
-        
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+
   </dependencies>
 
   <build>
@@ -73,13 +63,12 @@
         <plugin>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-maven-plugin</artifactId>
-            <version>${spring-boot.version}</version>
-
             <executions>
                 <execution>
                     <goals>
-                        <goal>repackage</goal>
+                        <goal>check</goal>
                     </goals>
+                    <phase>verify</phase>
                 </execution>
             </executions>
             

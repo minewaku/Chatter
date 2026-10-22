@@ -1,14 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-	<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-parent -->
+
+    <!-- Source: https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-parent -->
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.16</version>
+        <version>4.0.8</version>
         <relativePath/>
     </parent>
 
@@ -22,19 +23,18 @@
 
 
     <modules>
-        <module>identityaccess-start</module>
+        <module>identityaccess-core</module>
         <module>identityaccess-infrastructure</module>
         <module>identityaccess-presentation</module>
-        <module>identityaccess-domain</module>
-        <module>identityaccess-application</module>
+        <module>identityaccess-start</module>
     </modules>
 
 
     <properties>
         <java.version>21</java.version>
-		<spring-boot.version>3.5.16</spring-boot.version>
-        <spring-cloud.version>2025.0.0</spring-cloud.version>
-        <spring-dotenv.version>5.1.0</spring-dotenv.version>
+        <spring-cloud.version>2025.1.1</spring-cloud.version>
+        <spotless.version>3.9.0</spotless.version>
+        <resilience4j.version>2.4.0</resilience4j.version>
     </properties>
 
 
@@ -47,32 +47,22 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-
+            <!-- Plain library only: the Spring Boot starter is deliberately not used. -->
             <dependency>
-                <groupId>me.paulschwarz</groupId>
-                <artifactId>spring-dotenv-bom</artifactId>
-                <version>${spring-dotenv.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
+                <groupId>io.github.resilience4j</groupId>
+                <artifactId>resilience4j-circuitbreaker</artifactId>
+                <version>${resilience4j.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
 
 
     <dependencies>
-	    <!-- 
-			*** LOMBOK PACKAGES ***
-		-->
 		<!-- https://mvnrepository.com/artifact/org.projectlombok/lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-context</artifactId>
         </dependency>
     </dependencies>
 
@@ -81,7 +71,7 @@
         <pluginManagement>
             <plugins>
 
-				<!-- Define all the stuff for the compilation process -->
+                <!-- Define the compilation process. -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
@@ -91,17 +81,41 @@
                         <compilerArgs>
                             <arg>-parameters</arg>
                         </compilerArgs>
-
-                        <annotationProcessorPaths>
-                            <path>
-                                <groupId>org.projectlombok</groupId>
-                                <artifactId>lombok</artifactId>
-                            </path>
-                        </annotationProcessorPaths>
                     </configuration>
                 </plugin>
             </plugins>
         </pluginManagement>
+
+        <plugins>
+
+            <!-- Code formatting -->
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <version>${spotless.version}</version>
+
+                <configuration>
+                    <java>
+                        <palantirJavaFormat>
+                            <version>2.50.0</version>
+                        </palantirJavaFormat>
+                        <removeUnusedImports/>
+                        <forbidWildcardImports/>
+                        <importOrder/>
+                        <formatAnnotations/>
+                    </java>
+                </configuration>
+
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+        </plugins>
     </build>
 
 </project>
