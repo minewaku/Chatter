@@ -1,4 +1,4 @@
-package com.minewaku.chatter.identityaccess.start.configuration;
+package com.minewaku.chatter.identityaccess.start.time;
 
 import java.time.Clock;
 import org.springframework.context.annotation.Bean;

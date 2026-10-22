@@ -1,4 +1,4 @@
-package com.minewaku.chatter.identityaccess.start.configuration;
+package com.minewaku.chatter.identityaccess.start.signing;
 
 import com.minewaku.chatter.identityaccess.infrastructure.security.JwtProperties;
 import com.minewaku.chatter.identityaccess.infrastructure.security.PemKeys;

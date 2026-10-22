@@ -1,4 +1,4 @@
-package com.minewaku.chatter.identityaccess.start.configuration;
+package com.minewaku.chatter.identityaccess.start.signing;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
