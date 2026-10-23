@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -29,19 +30,13 @@ import org.springframework.web.bind.annotation.RestController;
 /** Public account entry points: registration and sign-in. */
 @Tag(name = "Authentication", description = "Registration and sign-in. No credential required.")
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("/api/v1/auth")
 public class AuthController {
 
     private final RegisterUserUseCase register;
     private final AuthenticateUseCase authenticate;
     private final DeviceLabelResolver deviceLabels;
-
-    public AuthController(
-            RegisterUserUseCase register, AuthenticateUseCase authenticate, DeviceLabelResolver deviceLabels) {
-        this.register = register;
-        this.authenticate = authenticate;
-        this.deviceLabels = deviceLabels;
-    }
 
     @Operation(summary = "Register a new account")
     @ApiResponse(

@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,14 +24,11 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Tag(name = "Account", description = "The caller's own account. Requires an access credential.")
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("/api/v1/users/email-change")
 public class EmailChangeController {
 
     private final ConfirmEmailChangeUseCase confirmEmailChange;
-
-    public EmailChangeController(ConfirmEmailChangeUseCase confirmEmailChange) {
-        this.confirmEmailChange = confirmEmailChange;
-    }
 
     @Operation(summary = "Confirm the token mailed to the new address (public, no access credential)")
     @ApiResponse(

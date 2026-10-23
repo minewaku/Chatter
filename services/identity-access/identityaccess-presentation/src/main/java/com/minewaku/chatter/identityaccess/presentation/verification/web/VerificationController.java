@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,16 +26,12 @@ import org.springframework.web.bind.annotation.RestController;
 /** Public email verification: request a (new) email and confirm the emailed token. */
 @Tag(name = "Email verification", description = "Request a verification email and confirm its token.")
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("/api/v1/auth/verification")
 public class VerificationController {
 
     private final RequestEmailVerificationUseCase requestVerification;
     private final VerifyEmailUseCase verifyEmail;
-
-    public VerificationController(RequestEmailVerificationUseCase requestVerification, VerifyEmailUseCase verifyEmail) {
-        this.requestVerification = requestVerification;
-        this.verifyEmail = verifyEmail;
-    }
 
     @Operation(
             summary = "Request a verification email (accepted for any well-formed address unless it is asked for too"

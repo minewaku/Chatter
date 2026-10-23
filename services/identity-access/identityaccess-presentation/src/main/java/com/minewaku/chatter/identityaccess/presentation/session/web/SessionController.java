@@ -21,6 +21,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -38,21 +39,13 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Sessions", description = "The caller's own sessions. Requires an access credential.")
 @SecurityRequirement(name = OpenApiConfiguration.BEARER_SCHEME)
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("/api/v1/sessions")
 public class SessionController {
 
     private final FindSessionsQuery findSessions;
     private final LogoutSessionUseCase logoutSession;
     private final LogoutOtherSessionsUseCase logoutOthers;
-
-    public SessionController(
-            FindSessionsQuery findSessions,
-            LogoutSessionUseCase logoutSession,
-            LogoutOtherSessionsUseCase logoutOthers) {
-        this.findSessions = findSessions;
-        this.logoutSession = logoutSession;
-        this.logoutOthers = logoutOthers;
-    }
 
     @Operation(summary = "List the caller's sessions, newest first")
     @DocumentedErrors({ErrorCode.UNAUTHENTICATED, ErrorCode.ACCOUNT_INACCESSIBLE, ErrorCode.SERVICE_UNAVAILABLE})

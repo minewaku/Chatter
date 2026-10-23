@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,16 +22,12 @@ import org.springframework.web.bind.annotation.RestController;
 /** Public credential exchange: renew access with a refresh credential, and sign the presented session out. */
 @Tag(name = "Tokens", description = "Renew access and sign out. The refresh credential is the credential.")
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("/api/v1/auth")
 public class TokenController {
 
     private final RefreshAccessTokenUseCase refresh;
     private final LogoutCurrentSessionUseCase logout;
-
-    public TokenController(RefreshAccessTokenUseCase refresh, LogoutCurrentSessionUseCase logout) {
-        this.refresh = refresh;
-        this.logout = logout;
-    }
 
     @Operation(summary = "Exchange a refresh credential for a new access and refresh credential")
     @DocumentedErrors({

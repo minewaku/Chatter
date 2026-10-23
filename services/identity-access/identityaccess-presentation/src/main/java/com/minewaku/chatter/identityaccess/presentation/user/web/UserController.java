@@ -18,6 +18,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -31,6 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Account", description = "The caller's own account. Requires an access credential.")
 @SecurityRequirement(name = OpenApiConfiguration.BEARER_SCHEME)
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("/api/v1/users/@me")
 public class UserController {
 
@@ -38,17 +40,6 @@ public class UserController {
     private final SoftDeleteUserAccountUseCase softDelete;
     private final ChangeUsernameUseCase changeUsername;
     private final RequestEmailChangeUseCase requestEmailChange;
-
-    public UserController(
-            ChangePasswordUseCase changePassword,
-            SoftDeleteUserAccountUseCase softDelete,
-            ChangeUsernameUseCase changeUsername,
-            RequestEmailChangeUseCase requestEmailChange) {
-        this.changePassword = changePassword;
-        this.softDelete = softDelete;
-        this.changeUsername = changeUsername;
-        this.requestEmailChange = requestEmailChange;
-    }
 
     /** Changing the password ends all of the account's sessions, including the one in use. */
     @Operation(summary = "Change the caller's password and end all of their sessions")
