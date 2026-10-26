@@ -52,6 +52,38 @@ class AccountManagementE2eTest extends E2eSupport {
     }
 
     @Test
+    void aCurrentPasswordFailingThePolicyIsAWrongPasswordNotAValidationFailure() {
+        String[] tokens = signIn(registerVerifiedAccount());
+
+        ApiResponse refused = changePassword(tokens[0], "weak", NEW_PASSWORD);
+
+        assertThat(refused.status()).isEqualTo(403);
+        assertThat(refused.text("code")).isEqualTo("reauthentication_failed");
+        assertThat(api().get("/sessions", tokens[0]).status()).isEqualTo(200);
+    }
+
+    @Test
+    void aLockedAccountIsAccountInaccessibleOnPasswordAndEmailChangesButMayStillClose() {
+        String email = registerVerifiedAccount();
+        String[] tokens = signIn(email);
+        lockAccountOf(tokens[0]);
+
+        for (String password : new String[] {PASSWORD, "Wrong-pass1!", "weak"}) {
+            ApiResponse passwordChange = changePassword(tokens[0], password, NEW_PASSWORD);
+            ApiResponse emailChange = api().post(
+                    "/users/@me/email-change",
+                    Map.of("newEmail", uniqueEmail(), "currentPassword", password),
+                    tokens[0]);
+            for (ApiResponse response : new ApiResponse[] {passwordChange, emailChange}) {
+                assertThat(response.status()).isEqualTo(403);
+                assertThat(response.text("code")).isEqualTo("account_inaccessible");
+            }
+        }
+        ApiResponse closed = api().post("/users/@me/close", Map.of("currentPassword", PASSWORD), tokens[0]);
+        assertThat(closed.status()).isEqualTo(204);
+    }
+
+    @Test
     void aWeakNewPasswordIsReportedAgainstItsFieldWithoutEchoingIt() {
         String[] tokens = signIn(registerVerifiedAccount());
 

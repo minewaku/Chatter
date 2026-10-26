@@ -108,7 +108,7 @@ public class UserAccount {
     }
 
     public boolean changePassword(
-            PlainPassword currentPassword, PlainPassword newPassword, PasswordHasher passwordHasher) {
+            String currentPassword, PlainPassword newPassword, PasswordHasher passwordHasher) {
         verifyAccessibleCredentials(currentPassword, passwordHasher, "change password");
         if (passwordHasher.matches(newPassword, passwordHash)) {
             return false;
@@ -119,9 +119,7 @@ public class UserAccount {
     }
 
     public boolean changeUsername(Username newUsername) {
-        if (!isAccessible()) {
-            throw new InvalidAccountStateTransitionException(status, "change username");
-        }
+        requireAccessible("change username");
         if (username.equals(newUsername)) {
             return false;
         }
@@ -134,34 +132,48 @@ public class UserAccount {
      * Checks that this account may ask to move to {@code newEmail}. Returns false when it is already the current
      * email. Nothing is changed: the email only moves once the new address is verified.
      */
-    public boolean authorizeEmailChange(PlainPassword currentPassword, Email newEmail, PasswordHasher passwordHasher) {
+    public boolean authorizeEmailChange(String currentPassword, Email newEmail, PasswordHasher passwordHasher) {
         verifyAccessibleCredentials(currentPassword, passwordHasher, "change email");
         return !email.equals(newEmail);
     }
 
     public void applyVerifiedEmail(Email newEmail) {
-        if (!isAccessible()) {
-            throw new InvalidAccountStateTransitionException(status, "confirm email change");
-        }
+        requireAccessible("confirm email change");
         email = newEmail;
         markUpdated();
     }
 
-    private void verifyAccessibleCredentials(
-            PlainPassword currentPassword, PasswordHasher passwordHasher, String operation) {
+    /**
+     * Confirms the person acting for this account by their current password, for actions that change nothing here
+     * (such as ending sessions). Follows the one rule shared by every action that asks for the password: the status is
+     * checked first, so a blocked account is reported as such whatever password was sent, then the password.
+     */
+    public void confirmCredentials(String presentedPassword, PasswordHasher passwordHasher) {
+        verifyAccessibleCredentials(presentedPassword, passwordHasher, "confirm current password");
+    }
+
+    /** Refuses {@code operation} unless this account is accessible. */
+    public void requireAccessible(String operation) {
         if (!isAccessible()) {
             throw new InvalidAccountStateTransitionException(status, operation);
         }
-        if (!passwordHasher.matches(currentPassword, passwordHash)) {
+    }
+
+    private void verifyAccessibleCredentials(
+            String presentedPassword, PasswordHasher passwordHasher, String operation) {
+        requireAccessible(operation);
+        verifyPassword(presentedPassword, passwordHasher);
+    }
+
+    private void verifyPassword(String presentedPassword, PasswordHasher passwordHasher) {
+        if (!passwordHasher.matches(PlainPassword.presented(presentedPassword), passwordHash)) {
             throw new InvalidCredentialsException("Current password is incorrect");
         }
     }
 
     /** Closes the account on the owner's request. Unlike the other credential-checked operations, any status may close. */
-    public boolean close(PlainPassword currentPassword, PasswordHasher passwordHasher) {
-        if (!passwordHasher.matches(currentPassword, passwordHash)) {
-            throw new InvalidCredentialsException("Current password is incorrect");
-        }
+    public boolean close(String currentPassword, PasswordHasher passwordHasher) {
+        verifyPassword(currentPassword, passwordHasher);
         return softDelete();
     }
 

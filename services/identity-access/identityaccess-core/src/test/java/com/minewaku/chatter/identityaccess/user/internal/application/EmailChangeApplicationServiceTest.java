@@ -276,6 +276,18 @@ class EmailChangeApplicationServiceTest {
     }
 
     @Test
+    void a_non_active_account_is_refused_for_its_status_whatever_current_password_is_sent() {
+        accounts.add(account(8, "sus@example.com", "sus_8", AccountStatus.LOCKED));
+
+        for (String presented : new String[] {PASSWORD, "WrongPassword3#", "wrong"}) {
+            assertThrows(
+                    InvalidAccountStateTransitionException.class,
+                    () -> request.handle(new RequestEmailChangeUseCase.Command(8, presented, "new@example.com")));
+        }
+        assertTrue(notifier.deliveries.isEmpty());
+    }
+
+    @Test
     void a_request_from_an_account_that_is_not_active_is_refused() {
         accounts.add(account(8, "sus@example.com", "sus_8", AccountStatus.SUSPENDED));
 

@@ -21,6 +21,9 @@ class UserAccountTest {
 
     private static final PlainPassword PASSWORD = new PlainPassword("Password1!");
     private static final PlainPassword INCORRECT_PASSWORD = new PlainPassword("Incorrect2@");
+    private static final String PRESENTED_PASSWORD = "Password1!";
+    private static final String PRESENTED_INCORRECT_PASSWORD = "Incorrect2@";
+    private static final String PRESENTED_WEAK_PASSWORD = "weak";
     private static final Instant ORIGINAL_UPDATED_AT = Instant.parse("2026-01-01T00:00:00Z");
     private static final PasswordHasher PASSWORD_HASHER = new TestPasswordHasher();
 
@@ -123,7 +126,7 @@ class UserAccountTest {
     void close_with_the_correct_password_deletes_the_account_from_every_non_deleted_status(AccountStatus source) {
         UserAccount account = account(source);
 
-        assertTrue(account.close(PASSWORD, PASSWORD_HASHER));
+        assertTrue(account.close(PRESENTED_PASSWORD, PASSWORD_HASHER));
 
         assertEquals(AccountStatus.DELETED, account.status());
         assertEquals("deleted-42@deleted.invalid", account.email().value());
@@ -135,7 +138,7 @@ class UserAccountTest {
     void close_with_a_wrong_password_changes_nothing(AccountStatus source) {
         UserAccount account = account(source);
 
-        assertThrows(InvalidCredentialsException.class, () -> account.close(INCORRECT_PASSWORD, PASSWORD_HASHER));
+        assertThrows(InvalidCredentialsException.class, () -> account.close(PRESENTED_INCORRECT_PASSWORD, PASSWORD_HASHER));
 
         assertEquals(source, account.status());
         assertEquals("person@example.com", account.email().value());
@@ -146,9 +149,9 @@ class UserAccountTest {
     @Test
     void close_on_an_already_closed_account_fails_the_password_check() {
         UserAccount account = account(AccountStatus.ACTIVE);
-        assertTrue(account.close(PASSWORD, PASSWORD_HASHER));
+        assertTrue(account.close(PRESENTED_PASSWORD, PASSWORD_HASHER));
 
-        assertThrows(InvalidCredentialsException.class, () -> account.close(PASSWORD, PASSWORD_HASHER));
+        assertThrows(InvalidCredentialsException.class, () -> account.close(PRESENTED_PASSWORD, PASSWORD_HASHER));
     }
 
     @Test
@@ -194,12 +197,12 @@ class UserAccountTest {
         assertThrows(InvalidAccountStateTransitionException.class, account::reinstate);
         assertThrows(
                 InvalidAccountStateTransitionException.class,
-                () -> account.changePassword(PASSWORD, new PlainPassword("NewPassword2@"), PASSWORD_HASHER));
+                () -> account.changePassword(PRESENTED_PASSWORD, new PlainPassword("NewPassword2@"), PASSWORD_HASHER));
         assertThrows(
                 InvalidAccountStateTransitionException.class, () -> account.changeUsername(new Username("new_person")));
         assertThrows(
                 InvalidAccountStateTransitionException.class,
-                () -> account.authorizeEmailChange(PASSWORD, new Email("new@example.com"), PASSWORD_HASHER));
+                () -> account.authorizeEmailChange(PRESENTED_PASSWORD, new Email("new@example.com"), PASSWORD_HASHER));
         assertThrows(
                 InvalidAccountStateTransitionException.class,
                 () -> account.applyVerifiedEmail(new Email("new@example.com")));
@@ -210,16 +213,16 @@ class UserAccountTest {
         UserAccount account = account(AccountStatus.ACTIVE);
         PlainPassword newPassword = new PlainPassword("NewPassword2@");
 
-        assertTrue(account.changePassword(PASSWORD, newPassword, PASSWORD_HASHER));
+        assertTrue(account.changePassword(PRESENTED_PASSWORD, newPassword, PASSWORD_HASHER));
         assertTrue(PASSWORD_HASHER.matches(newPassword, account.passwordHash()));
         assertFalse(PASSWORD_HASHER.matches(PASSWORD, account.passwordHash()));
-        assertFalse(account.changePassword(newPassword, newPassword, PASSWORD_HASHER));
+        assertFalse(account.changePassword("NewPassword2@", newPassword, PASSWORD_HASHER));
         assertThrows(
                 InvalidCredentialsException.class,
                 () -> account.changePassword(
-                        new PlainPassword("Incorrect2@"), new PlainPassword("OtherPassword3#"), PASSWORD_HASHER));
+                        PRESENTED_INCORRECT_PASSWORD, new PlainPassword("OtherPassword3#"), PASSWORD_HASHER));
         assertThrows(InvalidAccountStateTransitionException.class, () -> account(AccountStatus.LOCKED)
-                .changePassword(PASSWORD, new PlainPassword("OtherPassword3#"), PASSWORD_HASHER));
+                .changePassword(PRESENTED_PASSWORD, new PlainPassword("OtherPassword3#"), PASSWORD_HASHER));
     }
 
     @ParameterizedTest
@@ -229,7 +232,7 @@ class UserAccountTest {
 
         assertThrows(
                 InvalidAccountStateTransitionException.class,
-                () -> account.changePassword(INCORRECT_PASSWORD, new PlainPassword("NewPassword2@"), PASSWORD_HASHER));
+                () -> account.changePassword(PRESENTED_INCORRECT_PASSWORD, new PlainPassword("NewPassword2@"), PASSWORD_HASHER));
         assertEquals(ORIGINAL_UPDATED_AT, account.updatedAt());
         assertTrue(PASSWORD_HASHER.matches(PASSWORD, account.passwordHash()));
     }
@@ -267,12 +270,11 @@ class UserAccountTest {
     void email_change_authorization_needs_the_password_and_a_new_normalized_value_and_changes_nothing() {
         UserAccount account = account(AccountStatus.ACTIVE);
 
-        assertFalse(account.authorizeEmailChange(PASSWORD, new Email(" PERSON@example.com "), PASSWORD_HASHER));
-        assertTrue(account.authorizeEmailChange(PASSWORD, new Email("New@Example.com"), PASSWORD_HASHER));
+        assertFalse(account.authorizeEmailChange(PRESENTED_PASSWORD, new Email(" PERSON@example.com "), PASSWORD_HASHER));
+        assertTrue(account.authorizeEmailChange(PRESENTED_PASSWORD, new Email("New@Example.com"), PASSWORD_HASHER));
         assertThrows(
                 InvalidCredentialsException.class,
-                () -> account.authorizeEmailChange(
-                        INCORRECT_PASSWORD, new Email("other@example.com"), PASSWORD_HASHER));
+                () -> account.authorizeEmailChange(PRESENTED_INCORRECT_PASSWORD, new Email("other@example.com"), PASSWORD_HASHER));
 
         assertEquals("person@example.com", account.email().value());
         assertEquals(AccountStatus.ACTIVE, account.status());
@@ -287,7 +289,7 @@ class UserAccountTest {
 
         assertThrows(
                 InvalidAccountStateTransitionException.class,
-                () -> account.authorizeEmailChange(INCORRECT_PASSWORD, new Email("new@example.com"), PASSWORD_HASHER));
+                () -> account.authorizeEmailChange(PRESENTED_INCORRECT_PASSWORD, new Email("new@example.com"), PASSWORD_HASHER));
         assertEquals("person@example.com", account.email().value());
     }
 
@@ -344,6 +346,97 @@ class UserAccountTest {
     @FunctionalInterface
     private interface AccountOperation {
         boolean apply(UserAccount account);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = AccountStatus.class, names = "ACTIVE", mode = EnumSource.Mode.EXCLUDE)
+    void a_non_active_account_is_reported_as_such_whatever_password_is_presented_and_the_password_is_never_compared(
+            AccountStatus status) {
+        for (String presented :
+                new String[] {PRESENTED_PASSWORD, PRESENTED_INCORRECT_PASSWORD, PRESENTED_WEAK_PASSWORD, null}) {
+            CountingHasher hasher = new CountingHasher();
+            UserAccount account = account(status);
+
+            assertThrows(
+                    InvalidAccountStateTransitionException.class, () -> account.confirmCredentials(presented, hasher));
+            assertThrows(
+                    InvalidAccountStateTransitionException.class,
+                    () -> account.changePassword(presented, new PlainPassword("NewPassword2@"), hasher));
+            assertThrows(
+                    InvalidAccountStateTransitionException.class,
+                    () -> account.authorizeEmailChange(presented, new Email("new@example.com"), hasher));
+            assertEquals(0, hasher.matchCalls);
+        }
+    }
+
+    @Test
+    void an_active_account_treats_a_wrong_or_policy_failing_password_as_a_wrong_password() {
+        UserAccount account = account(AccountStatus.ACTIVE);
+
+        for (String presented : new String[] {PRESENTED_INCORRECT_PASSWORD, PRESENTED_WEAK_PASSWORD, "", null}) {
+            assertThrows(
+                    InvalidCredentialsException.class, () -> account.confirmCredentials(presented, PASSWORD_HASHER));
+            assertThrows(
+                    InvalidCredentialsException.class,
+                    () -> account.changePassword(presented, new PlainPassword("NewPassword2@"), PASSWORD_HASHER));
+            assertThrows(
+                    InvalidCredentialsException.class,
+                    () -> account.authorizeEmailChange(presented, new Email("new@example.com"), PASSWORD_HASHER));
+            assertThrows(InvalidCredentialsException.class, () -> account.close(presented, PASSWORD_HASHER));
+        }
+        assertEquals(AccountStatus.ACTIVE, account.status());
+        assertEquals(ORIGINAL_UPDATED_AT, account.updatedAt());
+    }
+
+    @Test
+    void confirming_credentials_with_the_right_password_on_an_active_account_changes_nothing() {
+        UserAccount account = account(AccountStatus.ACTIVE);
+
+        account.confirmCredentials(PRESENTED_PASSWORD, PASSWORD_HASHER);
+
+        assertEquals(AccountStatus.ACTIVE, account.status());
+        assertEquals(ORIGINAL_UPDATED_AT, account.updatedAt());
+        assertTrue(PASSWORD_HASHER.matches(PASSWORD, account.passwordHash()));
+    }
+
+    @ParameterizedTest
+    @EnumSource(AccountStatus.class)
+    void close_treats_a_policy_failing_password_as_wrong_for_every_status(AccountStatus status) {
+        UserAccount account = account(status);
+
+        assertThrows(InvalidCredentialsException.class, () -> account.close(PRESENTED_WEAK_PASSWORD, PASSWORD_HASHER));
+
+        assertEquals(status, account.status());
+    }
+
+    @ParameterizedTest
+    @EnumSource(AccountStatus.class)
+    void require_accessible_refuses_exactly_the_non_active_statuses(AccountStatus status) {
+        UserAccount account = account(status);
+
+        if (status == AccountStatus.ACTIVE) {
+            account.requireAccessible("some operation");
+        } else {
+            assertThrows(
+                    InvalidAccountStateTransitionException.class, () -> account.requireAccessible("some operation"));
+        }
+    }
+
+    private static final class CountingHasher implements PasswordHasher {
+
+        private final PasswordHasher delegate = new TestPasswordHasher();
+        private int matchCalls;
+
+        @Override
+        public PasswordHash hash(PlainPassword password) {
+            return delegate.hash(password);
+        }
+
+        @Override
+        public boolean matches(PlainPassword password, PasswordHash passwordHash) {
+            matchCalls++;
+            return delegate.matches(password, passwordHash);
+        }
     }
 
     private static final class TestPasswordHasher implements PasswordHasher {

@@ -2,6 +2,7 @@ package com.minewaku.chatter.identityaccess.presentation.session.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -15,12 +16,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.minewaku.chatter.identityaccess.authentication.api.command.LogoutOtherSessionsUseCase;
 import com.minewaku.chatter.identityaccess.authentication.api.command.LogoutSessionUseCase;
-import com.minewaku.chatter.identityaccess.authentication.api.exception.AuthenticationFailedException;
+import com.minewaku.chatter.identityaccess.authentication.api.exception.SessionUnusableException;
 import com.minewaku.chatter.identityaccess.authentication.api.query.FindSessionsQuery;
 import com.minewaku.chatter.identityaccess.presentation.SliceSecurityConfiguration;
 import com.minewaku.chatter.identityaccess.presentation.shared.error.ApiAccessDeniedHandler;
 import com.minewaku.chatter.identityaccess.presentation.shared.error.ApiAuthenticationEntryPoint;
 import com.minewaku.chatter.identityaccess.shared.exception.TooManyAttemptsException;
+import com.minewaku.chatter.identityaccess.user.api.exception.InvalidAccountStateTransitionException;
+import com.minewaku.chatter.identityaccess.user.api.exception.InvalidCredentialsException;
+import com.minewaku.chatter.identityaccess.user.api.exception.UserAccountNotFoundException;
+import com.minewaku.chatter.identityaccess.user.internal.model.AccountStatus;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -78,12 +83,18 @@ class SessionControllerTest {
     }
 
     @Test
-    void listForAnInaccessibleAccountIsForbiddenNotAServerError() throws Exception {
-        when(findSessions.handle(any())).thenThrow(new AuthenticationFailedException());
+    void listForABlockedOrMissingAccountIsForbiddenNotAServerError() throws Exception {
+        for (RuntimeException cause : List.of(
+                new InvalidAccountStateTransitionException(AccountStatus.SUSPENDED, "list sessions"),
+                new UserAccountNotFoundException())) {
+            doThrow(cause).when(findSessions).handle(any());
 
-        mvc.perform(get("/api/v1/sessions").with(caller()))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.code").value("account_inaccessible"));
+            mvc.perform(get("/api/v1/sessions").with(caller()))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.code").value("account_inaccessible"))
+                    .andExpect(content()
+                            .string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("SUSPENDED"))));
+        }
     }
 
     @Test
@@ -119,8 +130,8 @@ class SessionControllerTest {
 
     @Test
     void aWrongPasswordIsForbiddenAndNeverUnauthenticated() throws Exception {
-        when(logoutSession.handle(any())).thenThrow(new AuthenticationFailedException());
-        when(logoutOthers.handle(any())).thenThrow(new AuthenticationFailedException());
+        when(logoutSession.handle(any())).thenThrow(new InvalidCredentialsException("secret mismatch"));
+        when(logoutOthers.handle(any())).thenThrow(new InvalidCredentialsException("secret mismatch"));
 
         mvc.perform(post("/api/v1/sessions/target-session/revoke")
                         .with(caller())
@@ -135,6 +146,61 @@ class SessionControllerTest {
                         .content(PASSWORD_BODY))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("reauthentication_failed"));
+    }
+
+    @Test
+    void aBlockedOrMissingAccountIsAccountInaccessibleNotAWrongPassword() throws Exception {
+        for (RuntimeException cause : List.of(
+                new InvalidAccountStateTransitionException(AccountStatus.LOCKED, "confirm current password"),
+                new UserAccountNotFoundException())) {
+            doThrow(cause).when(logoutSession).handle(any());
+            doThrow(cause).when(logoutOthers).handle(any());
+
+            mvc.perform(post("/api/v1/sessions/target-session/revoke")
+                            .with(caller())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(PASSWORD_BODY))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.code").value("account_inaccessible"))
+                    .andExpect(content()
+                            .string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("LOCKED"))));
+            mvc.perform(post("/api/v1/sessions/revoke-others")
+                            .with(caller())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(PASSWORD_BODY))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.code").value("account_inaccessible"));
+        }
+    }
+
+    @Test
+    void anUnusableCurrentSessionIsUnauthorizedWithItsOwnCodeNotAWrongPassword() throws Exception {
+        when(logoutOthers.handle(any())).thenThrow(new SessionUnusableException());
+
+        mvc.perform(post("/api/v1/sessions/revoke-others")
+                        .with(caller())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(PASSWORD_BODY))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("session_unusable"))
+                .andExpect(jsonPath("$.message").value("The session is no longer usable."));
+    }
+
+    @Test
+    void noFailureOfTheSessionEndpointsIsEverTheGenericAuthenticationFailed() throws Exception {
+        for (RuntimeException cause : List.of(
+                new InvalidCredentialsException("secret"),
+                new InvalidAccountStateTransitionException(AccountStatus.LOCKED, "op"),
+                new UserAccountNotFoundException(),
+                new SessionUnusableException())) {
+            doThrow(cause).when(logoutOthers).handle(any());
+
+            mvc.perform(post("/api/v1/sessions/revoke-others")
+                            .with(caller())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(PASSWORD_BODY))
+                    .andExpect(jsonPath("$.code").value(org.hamcrest.Matchers.not("authentication_failed")));
+        }
     }
 
     @Test

@@ -63,6 +63,81 @@ class SessionManagementE2eTest extends E2eSupport {
     }
 
     @Test
+    void aPasswordFailingThePolicyIsAWrongPasswordNotAMalformedRequest() {
+        String email = registerVerifiedAccount();
+        String[] current = signIn(email);
+        String[] other = signIn(email);
+
+        ApiResponse weak = revoke(current[0], claim(other[0], "sid"), "weak");
+        ApiResponse weakOthers = api().post("/sessions/revoke-others", Map.of("currentPassword", "weak"), current[0]);
+
+        for (ApiResponse response : new ApiResponse[] {weak, weakOthers}) {
+            assertThat(response.status()).isEqualTo(403);
+            assertThat(response.text("code")).isEqualTo("reauthentication_failed");
+        }
+        assertThat(api().get("/sessions", other[0]).status()).isEqualTo(200);
+    }
+
+    @Test
+    void anExpiredCurrentSessionIsUnauthorizedWithItsOwnCodeAndEndsNothing() {
+        String email = registerVerifiedAccount();
+        String[] current = signIn(email);
+        String[] other = signIn(email);
+        // the access credential is still valid; only the session record behind it has run out
+        String key = KEY_PREFIX + "session:" + claim(current[0], "sid");
+        long issuedAt = Long.parseLong((String) redis.opsForHash().get(key, "issuedAt"));
+        redis.opsForHash().put(key, "expiresAt", Long.toString(issuedAt + 1_000));
+
+        ApiResponse refused =
+                api().post("/sessions/revoke-others", Map.of("currentPassword", PASSWORD), current[0]);
+        ApiResponse wrongPassword =
+                api().post("/sessions/revoke-others", Map.of("currentPassword", "Wrong-pass1!"), current[0]);
+
+        assertThat(refused.status()).isEqualTo(401);
+        assertThat(refused.text("code")).isEqualTo("session_unusable");
+        assertThat(wrongPassword.status()).isEqualTo(403);
+        assertThat(wrongPassword.text("code")).isEqualTo("reauthentication_failed");
+        assertThat(api().get("/sessions", other[0]).status()).isEqualTo(200);
+        assertThat(api().post("/auth/refresh", Map.of("refreshToken", other[1])).status())
+                .isEqualTo(200);
+    }
+
+    @Test
+    void listingSessionsOfALockedAccountIsAccountInaccessible() {
+        String email = registerVerifiedAccount();
+        String[] tokens = signIn(email);
+        assertThat(api().get("/sessions", tokens[0]).status()).isEqualTo(200);
+        lockAccountOf(tokens[0]);
+
+        ApiResponse listed = api().get("/sessions", tokens[0]);
+
+        assertThat(listed.status()).isEqualTo(403);
+        assertThat(listed.text("code")).isEqualTo("account_inaccessible");
+        unlockAccountOf(tokens[0]);
+        assertThat(api().get("/sessions", tokens[0]).status()).isEqualTo(200);
+    }
+
+    @Test
+    void aLockedAccountIsAccountInaccessibleWhateverPasswordIsSent() {
+        String email = registerVerifiedAccount();
+        String[] current = signIn(email);
+        String[] other = signIn(email);
+        lockAccountOf(current[0]);
+
+        for (String password : new String[] {PASSWORD, "Wrong-pass1!", "weak"}) {
+            ApiResponse one = revoke(current[0], claim(other[0], "sid"), password);
+            ApiResponse others =
+                    api().post("/sessions/revoke-others", Map.of("currentPassword", password), current[0]);
+            for (ApiResponse response : new ApiResponse[] {one, others}) {
+                assertThat(response.status()).isEqualTo(403);
+                assertThat(response.text("code")).isEqualTo("account_inaccessible");
+            }
+        }
+        unlockAccountOf(current[0]);
+        assertThat(api().get("/sessions", other[0]).status()).isEqualTo(200); // nothing was ended
+    }
+
+    @Test
     void endingASessionBlocksItsCredentialsImmediately() {
         String email = registerVerifiedAccount();
         String[] current = signIn(email);

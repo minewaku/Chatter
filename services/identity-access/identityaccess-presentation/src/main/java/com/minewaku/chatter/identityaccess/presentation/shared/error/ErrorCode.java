@@ -8,6 +8,7 @@ public enum ErrorCode {
     MALFORMED_REQUEST(HttpStatus.BAD_REQUEST, "The request could not be read."),
     INVALID_OR_EXPIRED_TOKEN(HttpStatus.BAD_REQUEST, "The token is invalid or has expired."),
     UNAUTHENTICATED(HttpStatus.UNAUTHORIZED, "Authentication is required."),
+    SESSION_UNUSABLE(HttpStatus.UNAUTHORIZED, "The session is no longer usable."),
     AUTHENTICATION_FAILED(HttpStatus.UNAUTHORIZED, "Authentication failed."),
     REAUTHENTICATION_FAILED(HttpStatus.FORBIDDEN, "The request could not be confirmed."),
     ACCOUNT_INACCESSIBLE(HttpStatus.FORBIDDEN, "The account cannot perform this action."),

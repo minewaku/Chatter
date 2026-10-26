@@ -1,7 +1,7 @@
 package com.minewaku.chatter.identityaccess.authentication.internal.application.command;
 
 import com.minewaku.chatter.identityaccess.authentication.api.command.LogoutOtherSessionsUseCase;
-import com.minewaku.chatter.identityaccess.authentication.api.exception.AuthenticationFailedException;
+import com.minewaku.chatter.identityaccess.authentication.api.exception.SessionUnusableException;
 import com.minewaku.chatter.identityaccess.authentication.internal.application.AccountVerifier;
 import com.minewaku.chatter.identityaccess.authentication.internal.model.AuthenticationSession;
 import com.minewaku.chatter.identityaccess.authentication.internal.port.repository.AuthenticationSessionRepository;
@@ -40,7 +40,7 @@ public class LogoutOtherSessionsService implements LogoutOtherSessionsUseCase {
         Instant now = clock.instant();
         AuthenticationSession current = sessions.findBySessionId(command.currentSessionId())
                 .filter(session -> session.userId().equals(account.id()) && session.isUsable(now))
-                .orElseThrow(AuthenticationFailedException::new);
+                .orElseThrow(SessionUnusableException::new);
         return new Result(sessions.revokeOtherSessions(account.id(), current.sessionId(), now));
     }
 }

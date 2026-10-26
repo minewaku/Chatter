@@ -1,12 +1,14 @@
 package com.minewaku.chatter.identityaccess.presentation.shared.error;
 
 import com.minewaku.chatter.identityaccess.authentication.api.exception.AuthenticationFailedException;
+import com.minewaku.chatter.identityaccess.authentication.api.exception.SessionUnusableException;
 import com.minewaku.chatter.identityaccess.shared.exception.DependencyUnavailableException;
 import com.minewaku.chatter.identityaccess.shared.exception.MailDeliveryException;
 import com.minewaku.chatter.identityaccess.shared.exception.TooManyAttemptsException;
 import com.minewaku.chatter.identityaccess.user.api.exception.DuplicateUserAccountException;
 import com.minewaku.chatter.identityaccess.user.api.exception.InvalidAccountStateTransitionException;
 import com.minewaku.chatter.identityaccess.user.api.exception.InvalidCredentialsException;
+import com.minewaku.chatter.identityaccess.user.api.exception.UserAccountNotFoundException;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
@@ -41,9 +43,9 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return body(ErrorCode.AUTHENTICATION_FAILED);
     }
 
-    @ExceptionHandler(ReauthenticationFailedException.class)
-    ResponseEntity<ApiError> reauthenticationFailed() {
-        return body(ErrorCode.REAUTHENTICATION_FAILED);
+    @ExceptionHandler(SessionUnusableException.class)
+    ResponseEntity<ApiError> sessionUnusable() {
+        return body(ErrorCode.SESSION_UNUSABLE);
     }
 
     @ExceptionHandler(InvalidCredentialsException.class)
@@ -51,7 +53,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return body(ErrorCode.REAUTHENTICATION_FAILED);
     }
 
-    @ExceptionHandler({InvalidAccountStateTransitionException.class, AccountInaccessibleException.class})
+    @ExceptionHandler({InvalidAccountStateTransitionException.class, UserAccountNotFoundException.class})
     ResponseEntity<ApiError> accountInaccessible() {
         return body(ErrorCode.ACCOUNT_INACCESSIBLE);
     }

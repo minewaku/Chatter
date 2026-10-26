@@ -1,8 +1,8 @@
 package com.minewaku.chatter.identityaccess.authentication.internal.application.query;
 
-import com.minewaku.chatter.identityaccess.authentication.api.exception.AuthenticationFailedException;
 import com.minewaku.chatter.identityaccess.authentication.api.query.FindSessionsQuery;
 import com.minewaku.chatter.identityaccess.authentication.internal.port.query.AuthenticationSessionViewRepository;
+import com.minewaku.chatter.identityaccess.user.api.exception.UserAccountNotFoundException;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserAccount;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserId;
 import com.minewaku.chatter.identityaccess.user.internal.port.repository.UserAccountRepository;
@@ -23,10 +23,9 @@ public class FindSessionsService implements FindSessionsQuery {
     @Override
     @Transactional(readOnly = true)
     public List<SessionView> handle(Command command) {
-        UserAccount account = userRepository
-                .findById(new UserId(command.userId()))
-                .filter(UserAccount::isAccessible)
-                .orElseThrow(AuthenticationFailedException::new);
+        UserAccount account =
+                userRepository.findById(new UserId(command.userId())).orElseThrow(UserAccountNotFoundException::new);
+        account.requireAccessible("list sessions");
         return views.findByUserId(account.id());
     }
 }

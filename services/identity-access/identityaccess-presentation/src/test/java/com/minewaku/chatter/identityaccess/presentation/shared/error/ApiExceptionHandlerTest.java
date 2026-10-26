@@ -72,12 +72,11 @@ class ApiExceptionHandlerTest {
         assertStandardShape(
                 mvc.perform(get("/probe/authentication-failed").with(caller())), ErrorCode.AUTHENTICATION_FAILED);
         assertStandardShape(
-                mvc.perform(get("/probe/reauthentication-failed").with(caller())), ErrorCode.REAUTHENTICATION_FAILED);
-        assertStandardShape(
                 mvc.perform(get("/probe/invalid-credentials").with(caller())), ErrorCode.REAUTHENTICATION_FAILED);
         assertStandardShape(mvc.perform(get("/probe/inaccessible").with(caller())), ErrorCode.ACCOUNT_INACCESSIBLE);
         assertStandardShape(
-                mvc.perform(get("/probe/account-inaccessible").with(caller())), ErrorCode.ACCOUNT_INACCESSIBLE);
+                mvc.perform(get("/probe/user-account-not-found").with(caller())), ErrorCode.ACCOUNT_INACCESSIBLE);
+        assertStandardShape(mvc.perform(get("/probe/session-unusable").with(caller())), ErrorCode.SESSION_UNUSABLE);
         assertStandardShape(mvc.perform(get("/probe/duplicate").with(caller())), ErrorCode.ACCOUNT_ALREADY_EXISTS);
     }
 

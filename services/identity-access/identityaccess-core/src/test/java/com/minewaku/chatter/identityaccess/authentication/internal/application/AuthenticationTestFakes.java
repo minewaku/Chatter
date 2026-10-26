@@ -7,6 +7,7 @@ import com.minewaku.chatter.identityaccess.authentication.internal.port.RefreshT
 import com.minewaku.chatter.identityaccess.authentication.internal.port.query.AuthenticationSessionViewRepository;
 import com.minewaku.chatter.identityaccess.authentication.internal.port.repository.AuthenticationSessionRepository;
 import com.minewaku.chatter.identityaccess.shared.port.UniqueStringIdGenerator;
+import com.minewaku.chatter.identityaccess.user.internal.model.AccountStatus;
 import com.minewaku.chatter.identityaccess.user.internal.model.Birthday;
 import com.minewaku.chatter.identityaccess.user.internal.model.Email;
 import com.minewaku.chatter.identityaccess.user.internal.model.PasswordHash;
@@ -48,6 +49,21 @@ public final class AuthenticationTestFakes {
                 new PasswordHasherFake().hash(new PlainPassword(PASSWORD)));
         account.activateAfterVerification();
         return account;
+    }
+
+    /** An account in {@code status} whose password is {@link #PASSWORD}. */
+    public static UserAccount accountWithStatus(long id, String email, AccountStatus status) {
+        return UserAccount.reconstitute(
+                new UserId(id),
+                new Email(email),
+                new Username("person_" + id),
+                new Birthday(LocalDate.of(1990, 1, 1)),
+                status,
+                null,
+                new PasswordHasherFake().hash(new PlainPassword(PASSWORD)),
+                NOW,
+                NOW,
+                0L);
     }
 
     public static AuthenticationSession session(String sessionId, long userId, Instant issuedAt) {

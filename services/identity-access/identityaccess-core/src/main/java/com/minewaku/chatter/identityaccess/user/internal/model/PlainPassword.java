@@ -1,5 +1,6 @@
 package com.minewaku.chatter.identityaccess.user.internal.model;
 
+import com.minewaku.chatter.identityaccess.user.api.exception.InvalidCredentialsException;
 import java.util.Arrays;
 import java.util.regex.Pattern;
 
@@ -15,6 +16,18 @@ public final class PlainPassword {
             throw new IllegalArgumentException("Invalid password format");
         }
         value = raw.toCharArray();
+    }
+
+    /**
+     * The password a caller presents to confirm an action. A real password always satisfies the password policy, so
+     * input that does not is simply a wrong password, not a malformed request.
+     */
+    public static PlainPassword presented(String raw) {
+        try {
+            return new PlainPassword(raw);
+        } catch (IllegalArgumentException e) {
+            throw new InvalidCredentialsException("Current password is incorrect");
+        }
     }
 
     public char[] characters() {

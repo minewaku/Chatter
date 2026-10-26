@@ -104,6 +104,27 @@ class ThrottlingE2eTest extends E2eSupport {
     }
 
     @Test
+    void aBlockedAccountNeverCostsAnAttemptAndClearsTheCount() {
+        String email = registerVerifiedAccount();
+        String[] tokens = signIn(email);
+        for (int i = 0; i < 2; i++) {
+            ApiResponse wrong = api().post("/sessions/revoke-others", Map.of("currentPassword", "Wrong-password1"), tokens[0]);
+            assertThat(wrong.status()).isEqualTo(403);
+            assertThat(wrong.text("code")).isEqualTo("reauthentication_failed");
+        }
+        lockAccountOf(tokens[0]);
+
+        ApiResponse blocked = api().post("/sessions/revoke-others", Map.of("currentPassword", PASSWORD), tokens[0]);
+        assertThat(blocked.status()).isEqualTo(403);
+        assertThat(blocked.text("code")).isEqualTo("account_inaccessible");
+
+        unlockAccountOf(tokens[0]);
+        ApiResponse wrongAgain = api().post("/sessions/revoke-others", Map.of("currentPassword", "Wrong-password1"), tokens[0]);
+        assertThat(wrongAgain.status()).isEqualTo(403);
+        assertThat(wrongAgain.text("code")).isEqualTo("reauthentication_failed");
+    }
+
+    @Test
     void wrongPasswordsAcrossDifferentActionsShareOneCountAndNeverEndTheSession() throws InterruptedException {
         String[] tokens = signIn(registerVerifiedAccount());
         String access = tokens[0];

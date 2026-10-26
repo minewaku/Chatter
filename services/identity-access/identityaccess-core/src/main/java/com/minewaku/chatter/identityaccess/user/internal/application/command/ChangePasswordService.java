@@ -34,9 +34,7 @@ public class ChangePasswordService extends UserAccountCommandService implements 
         return guard.confirm(command.userId(), () -> {
             UserAccount account = getAccount(command.userId());
             boolean changed = account.changePassword(
-                    new PlainPassword(command.currentPassword()),
-                    new PlainPassword(command.newPassword()),
-                    passwordHasher);
+                    command.currentPassword(), new PlainPassword(command.newPassword()), passwordHasher);
             boolean saved = saveIfChanged(account, changed);
             if (saved) {
                 sessionRevocation.revokeAllFor(account.id());

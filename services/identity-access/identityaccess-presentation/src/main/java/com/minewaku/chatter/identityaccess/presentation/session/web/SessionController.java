@@ -2,16 +2,13 @@ package com.minewaku.chatter.identityaccess.presentation.session.web;
 
 import com.minewaku.chatter.identityaccess.authentication.api.command.LogoutOtherSessionsUseCase;
 import com.minewaku.chatter.identityaccess.authentication.api.command.LogoutSessionUseCase;
-import com.minewaku.chatter.identityaccess.authentication.api.exception.AuthenticationFailedException;
 import com.minewaku.chatter.identityaccess.authentication.api.query.FindSessionsQuery;
 import com.minewaku.chatter.identityaccess.presentation.session.dto.RevokeOtherSessionsRequest;
 import com.minewaku.chatter.identityaccess.presentation.session.dto.RevokeSessionRequest;
 import com.minewaku.chatter.identityaccess.presentation.session.dto.RevokedCountResponse;
 import com.minewaku.chatter.identityaccess.presentation.session.dto.SessionResponse;
-import com.minewaku.chatter.identityaccess.presentation.shared.error.AccountInaccessibleException;
 import com.minewaku.chatter.identityaccess.presentation.shared.error.ApiErrors;
 import com.minewaku.chatter.identityaccess.presentation.shared.error.ErrorCode;
-import com.minewaku.chatter.identityaccess.presentation.shared.error.ReauthenticationFailedException;
 import com.minewaku.chatter.identityaccess.presentation.shared.openapi.DocumentedErrors;
 import com.minewaku.chatter.identityaccess.presentation.shared.openapi.OpenApiConfiguration;
 import com.minewaku.chatter.identityaccess.presentation.shared.security.AccessPrincipal;
@@ -52,13 +49,9 @@ public class SessionController {
     @GetMapping
     public List<SessionResponse> list(@AuthenticationPrincipal Jwt jwt) {
         AccessPrincipal caller = AccessPrincipal.from(jwt);
-        try {
-            return findSessions.handle(new FindSessionsQuery.Command(caller.userId())).stream()
-                    .map(SessionResponse::from)
-                    .toList();
-        } catch (AuthenticationFailedException e) {
-            throw new AccountInaccessibleException(e);
-        }
+        return findSessions.handle(new FindSessionsQuery.Command(caller.userId())).stream()
+                .map(SessionResponse::from)
+                .toList();
     }
 
     @Operation(summary = "End one of the caller's sessions (requires the current password)")
@@ -68,6 +61,7 @@ public class SessionController {
         ErrorCode.MALFORMED_REQUEST,
         ErrorCode.UNAUTHENTICATED,
         ErrorCode.REAUTHENTICATION_FAILED,
+        ErrorCode.ACCOUNT_INACCESSIBLE,
         ErrorCode.TOO_MANY_ATTEMPTS,
         ErrorCode.SESSION_NOT_FOUND,
         ErrorCode.SERVICE_UNAVAILABLE
@@ -78,13 +72,8 @@ public class SessionController {
             @Valid @RequestBody RevokeSessionRequest request,
             @AuthenticationPrincipal Jwt jwt) {
         AccessPrincipal caller = AccessPrincipal.from(jwt);
-        LogoutSessionUseCase.Result result;
-        try {
-            result = logoutSession.handle(
-                    new LogoutSessionUseCase.Command(caller.userId(), sessionId, request.currentPassword()));
-        } catch (AuthenticationFailedException e) {
-            throw new ReauthenticationFailedException(e);
-        }
+        LogoutSessionUseCase.Result result = logoutSession.handle(
+                new LogoutSessionUseCase.Command(caller.userId(), sessionId, request.currentPassword()));
         return result.revoked() ? ResponseEntity.noContent().build() : ApiErrors.response(ErrorCode.SESSION_NOT_FOUND);
     }
 
@@ -93,7 +82,9 @@ public class SessionController {
         ErrorCode.VALIDATION_FAILED,
         ErrorCode.MALFORMED_REQUEST,
         ErrorCode.UNAUTHENTICATED,
+        ErrorCode.SESSION_UNUSABLE,
         ErrorCode.REAUTHENTICATION_FAILED,
+        ErrorCode.ACCOUNT_INACCESSIBLE,
         ErrorCode.TOO_MANY_ATTEMPTS,
         ErrorCode.SERVICE_UNAVAILABLE
     })
@@ -101,12 +92,8 @@ public class SessionController {
     public RevokedCountResponse revokeOthers(
             @Valid @RequestBody RevokeOtherSessionsRequest request, @AuthenticationPrincipal Jwt jwt) {
         AccessPrincipal caller = AccessPrincipal.from(jwt);
-        try {
-            LogoutOtherSessionsUseCase.Result result = logoutOthers.handle(new LogoutOtherSessionsUseCase.Command(
-                    caller.userId(), caller.sessionId(), request.currentPassword()));
-            return new RevokedCountResponse(result.revokedCount());
-        } catch (AuthenticationFailedException e) {
-            throw new ReauthenticationFailedException(e);
-        }
+        LogoutOtherSessionsUseCase.Result result = logoutOthers.handle(
+                new LogoutOtherSessionsUseCase.Command(caller.userId(), caller.sessionId(), request.currentPassword()));
+        return new RevokedCountResponse(result.revokedCount());
     }
 }

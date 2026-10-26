@@ -59,7 +59,7 @@ public class RequestEmailChangeService extends UserAccountCommandService impleme
     private Result request(Command command) {
         UserAccount account = getAccount(command.userId());
         Email newEmail = new Email(command.newEmail());
-        if (!account.authorizeEmailChange(presentedPassword(command.currentPassword()), newEmail, passwordHasher)) {
+        if (!account.authorizeEmailChange(command.currentPassword(), newEmail, passwordHasher)) {
             return new Result(false);
         }
         if (repository.findByEmail(newEmail).isPresent()) {

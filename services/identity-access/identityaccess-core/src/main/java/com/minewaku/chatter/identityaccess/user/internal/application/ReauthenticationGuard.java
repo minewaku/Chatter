@@ -1,6 +1,5 @@
 package com.minewaku.chatter.identityaccess.user.internal.application;
 
-import com.minewaku.chatter.identityaccess.authentication.api.exception.AuthenticationFailedException;
 import com.minewaku.chatter.identityaccess.shared.exception.DependencyUnavailableException;
 import com.minewaku.chatter.identityaccess.shared.exception.TooManyAttemptsException;
 import com.minewaku.chatter.identityaccess.shared.port.AttemptLimiter;
@@ -16,7 +15,8 @@ import org.springframework.stereotype.Component;
  * Limits how often a signed-in person may confirm an action with their current password, so a stolen but still valid
  * access credential cannot be used to guess it. One count per person is shared by every action that asks for the
  * password. The attempt is counted before the action runs; only a wrong password keeps the count, any other outcome
- * (a success, or a conflict reached after the password was accepted) clears it.
+ * clears it: a success, a conflict reached after the password was accepted, or a refusal that came before any
+ * password was compared (a missing or blocked account).
  */
 @Component
 public class ReauthenticationGuard {
@@ -38,7 +38,7 @@ public class ReauthenticationGuard {
         R result;
         try {
             result = action.get();
-        } catch (InvalidCredentialsException | AuthenticationFailedException wrongPassword) {
+        } catch (InvalidCredentialsException wrongPassword) {
             throw wrongPassword;
         } catch (RuntimeException accepted) {
             forget(subject);

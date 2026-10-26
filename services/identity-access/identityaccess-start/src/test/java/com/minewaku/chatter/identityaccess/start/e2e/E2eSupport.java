@@ -2,6 +2,8 @@ package com.minewaku.chatter.identityaccess.start.e2e;
 
 import com.minewaku.chatter.identityaccess.start.StartApplication;
 import com.minewaku.chatter.identityaccess.start.support.VaultContainerSupport;
+import com.minewaku.chatter.identityaccess.user.api.command.LockUserAccountUseCase;
+import com.minewaku.chatter.identityaccess.user.api.command.UnlockUserAccountUseCase;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import java.util.Map;
@@ -91,6 +93,22 @@ public abstract class E2eSupport {
 
     @Autowired
     protected CircuitBreakerRegistry breakers;
+
+    @Autowired
+    private LockUserAccountUseCase lockAccount;
+
+    @Autowired
+    private UnlockUserAccountUseCase unlockAccount;
+
+    /** Locks the account behind an access credential. Sessions stay alive, as no endpoint locks an account. */
+    protected void lockAccountOf(String accessToken) {
+        lockAccount.handle(new LockUserAccountUseCase.Command(Long.parseLong(claim(accessToken, "sub"))));
+    }
+
+    /** Returns a locked account behind an access credential to active. */
+    protected void unlockAccountOf(String accessToken) {
+        unlockAccount.handle(new UnlockUserAccountUseCase.Command(Long.parseLong(claim(accessToken, "sub"))));
+    }
 
     /** Closes every breaker, for tests that deliberately open one. */
     protected void resetBreakers() {

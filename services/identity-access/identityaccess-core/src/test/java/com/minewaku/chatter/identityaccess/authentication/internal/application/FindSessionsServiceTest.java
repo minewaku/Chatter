@@ -1,18 +1,23 @@
 package com.minewaku.chatter.identityaccess.authentication.internal.application;
 
 import static com.minewaku.chatter.identityaccess.authentication.internal.application.AuthenticationTestFakes.NOW;
+import static com.minewaku.chatter.identityaccess.authentication.internal.application.AuthenticationTestFakes.accountWithStatus;
 import static com.minewaku.chatter.identityaccess.authentication.internal.application.AuthenticationTestFakes.activeAccount;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.minewaku.chatter.identityaccess.authentication.api.exception.AuthenticationFailedException;
 import com.minewaku.chatter.identityaccess.authentication.api.query.FindSessionsQuery;
 import com.minewaku.chatter.identityaccess.authentication.internal.application.query.FindSessionsService;
+import com.minewaku.chatter.identityaccess.user.api.exception.InvalidAccountStateTransitionException;
+import com.minewaku.chatter.identityaccess.user.api.exception.UserAccountNotFoundException;
+import com.minewaku.chatter.identityaccess.user.internal.model.AccountStatus;
 import java.lang.reflect.RecordComponent;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 class FindSessionsServiceTest {
 
@@ -68,7 +73,22 @@ class FindSessionsServiceTest {
                 .orElseThrow()
                 .suspend();
 
-        assertThrows(AuthenticationFailedException.class, () -> service.handle(new FindSessionsQuery.Command(42)));
+        assertThrows(
+                InvalidAccountStateTransitionException.class, () -> service.handle(new FindSessionsQuery.Command(42)));
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = AccountStatus.class, names = "ACTIVE", mode = EnumSource.Mode.EXCLUDE)
+    void every_non_active_status_is_reported_as_such(AccountStatus status) {
+        users.add(accountWithStatus(44, "blocked@example.com", status));
+
+        assertThrows(
+                InvalidAccountStateTransitionException.class, () -> service.handle(new FindSessionsQuery.Command(44)));
+    }
+
+    @Test
+    void a_missing_account_is_reported_as_missing() {
+        assertThrows(UserAccountNotFoundException.class, () -> service.handle(new FindSessionsQuery.Command(99)));
     }
 
     private static String sessionId(int n) {

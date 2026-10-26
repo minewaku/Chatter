@@ -37,8 +37,7 @@ public class SoftDeleteUserAccountService extends UserAccountCommandService impl
     public Result handle(Command command) {
         return guard.confirm(command.userId(), () -> {
             UserAccount account = getAccount(command.userId());
-            boolean changed =
-                    saveIfChanged(account, account.close(presentedPassword(command.currentPassword()), passwordHasher));
+            boolean changed = saveIfChanged(account, account.close(command.currentPassword(), passwordHasher));
             if (changed) {
                 verifications.invalidateForUser(VerificationPurpose.EMAIL_CHANGE, account.id());
                 sessionRevocation.revokeAllFor(account.id());

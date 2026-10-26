@@ -487,6 +487,38 @@ class UserAccountApplicationServiceTest {
     }
 
     @Test
+    void change_password_with_a_current_password_that_could_never_be_valid_is_a_wrong_password() {
+        UserAccountTestFakes.DeterministicPasswordHasher hasher =
+                new UserAccountTestFakes.DeterministicPasswordHasher();
+        UserAccountTestFakes.InMemoryRepository repository = new UserAccountTestFakes.InMemoryRepository();
+        repository.add(activeAccount(hasher));
+        ChangePasswordService service = new ChangePasswordService(repository, hasher, SESSION_REVOCATION, guard());
+
+        assertThrows(
+                InvalidCredentialsException.class,
+                () -> service.handle(new ChangePasswordUseCase.Command(42, "weak", "NewPassword2@")));
+        assertEquals(0, repository.saveCalls);
+    }
+
+    @Test
+    void change_password_on_a_locked_account_is_refused_for_its_status_whatever_current_password_is_sent() {
+        UserAccountTestFakes.DeterministicPasswordHasher hasher =
+                new UserAccountTestFakes.DeterministicPasswordHasher();
+        UserAccountTestFakes.InMemoryRepository repository = new UserAccountTestFakes.InMemoryRepository();
+        UserAccount locked = activeAccount(hasher);
+        locked.lock();
+        repository.add(locked);
+        ChangePasswordService service = new ChangePasswordService(repository, hasher, SESSION_REVOCATION, guard());
+
+        for (String presented : new String[] {CURRENT_PASSWORD, "WrongPassword3#", "weak"}) {
+            assertThrows(
+                    InvalidAccountStateTransitionException.class,
+                    () -> service.handle(new ChangePasswordUseCase.Command(42, presented, "NewPassword2@")));
+        }
+        assertEquals(0, repository.saveCalls);
+    }
+
+    @Test
     void closing_an_already_closed_account_is_refused_by_the_password_check() {
         UserAccountTestFakes.DeterministicPasswordHasher hasher =
                 new UserAccountTestFakes.DeterministicPasswordHasher();

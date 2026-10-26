@@ -5,13 +5,15 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.minewaku.chatter.identityaccess.authentication.api.exception.AuthenticationFailedException;
 import com.minewaku.chatter.identityaccess.shared.exception.DependencyUnavailableException;
 import com.minewaku.chatter.identityaccess.shared.exception.TooManyAttemptsException;
 import com.minewaku.chatter.identityaccess.shared.throttle.InMemoryAttemptLimiter;
 import com.minewaku.chatter.identityaccess.shared.throttle.TestPolicies;
 import com.minewaku.chatter.identityaccess.user.api.exception.DuplicateUserAccountException;
+import com.minewaku.chatter.identityaccess.user.api.exception.InvalidAccountStateTransitionException;
 import com.minewaku.chatter.identityaccess.user.api.exception.InvalidCredentialsException;
+import com.minewaku.chatter.identityaccess.user.api.exception.UserAccountNotFoundException;
+import com.minewaku.chatter.identityaccess.user.internal.model.AccountStatus;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
@@ -43,14 +45,33 @@ class ReauthenticationGuardTest {
     }
 
     @Test
-    void aFailedAuthenticationFromTheSessionCommandsAlsoKeepsTheCount() {
-        assertThrows(
-                AuthenticationFailedException.class,
+    void aBlockedAccountIsRethrownAsIsAndClearsTheCountBecauseNoPasswordWasCompared() {
+        wrongPassword(42);
+        wrongPassword(42);
+        InvalidAccountStateTransitionException blocked =
+                new InvalidAccountStateTransitionException(AccountStatus.LOCKED, "confirm current password");
+
+        InvalidAccountStateTransitionException thrown = assertThrows(
+                InvalidAccountStateTransitionException.class,
                 () -> guard.confirm(42, () -> {
-                    throw new AuthenticationFailedException();
+                    throw blocked;
                 }));
 
-        assertEquals(1, limiter.count(TestPolicies.defaults().reconfirmation(), "42"));
+        assertSame(blocked, thrown);
+        assertEquals(0, limiter.count(TestPolicies.defaults().reconfirmation(), "42"));
+    }
+
+    @Test
+    void aMissingAccountIsRethrownAsIsAndClearsTheCount() {
+        wrongPassword(42);
+
+        assertThrows(
+                UserAccountNotFoundException.class,
+                () -> guard.confirm(42, () -> {
+                    throw new UserAccountNotFoundException();
+                }));
+
+        assertEquals(0, limiter.count(TestPolicies.defaults().reconfirmation(), "42"));
     }
 
     @Test

@@ -1,12 +1,14 @@
 package com.minewaku.chatter.identityaccess.presentation.shared.error;
 
 import com.minewaku.chatter.identityaccess.authentication.api.exception.AuthenticationFailedException;
+import com.minewaku.chatter.identityaccess.authentication.api.exception.SessionUnusableException;
 import com.minewaku.chatter.identityaccess.shared.exception.DependencyUnavailableException;
 import com.minewaku.chatter.identityaccess.shared.exception.MailDeliveryException;
 import com.minewaku.chatter.identityaccess.shared.exception.TooManyAttemptsException;
 import com.minewaku.chatter.identityaccess.user.api.exception.DuplicateUserAccountException;
 import com.minewaku.chatter.identityaccess.user.api.exception.InvalidAccountStateTransitionException;
 import com.minewaku.chatter.identityaccess.user.api.exception.InvalidCredentialsException;
+import com.minewaku.chatter.identityaccess.user.api.exception.UserAccountNotFoundException;
 import com.minewaku.chatter.identityaccess.user.internal.model.AccountStatus;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -43,11 +45,6 @@ class ErrorProbeController {
         throw new AuthenticationFailedException();
     }
 
-    @GetMapping("/probe/reauthentication-failed")
-    String reauthenticationFailed() {
-        throw new ReauthenticationFailedException(new AuthenticationFailedException());
-    }
-
     @GetMapping("/probe/invalid-credentials")
     String invalidCredentials() {
         throw new InvalidCredentialsException("secret current password mismatch");
@@ -58,9 +55,14 @@ class ErrorProbeController {
         throw new InvalidAccountStateTransitionException(AccountStatus.SUSPENDED, "secret operation");
     }
 
-    @GetMapping("/probe/account-inaccessible")
-    String accountInaccessible() {
-        throw new AccountInaccessibleException(new AuthenticationFailedException());
+    @GetMapping("/probe/session-unusable")
+    String sessionUnusable() {
+        throw new SessionUnusableException();
+    }
+
+    @GetMapping("/probe/user-account-not-found")
+    String userAccountNotFound() {
+        throw new UserAccountNotFoundException();
     }
 
     @GetMapping("/probe/duplicate")
