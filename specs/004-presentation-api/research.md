@@ -22,6 +22,8 @@ Every Technical Context item was resolvable from the existing code and the spec,
 
 ## R4. Wrong password on session endpoints is `403`, not `401`
 
+> **Superseded by [010](../010-session-error-mapping/spec.md)** for the three session endpoints. Core now reports wrong password, blocked or missing account, and unusable current session as distinct exceptions, and presentation no longer wraps them. Sign-in and renewal still follow this decision. The text below is kept as history.
+
 - **Decision**: `AccountVerifier` throws the same generic `AuthenticationFailedException` for wrong password, inaccessible account, and unusable current session. On the three protected endpoints that call it (end one session, end others, change password via `InvalidCredentialsException`), the controller translates it to a presentation `ReauthenticationFailedException` that maps to `403` with code `reauthentication_failed`. On the public endpoints (sign-in, refresh) the same core exception maps to `401` with code `authentication_failed`.
 - **Rationale**: Spec FR-018/FR-019 forbids `401` for a wrong current password, because clients react to `401` by refreshing or signing out. Core deliberately conflates the causes so it cannot leak which one applied; presentation keeps that by using one code for all of them on those endpoints.
 - **Alternatives**: Change core to distinguish wrong password. Rejected: widens an information leak and changes 002's contract for a presentation concern. Always `401`. Rejected: breaks client refresh logic.

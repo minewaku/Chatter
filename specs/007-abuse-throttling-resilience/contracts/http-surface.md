@@ -24,7 +24,7 @@ Both use the existing body: `{ "code": ..., "message": ... }` with no field erro
 | `POST /api/v1/sessions/{sessionId}/revoke` and `POST /api/v1/sessions/revoke-others` (the two session commands that confirm a password) | `429`, `503 service_unavailable` | `reconfirmation` per user |
 | Any signed-in endpoint | `503 service_unavailable` returns quickly while the store is held off (was: after the full timeout) | Revocation lookup inside the `sessionStore` breaker |
 
-The two session endpoints are `SessionController` lines 81 and 105. Their commands, `LogoutSessionService` and `LogoutOtherSessionsService`, both call `AccountVerifier`, and `SessionController` catches `AuthenticationFailedException` and rethrows `ReauthenticationFailedException`. `TooManyAttemptsException` and `DependencyUnavailableException` are not `AuthenticationFailedException`, so they pass through that catch untouched.
+The two session endpoints are `revoke` and `revoke-others` in `SessionController`. Their commands, `LogoutSessionService` and `LogoutOtherSessionsService`, both call `AccountVerifier`, which reports a wrong password, a blocked or missing account, and (for `revoke-others`) an unusable current session as distinct exceptions that `ApiExceptionHandler` maps directly (amended by [010](../../010-session-error-mapping/spec.md); the controller no longer catches and rethrows anything). `TooManyAttemptsException` and `DependencyUnavailableException` pass through unchanged.
 
 ## Response shapes
 

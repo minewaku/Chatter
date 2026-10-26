@@ -23,8 +23,9 @@ Every non-success response, from a controller or from the security chain, has th
 | `invalid_or_expired_token` | 400 | Verification token blank, unknown, invalidated, expired, or wrong account state | `VerifyEmailUseCase.InvalidOrExpired` |
 | `unauthenticated` | 401 | Missing, malformed, expired, tampered, foreign-issuer, revoked, or `sid`-less access credential; non-numeric `sub` | entry point, filter |
 | `authentication_failed` | 401 | Sign-in or renewal denied; one message for every cause | `AuthenticationFailedException` on endpoints 2 and 5 |
-| `reauthentication_failed` | 403 | Wrong current password, inaccessible account, or unusable current session on endpoints 8, 9, 10 | `AuthenticationFailedException`, `InvalidCredentialsException` on endpoints 8-10 |
-| `account_inaccessible` | 403 | Authenticated account is suspended, deleted, or otherwise not active | `InvalidAccountStateTransitionException`, query denials |
+| `session_unusable` | 401 | The current session behind a valid access credential is expired or not the caller's, on endpoint 9 (added by [010](../../010-session-error-mapping/spec.md)) | `SessionUnusableException` |
+| `reauthentication_failed` | 403 | Wrong current password, including one that fails the password rules, on endpoints 8, 9, 10 (amended by 010: no longer covers an inaccessible account or an unusable session) | `InvalidCredentialsException` |
+| `account_inaccessible` | 403 | Authenticated account is missing, suspended, deleted, locked, or pending verification; reported before the password is compared (amended by 010) | `InvalidAccountStateTransitionException`, `UserAccountNotFoundException` |
 | `forbidden` | 403 | Authorization denied by the chain (no current rule produces it) | access-denied handler |
 | `session_not_found` | 404 | Session absent or not owned | `LogoutSessionUseCase.Result(false)` |
 | `not_found` | 404 | No such path | handler |
@@ -38,7 +39,7 @@ Every non-success response, from a controller or from the security chain, has th
 
 ## Mapping rules
 
-1. `AuthenticationFailedException` is context-dependent (research R4): `authentication_failed` (401) on public credential exchanges, `reauthentication_failed` (403) on protected re-authentication endpoints. Controllers on endpoints 8-10 translate before the exception reaches the handler; the handler's default is `authentication_failed`.
+1. `AuthenticationFailedException` is thrown only by sign-in and renewal and always maps to `authentication_failed` (401). (Amended by [010](../../010-session-error-mapping/spec.md); it was context-dependent in research R4, with controllers on endpoints 8-10 translating it.) Each other cause has its own exception, mapped directly by the handler. `session_unusable` is produced by the handler, so unlike the security-chain `401` answers it carries no `WWW-Authenticate` header.
 2. Anything the handler does not recognise becomes `internal_error`. It logs the exception class and a correlation id (also returned nowhere in the body) and nothing from the request.
 3. Identical-response requirement (SC-006): all causes under `authentication_failed` share status, code, and message.
 4. `401` responses carry `WWW-Authenticate: Bearer`. `503` responses carry `Retry-After: 5`.

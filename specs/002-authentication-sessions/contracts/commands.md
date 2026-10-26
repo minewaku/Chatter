@@ -39,6 +39,8 @@ An unknown, expired, or already revoked credential returns `false`. Repeated sig
 
 Verify an `ACTIVE` account and its current password before mutation. A session owned by another account or absent session returns `false` without disclosing its owner. An expired but retained, unrevoked session may be marked revoked; it was already unable to renew. A bad password fails the operation and changes no session.
 
+Amended by [010](../010-session-error-mapping/spec.md): a missing account raises `UserAccountNotFoundException`, an account that is not `ACTIVE` raises `InvalidAccountStateTransitionException` without comparing the password, and a wrong password (including one that fails the password rules) raises `InvalidCredentialsException`. None of these is `AuthenticationFailedException`, which is now thrown only by sign-in and renewal.
+
 ## End all other sessions
 
 | Contract | Shape | Behavior |
@@ -47,6 +49,8 @@ Verify an `ACTIVE` account and its current password before mutation. A session o
 | `LogoutOtherSessionsUseCase.Result` | `int revokedCount` | Number of other retained, unrevoked sessions newly revoked |
 
 The current session remains usable. A current session that is unknown, non-owned, expired, or revoked cannot authorize this operation. A bad password changes zero sessions. Repeating a successful request returns `revokedCount = 0`.
+
+Amended by [010](../010-session-error-mapping/spec.md): the account and password failures are the same as for ending one session, and a current session that cannot authorize raises `SessionUnusableException` (checked after the password) instead of `AuthenticationFailedException`.
 
 ## List sessions
 

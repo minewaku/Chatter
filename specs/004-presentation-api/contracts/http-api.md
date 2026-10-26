@@ -87,7 +87,8 @@ Path `sessionId`; request `{"currentPassword"}`.
 |--------------|--------|------|
 | `Result(revoked=true)` | `204` | none |
 | `Result(revoked=false)` (absent, other account's, already revoked) | `404` | `session_not_found`, no ownership hint |
-| `AuthenticationFailedException` (wrong password, inaccessible account) | `403` | `reauthentication_failed` |
+| `InvalidCredentialsException` (wrong password, including one that fails the password rules) | `403` | `reauthentication_failed` |
+| `InvalidAccountStateTransitionException`, `UserAccountNotFoundException` (account not active, or missing) | `403` | `account_inaccessible`, whatever password was sent (amended by [010](../../010-session-error-mapping/spec.md)) |
 
 Ending the session that issued the presented access credential is allowed; the credential stops working from the next request.
 
@@ -98,7 +99,9 @@ Request `{"currentPassword"}`. The current session is the `sid` of the presented
 | Core outcome | Status | Body |
 |--------------|--------|------|
 | `Result(revokedCount=n)` | `200` | `{"revokedCount": n}` (0 when repeated) |
-| `AuthenticationFailedException` (wrong password, inaccessible account, current session unusable) | `403` | `reauthentication_failed` |
+| `InvalidCredentialsException` (wrong password, including one that fails the password rules) | `403` | `reauthentication_failed` |
+| `InvalidAccountStateTransitionException`, `UserAccountNotFoundException` (account not active, or missing) | `403` | `account_inaccessible`, whatever password was sent |
+| `SessionUnusableException` (current session expired or not owned) | `401` | `session_unusable` (amended by [010](../../010-session-error-mapping/spec.md)) |
 
 Every revoked session gets a revocation entry in the same step; the current session is untouched.
 
