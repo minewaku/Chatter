@@ -51,35 +51,37 @@ curl -i -X POST $B/auth/authenticate -H "$H" -d '{"email":"a@example.com","passw
 Open Mailpit (`http://localhost:8025`), follow the link (endpoint 4: `200 {"status":"verified"}`; again: `already_verified`). Then:
 
 ```bash
-TOKENS=$(curl -s -X POST $B/auth/authenticate -H "$H" -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) Chrome/130.0' \
+JAR=$(mktemp)   # curl cookie jar: the refresh credential never appears in the body (spec 011)
+TOKENS=$(curl -s -c "$JAR" -X POST $B/auth/authenticate -H "$H" -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) Chrome/130.0' \
   -d '{"email":"a@example.com","password":"S3cure-pass!"}')
-AT=$(echo "$TOKENS" | jq -r .accessToken); RT=$(echo "$TOKENS" | jq -r .refreshToken)
+AT=$(echo "$TOKENS" | jq -r .accessToken)
 curl -s $B/sessions -H "Authorization: Bearer $AT" | jq        # one session, label like "Chrome on Linux (Desktop)"
 ```
 
-Expected: the sign-in body has exactly two fields and no `Set-Cookie` header.
+Expected: the sign-in body has exactly one field, and the jar holds an `HttpOnly` `refresh_token` cookie for path `/api/v1/auth`. Over plain HTTP, run with `identity-access.web.refresh-cookie.secure=false` so curl sends the cookie back.
 
 ## 5. Refresh rotation (US2, SC-009)
 
 ```bash
-NEW=$(curl -s -X POST $B/auth/refresh -H "$H" -H "Authorization: Bearer $AT" -d "{\"refreshToken\":\"$RT\"}")   # 200 pair; old AT header is ignored (FR-035)
-curl -i -X POST $B/auth/refresh -H "$H" -d "{\"refreshToken\":\"$RT\"}"                                         # 401 authentication_failed (old credential dead)
+cp "$JAR" old.jar
+NEW=$(curl -s -b "$JAR" -c "$JAR" -X POST $B/auth/refresh -H "Authorization: Bearer $AT")   # 200 {accessToken}, new cookie in the jar; old AT header is ignored (FR-035)
+curl -i -b old.jar -X POST $B/auth/refresh                                                    # 401 authentication_failed (old credential dead)
 curl -s $B/sessions -H "Authorization: Bearer $AT" | jq '.[0] | {expiresAt,lastUsedAt}'                          # expiry moved forward
 ```
 
 ## 6. Immediate sign-out (US2, SC-008)
 
-Sign in twice (two sessions: `AT1/RT1`, `AT2/RT2`), then:
+Sign in twice with separate cookie jars (two sessions: `AT1/jar1`, `AT2/jar2`), then:
 
 ```bash
-curl -i -X POST $B/auth/logout -H "$H" -d "{\"refreshToken\":\"$RT1\"}"                   # 204
+curl -i -b jar1 -X POST $B/auth/logout                                                      # 204 and a Set-Cookie with Max-Age=0
 curl -i $B/sessions -H "Authorization: Bearer $AT1"                                         # 401 unauthenticated, immediately
 curl -i $B/sessions -H "Authorization: Bearer $AT2"                                         # 200, other device unaffected
 redis-cli --user admin --pass 123456 --no-auth-warning --scan --pattern 'identity-access:access-revoked:*'   # one entry
 redis-cli --user admin --pass 123456 --no-auth-warning pttl "$(redis-cli --user admin --pass 123456 --no-auth-warning --scan --pattern 'identity-access:access-revoked:*' | head -1)"   # at most 900000 ms
 ```
 
-After the TTL passes the entry is gone while the session stays revoked: `POST /auth/refresh` with `RT1` still returns `401`.
+After the TTL passes the entry is gone while the session stays revoked: `POST /auth/refresh` with the cookie from `jar1` still returns `401`.
 
 ## 7. Session management (US3)
 

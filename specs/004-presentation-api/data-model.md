@@ -9,8 +9,8 @@ The API adds no persistent business entity. It adds HTTP-only shapes, one derive
 | `RegisterRequest` | `email` (required, email format, max 254), `username` (required, 1-64), `birthday` (required, ISO date, in the past), `password` (required, max 128) | `RegisterUserUseCase.Command` |
 | `AuthenticateRequest` | `email` (required), `password` (required) | `AuthenticateUseCase.Command` plus `DeviceInfo(label)` from `DeviceLabelResolver` |
 | `ResendVerificationRequest` | `email` (required, email format) | `RequestEmailVerificationUseCase.Command` |
-| `RefreshRequest` | `refreshToken` (optional, max 512; absent or blank is treated by core as an invalid credential, giving `401`) | `RefreshAccessTokenUseCase.Command` |
-| `LogoutRequest` | `refreshToken` (optional, max 512; absent or blank revokes nothing and still gives `204`) | `LogoutCurrentSessionUseCase.Command` |
+| ~~`RefreshRequest`~~ (removed by spec 011; the credential is the `refresh_token` cookie) | `refreshToken` (optional, max 512; absent or blank is treated by core as an invalid credential, giving `401`) | `RefreshAccessTokenUseCase.Command` |
+| ~~`LogoutRequest`~~ (removed by spec 011; the credential is the `refresh_token` cookie) | `refreshToken` (optional, max 512; absent or blank revokes nothing and still gives `204`) | `LogoutCurrentSessionUseCase.Command` |
 | `RevokeSessionRequest` | `currentPassword` (required) | `LogoutSessionUseCase.Command(userId, sessionId, currentPassword)` |
 | `RevokeOtherSessionsRequest` | `currentPassword` (required) | `LogoutOtherSessionsUseCase.Command(userId, currentSessionId, currentPassword)` |
 | `ChangePasswordRequest` | `currentPassword` (required), `newPassword` (required, max 128) | `ChangePasswordUseCase.Command` |
@@ -24,7 +24,7 @@ Every request record overrides `toString()` to omit secrets so an accidental log
 | Type | Fields | Produced for |
 |------|--------|--------------|
 | `RegisterResponse` | `userId` (number) | `201` registration |
-| `TokenPairResponse` | `accessToken`, `refreshToken` | `200` sign-in and `200` refresh |
+| `AccessTokenResponse` | `accessToken` | `200` sign-in and `200` refresh; the refresh credential is a cookie (spec 011, replaces `TokenPairResponse`) |
 | `VerificationStatusResponse` | `status`: `verified` or `already_verified` | `200` confirmation |
 | `SessionResponse` | `sessionId`, `deviceInfo`, `issuedAt`, `expiresAt`, `lastUsedAt` (nullable), `revokedAt` (nullable) | each element of `200` session list |
 | `RevokedCountResponse` | `revokedCount` (integer) | `200` end other sessions |

@@ -39,10 +39,10 @@ Request: `{"email","password"}`. The device label comes from the `User-Agent` he
 
 | Core outcome | Status | Body |
 |--------------|--------|------|
-| `Authenticated(access, refresh)` | `200` | `{"accessToken":"...","refreshToken":"..."}` |
+| `Authenticated(access, refresh)` | `200` | `{"accessToken":"..."}` and `Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth; Max-Age=<session lifetime>` (spec 011; originally `{"accessToken":"...","refreshToken":"..."}` with no cookie) |
 | `AuthenticationFailedException` (unknown email, wrong password, inactive account, malformed input) | `401` | `authentication_failed`, one identical response for all causes |
 
-No cookie, no credential in a header or URL. Response header `Cache-Control: no-store`.
+No credential in a URL or in the body beyond the access credential. Response header `Cache-Control: no-store`.
 
 ## 3. Request a verification email
 
@@ -62,18 +62,18 @@ The token is in the query string, so access logging of the query string is disab
 
 ## 5. Refresh
 
-Request: `{"refreshToken"}`.
+Request: no body; the credential is the `refresh_token` cookie (spec 011; originally `{"refreshToken"}` in the body).
 
 | Core outcome | Status | Body |
 |--------------|--------|------|
-| `Refreshed(access, refresh)` | `200` | `{"accessToken":"...","refreshToken":"..."}`; the presented refresh credential is now dead; the session expiry moved forward |
+| `Refreshed(access, refresh)` | `200` | `{"accessToken":"..."}` and a replacement `refresh_token` cookie as for sign-in; the presented refresh credential is now dead; the session expiry moved forward |
 | `AuthenticationFailedException` (absent, blank, unknown, expired, revoked, already-exchanged credential, inactive account) | `401` | `authentication_failed` |
 
 Response header `Cache-Control: no-store`.
 
 ## 6. Logout
 
-Request: `{"refreshToken"}`. Always `204`, whether or not a session was revoked (absent, blank, unknown, expired, or already revoked credentials revoke nothing). When a session is newly revoked, a revocation entry for it is written atomically (FR-030).
+Request: no body; the credential is the `refresh_token` cookie (spec 011). Always `204`, with a `Set-Cookie` that clears the cookie (`Max-Age=0`),, whether or not a session was revoked (absent, blank, unknown, expired, or already revoked credentials revoke nothing). When a session is newly revoked, a revocation entry for it is written atomically (FR-030).
 
 ## 7. List sessions
 

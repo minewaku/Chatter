@@ -18,7 +18,7 @@
 
 ### User Story 1 - Register, Verify, and Sign In Over HTTP (Priority: P1)
 
-A new person registers with email, username, birthday, and password, follows the link in the verification email, and then signs in. Sign-in answers with an access credential and a refresh credential in a JSON body. An already-registered person is told so, and a registered-but-unverified person can ask for a new verification email.
+A new person registers with email, username, birthday, and password, follows the link in the verification email, and then signs in. Sign-in answers with an access credential in a JSON body and a refresh credential in a cookie (spec 011; originally both were in the body). An already-registered person is told so, and a registered-but-unverified person can ask for a new verification email.
 
 **Why this priority**: Without these endpoints no client can create or use an account. Every other story depends on a signed-in caller.
 
@@ -32,7 +32,7 @@ A new person registers with email, username, birthday, and password, follows the
 4. **Given** a pending account, **When** the caller requests a verification email for its address, **Then** the response is the same "accepted" answer whether or not the address belongs to an eligible account.
 5. **Given** a valid unexpired verification token, **When** the caller confirms it, **Then** the account becomes active and a repeat of the same confirmation reports it as already verified without error.
 6. **Given** a blank, unknown, invalidated, or expired token, **When** the caller confirms it, **Then** the response is a client error with the stable code `invalid_or_expired_token`.
-7. **Given** an active account and correct password, **When** the caller signs in, **Then** the response body is `{"accessToken": "...", "refreshToken": "..."}`, and no credential is set as a cookie or header.
+7. **Given** an active account and correct password, **When** the caller signs in, **Then** the response body is `{"accessToken": "..."}` and the refresh credential is set as an `HttpOnly` cookie (spec 011; originally both were in the body and no cookie was set).
 8. **Given** an unknown email, a wrong password, or an account that is not active, **When** the caller signs in, **Then** the response is one identical "unauthenticated" outcome that reveals nothing about which condition applied.
 
 ---
@@ -47,7 +47,7 @@ A signed-in client exchanges its refresh credential for a new access credential 
 
 **Acceptance Scenarios**:
 
-1. **Given** a usable session, **When** the client presents its refresh credential, **Then** the response is `{"accessToken": "...", "refreshToken": "..."}` with a new refresh credential, the session's expiry moves forward, and its last-used time advances.
+1. **Given** a usable session, **When** the client presents its refresh credential, **Then** the response is `{"accessToken": "..."}` with a new refresh cookie (spec 011), the session's expiry moves forward, and its last-used time advances.
 2. **Given** a refresh credential that has already been exchanged for a newer one, **When** the client presents it again, **Then** the response is the generic "unauthenticated" outcome and the session is unaffected.
 3. **Given** a blank, malformed, unknown, expired, or revoked refresh credential, **When** the client tries to renew, **Then** the response is the generic "unauthenticated" outcome.
 4. **Given** a usable session, **When** the client signs out with its refresh credential, **Then** the session is revoked, later renewal fails, and the session's access credentials are refused on protected endpoints immediately.
@@ -145,15 +145,15 @@ Every failure from every endpoint has the same JSON shape with a stable machine-
   - change own password: `PUT /api/v1/users/@me/password`
   - close own account: `POST /api/v1/users/@me/close` with `{"currentPassword": "..."}` (was `DELETE /api/v1/users/@me`; see [spec 005](../005-account-change-endpoints/spec.md))
 - **FR-003**: The public set in FR-001, plus API documentation, MUST be exactly the allow-list that the security configuration from spec 003 FR-012 permits. Any other path MUST require a valid access credential.
-- **FR-004**: The old endpoints that were unimplemented stubs (end one session, end other sessions) MUST be real in this feature, and the old cookie-based credential transport MUST NOT be carried over.
+- **FR-004**: The old endpoints that were unimplemented stubs (end one session, end other sessions) MUST be real in this feature, and the old cookie-based credential transport MUST NOT be carried over. (Superseded by spec 011: a hardened refresh cookie replaces the body field.)
 
 **Request and response shapes**
 
 - **FR-005**: All request and response bodies MUST be JSON, including fields that the old service took as a bare plain-text string such as `password`.
 - **FR-006**: Registration MUST accept email, username, birthday, and password. It MUST respond `201` with a body containing only the new account identifier on success, and `409` on `AccountAlreadyExists` (code `account_already_exists`) or `VerificationPending` (code `verification_pending`).
-- **FR-007**: Sign-in MUST accept email and password, derive a device label from the request, and respond `200` with exactly `{"accessToken": "...", "refreshToken": "..."}`. Credentials MUST NOT be set as cookies or exposed in headers or URLs.
-- **FR-008**: Renewal MUST accept `{"refreshToken": "..."}` in the request body and respond `200` with `{"accessToken": "...", "refreshToken": "..."}`. The presented refresh credential MUST stop working once the new one is issued, and the session's expiry MUST move forward (see FR-029).
-- **FR-009**: Sign-out MUST accept `{"refreshToken": "..."}` and respond `204` with no body whether or not a session was revoked. When a session was revoked, FR-030 applies.
+- **FR-007**: Sign-in MUST accept email and password, derive a device label from the request, and respond `200` with exactly `{"accessToken": "...", "refreshToken": "..."}`. Credentials MUST NOT be set as cookies or exposed in headers or URLs. (Superseded by spec 011: the refresh credential is an HttpOnly cookie, not a body field.)
+- **FR-008**: Renewal MUST accept `{"refreshToken": "..."}` in the request body and respond `200` with `{"accessToken": "...", "refreshToken": "..."}`. (Superseded by spec 011: the refresh credential is an HttpOnly cookie, not a body field.) The presented refresh credential MUST stop working once the new one is issued, and the session's expiry MUST move forward (see FR-029).
+- **FR-009**: Sign-out MUST accept `{"refreshToken": "..."}` and respond `204` with no body whether or not a session was revoked. (Superseded by spec 011: the refresh credential is an HttpOnly cookie, not a body field.) When a session was revoked, FR-030 applies.
 - **FR-010**: A verification-email request MUST accept `{"email": "..."}` and respond `202` with no body, regardless of whether the address matches an eligible account.
 - **FR-011**: Verification confirmation MUST accept the token as the `token` query parameter. It MUST respond `200` with a small JSON body whose `status` is `verified` or `already_verified`, and `400` with code `invalid_or_expired_token` otherwise.
 - **FR-012**: Session listing MUST respond `200` with a JSON array of session views containing session identifier, device label, issued time, expiry, last used time, and revoked time, ordered as the core query orders them. It MUST NOT include a refresh credential, digest, or account identifier of another user.
