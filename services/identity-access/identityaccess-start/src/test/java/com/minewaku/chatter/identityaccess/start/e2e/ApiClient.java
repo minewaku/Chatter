@@ -38,6 +38,32 @@ public final class ApiClient {
         return post(path, body, null, null);
     }
 
+    /** Renews access with the refresh cookie; a {@code null} credential sends no cookie at all. */
+    public ApiResponse refresh(String refreshToken) {
+        return refresh(refreshToken, null);
+    }
+
+    public ApiResponse refresh(String refreshToken, String accessToken) {
+        return cookiePost("/auth/refresh", refreshToken, accessToken);
+    }
+
+    /** Signs out with the refresh cookie; a {@code null} credential sends no cookie at all. */
+    public ApiResponse logout(String refreshToken) {
+        return logout(refreshToken, null);
+    }
+
+    public ApiResponse logout(String refreshToken, String accessToken) {
+        return cookiePost("/auth/logout", refreshToken, accessToken);
+    }
+
+    private ApiResponse cookiePost(String path, String refreshToken, String accessToken) {
+        HttpRequest.Builder request = builder(path, accessToken, null).POST(HttpRequest.BodyPublishers.noBody());
+        if (refreshToken != null) {
+            request.header("Cookie", ApiResponse.REFRESH_COOKIE + "=" + refreshToken);
+        }
+        return send(request);
+    }
+
     public ApiResponse put(String path, Object body, String accessToken) {
         return send(builder(path, accessToken, null)
                 .header("Content-Type", "application/json")

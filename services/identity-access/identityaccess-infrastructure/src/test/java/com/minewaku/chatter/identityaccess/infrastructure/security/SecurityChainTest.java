@@ -163,7 +163,17 @@ class SecurityChainTest {
                         .header("Access-Control-Request-Method", "GET")
                         .header("Access-Control-Request-Headers", "Authorization"))
                 .andExpect(status().is2xxSuccessful())
-                .andExpect(header().string("Access-Control-Allow-Origin", "https://app.example.com"));
+                .andExpect(header().string("Access-Control-Allow-Origin", "https://app.example.com"))
+                .andExpect(header().string("Access-Control-Allow-Credentials", "true"));
+        assertThat(probe.invocations.get()).isZero();
+    }
+
+    @Test
+    void aCookieCarryingCallFromAnUnknownOriginIsRejectedBeforeItReachesTheEndpoint() throws Exception {
+        mvc.perform(post("/api/v1/auth/refresh")
+                        .header("Origin", "https://evil.example.com")
+                        .cookie(new jakarta.servlet.http.Cookie("refresh_token", "stolen")))
+                .andExpect(status().isForbidden());
         assertThat(probe.invocations.get()).isZero();
     }
 

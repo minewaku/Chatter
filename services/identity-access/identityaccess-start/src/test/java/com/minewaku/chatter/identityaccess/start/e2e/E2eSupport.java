@@ -156,7 +156,7 @@ public abstract class E2eSupport {
         if (response.status() != 200) {
             throw new IllegalStateException("sign-in failed with " + response.status());
         }
-        return new String[] {response.text("accessToken"), response.text("refreshToken")};
+        return new String[] {response.text("accessToken"), response.refreshCookie()};
     }
 
     /** Reads one claim from a JWT without validating it (tests only). */

@@ -97,7 +97,7 @@ class OpenApiE2eTest extends E2eSupport {
 
         JsonNode refresh = paths.at("/~1api~1v1~1auth~1refresh/post/responses");
         assertThat(refresh.propertyNames()).contains("200", "401");
-        assertThat(refresh.at("/200").toString()).contains("TokenPairResponse");
+        assertThat(refresh.at("/200").toString()).contains("AccessTokenResponse");
     }
 
     @Test
@@ -127,11 +127,12 @@ class OpenApiE2eTest extends E2eSupport {
     }
 
     @Test
-    void secretFieldsAreWriteOnlyAndTheCredentialPairIsDocumented() {
+    void secretFieldsAreWriteOnlyAndTheAccessCredentialIsDocumented() {
         JsonNode schemas = document().at("/components/schemas");
 
-        assertThat(schemas.has("TokenPairResponse")).isTrue();
-        assertThat(schemas.at("/TokenPairResponse/properties/refreshToken")).isNotNull();
+        assertThat(schemas.has("AccessTokenResponse")).isTrue();
+        assertThat(schemas.at("/AccessTokenResponse/properties").propertyNames())
+                .containsExactly("accessToken");
         assertThat(schemas.at("/RegisterRequest/properties/password/writeOnly").asBoolean())
                 .isTrue();
         assertThat(schemas.at("/SessionResponse/properties").toString())

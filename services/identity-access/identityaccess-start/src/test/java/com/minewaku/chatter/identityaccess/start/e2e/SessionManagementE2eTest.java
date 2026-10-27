@@ -14,7 +14,7 @@ class SessionManagementE2eTest extends E2eSupport {
         ApiResponse response =
                 api().post("/auth/authenticate", ApiClient.credentials(email, PASSWORD), null, userAgent);
         assertThat(response.status()).isEqualTo(200);
-        return new String[] {response.text("accessToken"), response.text("refreshToken")};
+        return new String[] {response.text("accessToken"), response.refreshCookie()};
     }
 
     private ApiResponse revoke(String accessToken, String sessionId, String password) {
@@ -58,7 +58,7 @@ class SessionManagementE2eTest extends E2eSupport {
             assertThat(response.text("code")).isEqualTo("reauthentication_failed");
         }
         assertThat(api().get("/sessions", other[0]).status()).isEqualTo(200);
-        assertThat(api().post("/auth/refresh", Map.of("refreshToken", other[1])).status())
+        assertThat(api().refresh(other[1]).status())
                 .isEqualTo(200);
     }
 
@@ -98,7 +98,7 @@ class SessionManagementE2eTest extends E2eSupport {
         assertThat(wrongPassword.status()).isEqualTo(403);
         assertThat(wrongPassword.text("code")).isEqualTo("reauthentication_failed");
         assertThat(api().get("/sessions", other[0]).status()).isEqualTo(200);
-        assertThat(api().post("/auth/refresh", Map.of("refreshToken", other[1])).status())
+        assertThat(api().refresh(other[1]).status())
                 .isEqualTo(200);
     }
 
@@ -147,7 +147,7 @@ class SessionManagementE2eTest extends E2eSupport {
 
         assertThat(ended.status()).isEqualTo(204);
         assertThat(api().get("/sessions", other[0]).status()).isEqualTo(401);
-        assertThat(api().post("/auth/refresh", Map.of("refreshToken", other[1])).status())
+        assertThat(api().refresh(other[1]).status())
                 .isEqualTo(401);
         assertThat(api().get("/sessions", current[0]).status()).isEqualTo(200);
         ApiResponse again = revoke(current[0], claim(other[0], "sid"), PASSWORD);
@@ -195,7 +195,7 @@ class SessionManagementE2eTest extends E2eSupport {
         assertThat(api().get("/sessions", current[0]).status()).isEqualTo(200);
         for (String[] ended : new String[][] {second, third}) {
             assertThat(api().get("/sessions", ended[0]).status()).isEqualTo(401);
-            assertThat(api().post("/auth/refresh", Map.of("refreshToken", ended[1]))
+            assertThat(api().refresh(ended[1])
                             .status())
                     .isEqualTo(401);
         }

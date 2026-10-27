@@ -43,6 +43,9 @@ public class SecurityConfiguration {
         configuration.setAllowedOrigins(properties.cors().allowedOrigins());
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
+        // the refresh credential is a cookie, which browsers only send on cross-origin calls when this is on; it is
+        // safe because the allowed origins are an explicit list, never a wildcard
+        configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

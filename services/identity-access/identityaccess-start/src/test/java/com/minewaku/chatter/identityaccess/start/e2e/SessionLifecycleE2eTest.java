@@ -18,19 +18,20 @@ class SessionLifecycleE2eTest extends E2eSupport {
         String sessionId = claim(first[0], "sid");
         long expiryBefore = storedExpiry(sessionId);
 
-        ApiResponse renewed = api().post("/auth/refresh", Map.of("refreshToken", first[1]));
+        ApiResponse renewed = api().refresh(first[1]);
 
         assertThat(renewed.status()).isEqualTo(200);
-        assertThat(renewed.json().size()).isEqualTo(2);
-        assertThat(renewed.text("refreshToken")).isNotBlank().isNotEqualTo(first[1]);
+        assertThat(renewed.json().size()).isEqualTo(1);
+        assertThat(renewed.refreshCookie()).isNotBlank().isNotEqualTo(first[1]);
         assertThat(claim(renewed.text("accessToken"), "sid")).isEqualTo(sessionId);
         assertThat(storedExpiry(sessionId)).isGreaterThan(expiryBefore);
-        assertThat(renewed.header("Set-Cookie")).isNull();
+        assertThat(renewed.header("Set-Cookie"))
+                .contains("HttpOnly", "Secure", "SameSite=Strict", "Path=/api/v1/auth", "Max-Age=2592000");
 
-        ApiResponse chained = api().post("/auth/refresh", Map.of("refreshToken", renewed.text("refreshToken")));
+        ApiResponse chained = api().refresh(renewed.refreshCookie());
         assertThat(chained.status()).isEqualTo(200);
 
-        ApiResponse reused = api().post("/auth/refresh", Map.of("refreshToken", first[1]));
+        ApiResponse reused = api().refresh(first[1]);
         assertThat(reused.status()).isEqualTo(401);
         assertThat(reused.text("code")).isEqualTo("authentication_failed");
     }
@@ -38,7 +39,7 @@ class SessionLifecycleE2eTest extends E2eSupport {
     // ---- reuse of a replaced credential (spec 009) ----
 
     private ApiResponse refresh(String credential) {
-        return api().post("/auth/refresh", Map.of("refreshToken", credential));
+        return api().refresh(credential);
     }
 
     private boolean sessionListShowsRevoked(String viewerAccessToken, String sessionId) {
@@ -56,7 +57,7 @@ class SessionLifecycleE2eTest extends E2eSupport {
     void replayingAReplacedCredentialIsRefusedLikeAnUnknownOneAndEndsTheSession() {
         String[] tokens = signIn(registerVerifiedAccount());
         ApiResponse renewed = refresh(tokens[1]);
-        String current = renewed.text("refreshToken");
+        String current = renewed.refreshCookie();
 
         ApiResponse replayed = refresh(tokens[1]);
         ApiResponse unknown = refresh("never-issued");
@@ -91,9 +92,9 @@ class SessionLifecycleE2eTest extends E2eSupport {
     @Test
     void anyEarlierCredentialOfASessionEndsItNotOnlyTheLatestOne() {
         String[] tokens = signIn(registerVerifiedAccount());
-        String second = refresh(tokens[1]).text("refreshToken");
-        String third = refresh(second).text("refreshToken");
-        String fourth = refresh(third).text("refreshToken");
+        String second = refresh(tokens[1]).refreshCookie();
+        String third = refresh(second).refreshCookie();
+        String fourth = refresh(third).refreshCookie();
 
         assertThat(refresh(tokens[1]).status()).isEqualTo(401);
 
@@ -105,11 +106,11 @@ class SessionLifecycleE2eTest extends E2eSupport {
         String[] tokens = signIn(registerVerifiedAccount());
         ApiResponse renewed = refresh(tokens[1]);
 
-        ApiResponse loggedOut = api().post("/auth/logout", Map.of("refreshToken", tokens[1]));
+        ApiResponse loggedOut = api().logout(tokens[1]);
 
         assertThat(loggedOut.status()).isEqualTo(204);
         assertThat(api().get("/sessions", renewed.text("accessToken")).status()).isEqualTo(200);
-        assertThat(refresh(renewed.text("refreshToken")).status()).isEqualTo(200);
+        assertThat(refresh(renewed.refreshCookie()).status()).isEqualTo(200);
     }
 
     // ---- normal use is unaffected (spec 009) ----
@@ -125,7 +126,7 @@ class SessionLifecycleE2eTest extends E2eSupport {
             ApiResponse renewed = refresh(credential);
             assertThat(renewed.status()).as("renewal %s", i + 1).isEqualTo(200);
             assertThat(claim(renewed.text("accessToken"), "sid")).isEqualTo(sessionId);
-            credential = renewed.text("refreshToken");
+            credential = renewed.refreshCookie();
             access = renewed.text("accessToken");
         }
 
@@ -139,7 +140,7 @@ class SessionLifecycleE2eTest extends E2eSupport {
 
         assertThat(refresh("never-issued").status()).isEqualTo(401);
         assertThat(refresh("x".repeat(43)).status()).isEqualTo(401);
-        assertThat(api().post("/auth/refresh", Map.of()).status()).isNotEqualTo(200);
+        assertThat(api().refresh(null).status()).isNotEqualTo(200);
 
         assertThat(api().get("/sessions", tokens[0]).status()).isEqualTo(200);
         assertThat(refresh(tokens[1]).status()).isEqualTo(200);
@@ -149,7 +150,7 @@ class SessionLifecycleE2eTest extends E2eSupport {
     void anExpiredOrInvalidAuthorizationHeaderOnAPublicEndpointIsIgnored() {
         String[] tokens = signIn(registerVerifiedAccount());
 
-        ApiResponse renewed = api().post("/auth/refresh", Map.of("refreshToken", tokens[1]), "not.a.valid-token");
+        ApiResponse renewed = api().refresh(tokens[1], "not.a.valid-token");
 
         assertThat(renewed.status()).isEqualTo(200);
     }
@@ -161,17 +162,17 @@ class SessionLifecycleE2eTest extends E2eSupport {
         String[] device2 = signIn(email);
         assertThat(api().get("/sessions", device1[0]).status()).isNotEqualTo(401);
 
-        ApiResponse loggedOut = api().post("/auth/logout", Map.of("refreshToken", device1[1]));
+        ApiResponse loggedOut = api().logout(device1[1]);
 
         assertThat(loggedOut.status()).isEqualTo(204);
         ApiResponse blocked = api().get("/sessions", device1[0]);
         assertThat(blocked.status()).isEqualTo(401);
         assertThat(blocked.text("code")).isEqualTo("unauthenticated");
         assertThat(api().get("/sessions", device2[0]).status()).isNotEqualTo(401);
-        assertThat(api().post("/auth/refresh", Map.of("refreshToken", device2[1]))
+        assertThat(api().refresh(device2[1])
                         .status())
                 .isEqualTo(200);
-        assertThat(api().post("/auth/refresh", Map.of("refreshToken", device1[1]))
+        assertThat(api().refresh(device1[1])
                         .status())
                 .isEqualTo(401);
     }
@@ -180,10 +181,10 @@ class SessionLifecycleE2eTest extends E2eSupport {
     void signingOutTwiceOrWithAnUnknownCredentialIsTheSameSuccess() {
         String[] tokens = signIn(registerVerifiedAccount());
 
-        ApiResponse first = api().post("/auth/logout", Map.of("refreshToken", tokens[1]));
-        ApiResponse second = api().post("/auth/logout", Map.of("refreshToken", tokens[1]));
-        ApiResponse unknown = api().post("/auth/logout", Map.of("refreshToken", "never-issued"));
-        ApiResponse missing = api().post("/auth/logout", Map.of());
+        ApiResponse first = api().logout(tokens[1]);
+        ApiResponse second = api().logout(tokens[1]);
+        ApiResponse unknown = api().logout("never-issued");
+        ApiResponse missing = api().logout(null);
 
         for (ApiResponse response : new ApiResponse[] {first, second, unknown, missing}) {
             assertThat(response.status()).isEqualTo(204);
@@ -194,14 +195,14 @@ class SessionLifecycleE2eTest extends E2eSupport {
     @Test
     void losingTheRevocationEntriesNeverLetsARevokedSessionRenew() {
         String[] tokens = signIn(registerVerifiedAccount());
-        api().post("/auth/logout", Map.of("refreshToken", tokens[1]));
+        api().logout(tokens[1]);
         assertThat(api().get("/sessions", tokens[0]).status()).isEqualTo(401);
 
         redis.delete(redis.keys(KEY_PREFIX + "access-revoked:*"));
 
         // the access token works again only until its own expiry; the session record stays revoked
         assertThat(api().get("/sessions", tokens[0]).status()).isNotEqualTo(401);
-        assertThat(api().post("/auth/refresh", Map.of("refreshToken", tokens[1]))
+        assertThat(api().refresh(tokens[1])
                         .status())
                 .isEqualTo(401);
     }

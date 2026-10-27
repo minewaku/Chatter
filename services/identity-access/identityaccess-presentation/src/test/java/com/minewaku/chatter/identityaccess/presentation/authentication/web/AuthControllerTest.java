@@ -147,7 +147,7 @@ class AuthControllerTest {
     }
 
     @Test
-    void signInReturnsExactlyTheTwoCredentialsWithoutACookie() throws Exception {
+    void signInReturnsTheAccessCredentialInTheBodyAndTheRefreshCredentialOnlyAsAHardenedCookie() throws Exception {
         when(deviceLabels.resolve("Mozilla/5.0 Chrome")).thenReturn("Chrome on Linux (Desktop)");
         when(authenticate.handle(any())).thenReturn(new AuthenticateUseCase.Authenticated("access-1", "refresh-1"));
 
@@ -157,9 +157,14 @@ class AuthControllerTest {
                         .content("{\"email\":\"alice@example.com\",\"password\":\"S3cure-pass!\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").value("access-1"))
-                .andExpect(jsonPath("$.refreshToken").value("refresh-1"))
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(header().doesNotExist("Set-Cookie"))
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("refresh-1"))))
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.startsWith("refresh_token=refresh-1;")))
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("HttpOnly")))
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("Secure")))
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("SameSite=Strict")))
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("Path=/api/v1/auth")))
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("Max-Age=2592000")))
                 .andExpect(header().string("Cache-Control", org.hamcrest.Matchers.containsString("no-store")));
 
         ArgumentCaptor<AuthenticateUseCase.Command> captor = ArgumentCaptor.forClass(AuthenticateUseCase.Command.class);

@@ -124,6 +124,13 @@ identity-access:
       - /v3/api-docs/**
     cors:
       allowed-origins: []
+  web:
+    refresh-cookie:
+      name: refresh_token
+      path: /api/v1/auth
+      # switch off only for plain-HTTP local development
+      secure: true
+      max-age: ${identity-access.session.lifetime:P30D}
   verification:
     mail:
       # Gmail sends as the authenticated account, so the sender defaults to the mail username

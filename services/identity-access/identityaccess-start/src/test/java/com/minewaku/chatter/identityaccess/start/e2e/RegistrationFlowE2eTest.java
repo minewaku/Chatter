@@ -44,10 +44,11 @@ class RegistrationFlowE2eTest extends E2eSupport {
                         null,
                         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36");
         assertThat(signedIn.status()).isEqualTo(200);
-        assertThat(signedIn.json().size()).isEqualTo(2);
+        assertThat(signedIn.json().size()).isEqualTo(1);
         assertThat(signedIn.text("accessToken")).isNotBlank();
-        assertThat(signedIn.text("refreshToken")).isNotBlank();
-        assertThat(signedIn.header("Set-Cookie")).isNull();
+        assertThat(signedIn.refreshCookie()).isNotBlank();
+        assertThat(signedIn.header("Set-Cookie"))
+                .contains("HttpOnly", "Secure", "SameSite=Strict", "Path=/api/v1/auth", "Max-Age=2592000");
 
         ApiResponse protectedCall = api().get("/sessions", signedIn.text("accessToken"));
         assertThat(protectedCall.status()).isNotEqualTo(401);

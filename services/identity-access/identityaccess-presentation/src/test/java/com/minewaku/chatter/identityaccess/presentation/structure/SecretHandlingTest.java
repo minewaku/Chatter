@@ -43,13 +43,13 @@ class SecretHandlingTest {
                 .importPackages("com.minewaku.chatter.identityaccess.presentation")) {
             Class<?> type = javaClass.reflect();
             boolean carriesSecrets = type.getSimpleName().endsWith("Request")
-                    || type.getSimpleName().equals("TokenPairResponse");
+                    || type.getSimpleName().equals("AccessTokenResponse");
             if (type.isRecord() && carriesSecrets) {
                 records.add(type);
             }
         }
 
-        // eight request records plus the credential pair at the time of writing; new ones are picked up automatically
+        // eight request records plus the access credential response at the time of writing; new ones are picked up automatically
         assertThat(records).hasSizeGreaterThanOrEqualTo(9);
         for (Class<?> type : records) {
             Object instance = instantiate(type);

@@ -62,7 +62,7 @@ class EmailChangeE2eTest extends E2eSupport {
         confirm(mail.latestTokenFor(newEmail).orElseThrow());
 
         assertThat(api().get("/sessions", tokens[0]).status()).isEqualTo(200);
-        assertThat(api().post("/auth/refresh", Map.of("refreshToken", tokens[1]))
+        assertThat(api().refresh(tokens[1])
                         .status())
                 .isEqualTo(200);
     }
@@ -103,7 +103,7 @@ class EmailChangeE2eTest extends E2eSupport {
 
         assertThat(mail.countFor(newEmail)).isZero();
         assertThat(api().get("/sessions", tokens[0]).status()).isEqualTo(200);
-        assertThat(api().post("/auth/refresh", Map.of("refreshToken", tokens[1]))
+        assertThat(api().refresh(tokens[1])
                         .status())
                 .isEqualTo(200);
     }

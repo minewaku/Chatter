@@ -1,11 +1,12 @@
 package com.minewaku.chatter.identityaccess.presentation.authentication.web;
 
 import com.minewaku.chatter.identityaccess.authentication.api.command.AuthenticateUseCase;
+import com.minewaku.chatter.identityaccess.presentation.authentication.dto.AccessTokenResponse;
 import com.minewaku.chatter.identityaccess.presentation.authentication.dto.AuthenticateRequest;
 import com.minewaku.chatter.identityaccess.presentation.authentication.dto.RegisterRequest;
 import com.minewaku.chatter.identityaccess.presentation.authentication.dto.RegisterResponse;
-import com.minewaku.chatter.identityaccess.presentation.authentication.dto.TokenPairResponse;
 import com.minewaku.chatter.identityaccess.presentation.authentication.support.DeviceLabelResolver;
+import com.minewaku.chatter.identityaccess.presentation.authentication.support.RefreshCookies;
 import com.minewaku.chatter.identityaccess.presentation.shared.error.ApiErrors;
 import com.minewaku.chatter.identityaccess.presentation.shared.error.ErrorCode;
 import com.minewaku.chatter.identityaccess.presentation.shared.openapi.DocumentedErrors;
@@ -37,6 +38,7 @@ public class AuthController {
     private final RegisterUserUseCase register;
     private final AuthenticateUseCase authenticate;
     private final DeviceLabelResolver deviceLabels;
+    private final RefreshCookies refreshCookies;
 
     @Operation(summary = "Register a new account")
     @ApiResponse(
@@ -64,7 +66,9 @@ public class AuthController {
         };
     }
 
-    @Operation(summary = "Sign in and receive an access and a refresh credential")
+    @Operation(
+            summary = "Sign in and receive an access credential and a refresh cookie",
+            description = "The refresh credential is set as an HttpOnly, SameSite=Strict cookie scoped to the auth path.")
     @DocumentedErrors({
         ErrorCode.VALIDATION_FAILED,
         ErrorCode.MALFORMED_REQUEST,
@@ -74,7 +78,7 @@ public class AuthController {
         ErrorCode.SERVICE_UNAVAILABLE
     })
     @PostMapping("/authenticate")
-    public ResponseEntity<TokenPairResponse> authenticate(
+    public ResponseEntity<AccessTokenResponse> authenticate(
             @Valid @RequestBody AuthenticateRequest request,
             @RequestHeader(value = HttpHeaders.USER_AGENT, required = false) String userAgent) {
         AuthenticateUseCase.Authenticated authenticated = authenticate.handle(new AuthenticateUseCase.Command(
@@ -83,6 +87,7 @@ public class AuthController {
                 new AuthenticateUseCase.DeviceInfo(deviceLabels.resolve(userAgent))));
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
-                .body(new TokenPairResponse(authenticated.accessToken(), authenticated.refreshToken()));
+                .header(HttpHeaders.SET_COOKIE, refreshCookies.issue(authenticated.refreshToken()))
+                .body(new AccessTokenResponse(authenticated.accessToken()));
     }
 }

@@ -83,8 +83,8 @@ class AllowListE2eTest extends E2eSupport {
     void publicOperationsIgnoreAnInvalidCredentialAndAnswerOnTheirOwnTerms() {
         ApiResponse register = api().post("/auth/register", Map.of("email", "bad"), "garbage");
         ApiResponse authenticate = api().post("/auth/authenticate", Map.of("email", "bad"), "garbage");
-        ApiResponse refresh = api().post("/auth/refresh", Map.of(), "garbage");
-        ApiResponse logout = api().post("/auth/logout", Map.of(), "garbage");
+        ApiResponse refresh = api().refresh(null, "garbage");
+        ApiResponse logout = api().logout(null, "garbage");
         ApiResponse resend = api().post("/auth/verification/resend", Map.of("email", "bad"), "garbage");
         ApiResponse confirm = api().get("/auth/verification/confirm?token=x", "garbage");
 

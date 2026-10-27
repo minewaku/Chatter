@@ -29,16 +29,9 @@ class SecretLeakageE2eTest extends E2eSupport {
     Environment environment;
 
     private final List<ApiResponse> responses = new ArrayList<>();
-    private final List<ApiResponse> refreshIssuingResponses = new ArrayList<>();
 
     private ApiResponse record(ApiResponse response) {
         responses.add(response);
-        return response;
-    }
-
-    private ApiResponse recordIssuing(ApiResponse response) {
-        responses.add(response);
-        refreshIssuingResponses.add(response);
         return response;
     }
 
@@ -77,14 +70,14 @@ class SecretLeakageE2eTest extends E2eSupport {
         record(api().get("/auth/verification/confirm?token=" + verificationToken, null));
 
         ApiResponse signedIn =
-                recordIssuing(api().post("/auth/authenticate", ApiClient.credentials(email, PASSWORD_SENTINEL)));
+                record(api().post("/auth/authenticate", ApiClient.credentials(email, PASSWORD_SENTINEL)));
         assertThat(signedIn.status()).isEqualTo(200);
         String accessToken = signedIn.text("accessToken");
-        String refreshToken = signedIn.text("refreshToken");
+        String refreshToken = signedIn.refreshCookie();
         String sid = claim(accessToken, "sid");
 
-        ApiResponse renewed = recordIssuing(api().post("/auth/refresh", Map.of("refreshToken", refreshToken)));
-        String renewedRefresh = renewed.text("refreshToken");
+        ApiResponse renewed = record(api().refresh(refreshToken));
+        String renewedRefresh = renewed.refreshCookie();
         record(api().get("/sessions", accessToken));
         record(api().post(
                         "/sessions/" + sid + "/revoke",
@@ -114,8 +107,8 @@ class SecretLeakageE2eTest extends E2eSupport {
         record(api().get("/users/email-change/confirm?token=" + emailChangeToken, null));
         record(api().get("/users/email-change/confirm?token=" + emailChangeToken, null));
         // replaying the replaced credential ends the session, so it comes after every call that needs the session
-        record(api().post("/auth/refresh", Map.of("refreshToken", refreshToken)));
-        record(api().post("/auth/logout", Map.of("refreshToken", renewedRefresh)));
+        record(api().refresh(refreshToken));
+        record(api().logout(renewedRefresh));
         record(api().post("/auth/verification/resend", Map.of("email", email)));
 
         String logs = output.getAll();
@@ -150,9 +143,8 @@ class SecretLeakageE2eTest extends E2eSupport {
                     changeTarget)) {
                 assertThat(response.body()).doesNotContain(secret);
             }
-            if (!refreshIssuingResponses.contains(response)) {
-                assertThat(response.body()).doesNotContain(refreshToken).doesNotContain(renewedRefresh);
-            }
+            // the refresh credential only ever travels in the Set-Cookie header
+            assertThat(response.body()).doesNotContain(refreshToken).doesNotContain(renewedRefresh);
         }
     }
 

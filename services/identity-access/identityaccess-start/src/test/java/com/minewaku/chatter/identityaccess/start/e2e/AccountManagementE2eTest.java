@@ -25,7 +25,7 @@ class AccountManagementE2eTest extends E2eSupport {
         assertThat(changed.body()).isEmpty();
         assertThat(api().get("/sessions", device1[0]).status()).isEqualTo(401);
         assertThat(api().get("/sessions", device2[0]).status()).isEqualTo(401);
-        assertThat(api().post("/auth/refresh", Map.of("refreshToken", device2[1]))
+        assertThat(api().refresh(device2[1])
                         .status())
                 .isEqualTo(401);
         assertThat(api().post("/auth/authenticate", ApiClient.credentials(email, PASSWORD))
@@ -115,7 +115,7 @@ class AccountManagementE2eTest extends E2eSupport {
         assertThat(closed.status()).isEqualTo(204);
         assertThat(closed.body()).isEmpty();
         assertThat(api().get("/sessions", tokens[0]).status()).isEqualTo(401);
-        assertThat(api().post("/auth/refresh", Map.of("refreshToken", tokens[1]))
+        assertThat(api().refresh(tokens[1])
                         .status())
                 .isEqualTo(401);
         assertThat(api().post("/auth/authenticate", ApiClient.credentials(email, PASSWORD))
@@ -140,7 +140,7 @@ class AccountManagementE2eTest extends E2eSupport {
             assertThat(refused.body()).doesNotContain(wrong);
         }
         assertThat(api().get("/sessions", tokens[0]).status()).isEqualTo(200);
-        assertThat(api().post("/auth/refresh", Map.of("refreshToken", tokens[1]))
+        assertThat(api().refresh(tokens[1])
                         .status())
                 .isEqualTo(200);
         assertThat(api().post("/auth/authenticate", ApiClient.credentials(email, PASSWORD))
@@ -181,7 +181,7 @@ class AccountManagementE2eTest extends E2eSupport {
         assertThat(registerWithUsername(newName)).isEqualTo(409);
         // sessions are not ended by a username change
         assertThat(api().get("/sessions", tokens[0]).status()).isEqualTo(200);
-        assertThat(api().post("/auth/refresh", Map.of("refreshToken", tokens[1]))
+        assertThat(api().refresh(tokens[1])
                         .status())
                 .isEqualTo(200);
     }

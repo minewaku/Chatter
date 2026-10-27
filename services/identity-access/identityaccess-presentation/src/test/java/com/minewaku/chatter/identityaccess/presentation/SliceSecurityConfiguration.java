@@ -2,10 +2,14 @@ package com.minewaku.chatter.identityaccess.presentation;
 
 import static org.mockito.Mockito.mock;
 
+import com.minewaku.chatter.identityaccess.presentation.authentication.support.RefreshCookieProperties;
+import com.minewaku.chatter.identityaccess.presentation.authentication.support.RefreshCookies;
 import com.minewaku.chatter.identityaccess.presentation.shared.error.ApiAccessDeniedHandler;
 import com.minewaku.chatter.identityaccess.presentation.shared.error.ApiAuthenticationEntryPoint;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -18,10 +22,13 @@ import org.springframework.security.web.SecurityFilterChain;
 /**
  * A small stand-in for the infrastructure security chain used by the web-slice tests: the same public/protected
  * split as the real allow-list, bearer-token handling with this module's error beans, and a stub decoder so tests
- * authenticate with {@code SecurityMockMvcRequestPostProcessors.jwt()}.
+ * authenticate with {@code SecurityMockMvcRequestPostProcessors.jwt()}. It also supplies the refresh cookie beans
+ * with their default settings.
  */
 @TestConfiguration
 @EnableWebSecurity
+@EnableConfigurationProperties(RefreshCookieProperties.class)
+@Import(RefreshCookies.class)
 public class SliceSecurityConfiguration {
 
     @Bean
