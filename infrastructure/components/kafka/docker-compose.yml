@@ -59,3 +59,37 @@ services:
       - kafka-chatter
     networks:
       - chatter-net
+
+  # Change-data-capture relay for identity-access: reads the outbox row from the Postgres change log and publishes
+  # it to identityaccess.user.v1. Register the connector with scripts/register-connectors.sh.
+  # Needs IDENTITYACCESS_DEBEZIUM_USERNAME / _PASSWORD in the shell: source infrastructure/shared/scripts/relay-env.sh
+  kafka-connect-chatter:
+    image: quay.io/debezium/connect:3.7.0.Final
+    container_name: kafka-connect-chatter
+    restart: unless-stopped
+    depends_on:
+      - kafka-chatter
+    ports:
+      - "127.0.0.1:5004:8083"
+    environment:
+      BOOTSTRAP_SERVERS: kafka-chatter:29092
+      GROUP_ID: connect-chatter
+      CONFIG_STORAGE_TOPIC: connect-configs
+      OFFSET_STORAGE_TOPIC: connect-offsets
+      STATUS_STORAGE_TOPIC: connect-status
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: "1"
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: "1"
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: "1"
+      CONNECT_PRODUCER_ACKS: all
+      CONNECT_PRODUCER_ENABLE_IDEMPOTENCE: "true"
+      CONNECT_CONFIG_PROVIDERS: env
+      CONNECT_CONFIG_PROVIDERS_ENV_CLASS: org.apache.kafka.common.config.provider.EnvVarConfigProvider
+      IDENTITYACCESS_DEBEZIUM_USERNAME: ${IDENTITYACCESS_DEBEZIUM_USERNAME:?set in infrastructure/components/postgresql/.env}
+      IDENTITYACCESS_DEBEZIUM_PASSWORD: ${IDENTITYACCESS_DEBEZIUM_PASSWORD:?set in infrastructure/components/postgresql/.env}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf localhost:8083/connectors >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks:
+      - chatter-net

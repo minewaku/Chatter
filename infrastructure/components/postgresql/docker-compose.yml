@@ -3,6 +3,8 @@ services:
     image: postgres:17
     container_name: postgresql-chatter
     restart: unless-stopped
+    # Logical decoding: the identity-access outbox relay (Debezium) reads the change log.
+    command: ["postgres", "-c", "wal_level=logical"]
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}

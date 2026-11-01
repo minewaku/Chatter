@@ -1,3 +1,4 @@
 # Runtime data folders are created by Docker; keep them out of git when possible
 .data_kafka/
 .data_zookeeper/
+data/
