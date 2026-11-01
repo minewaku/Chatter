@@ -4,6 +4,7 @@
 
 - Migrate infrastructure from `services/identity-access` into `services/identity-access-next`.
 - Do not migrate `messaging`, `cache`, `persistence`, `cdc`, `exception`, or `scheduler` packages.
+- The only messaging-related addition is the account-deleted outbox row and its separate relay, described in `specs/013-account-deleted-outbox/`; no legacy messaging, CDC or scheduler package is migrated.
 - Use only third-party dependencies already declared by the legacy identity-access parent or infrastructure POM.
 - Keep the Clean Architecture dependency direction `infrastructure -> core`.
 - Preserve the user's existing core and presentation changes.

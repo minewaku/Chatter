@@ -24,7 +24,7 @@ postgresql/
 | Data | `./data:/var/lib/postgresql/data` |
 | Health check | `pg_isready -U admin -d chatter` |
 | Restart policy | `unless-stopped` |
-| Not set | `wal_level=logical`, replication slots, per-service init users |
+| Logical decoding | `wal_level=logical` is set, via `command: ["postgres", "-c", "wal_level=logical"]` (spec 013, replacing the original "not set"). Replication slots and per-service init users are still not set by the compose file; the relay role and publication come from `scripts/create-relay-role.sh` |
 
 Each service creates and owns its own schema through its migrations (identity-access: `identity_access`).
 

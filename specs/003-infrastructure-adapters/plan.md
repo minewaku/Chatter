@@ -40,6 +40,7 @@ Give `identity-access-next` real implementations for every outbound port the cor
 | Core owns contracts; infrastructure owns technology (`infrastructure-structure-design.txt`) | Pass | Pass: adapters implement existing ports; no core change in this feature |
 | Capability → role → technology package convention; no catch-all `service`/`helper`/`config` folders | Pass | Pass: see adapter map and structure test |
 | No messaging, outbox, CDC, Vault rotation, custom auth filter | Pass | Pass: dependencies removed and asserted absent (SC-008) |
+| *Amended by spec 013: the account-deleted outbox row is allowed; messaging clients, CDC engine code and Vault rotation stay banned* | | |
 | Secrets, tokens, and passwords never stored raw or logged | Pass | Pass: digests only; logging rule in configuration contract; tests on failure paths |
 | Git/patch paths resolved against repository root, build commands against the workspace | Pass | Pass: quickstart commands state their working directory |
 

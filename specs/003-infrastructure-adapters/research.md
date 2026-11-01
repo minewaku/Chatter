@@ -127,7 +127,7 @@ Redis 6+ ACL user `admin` with password `123456`; the `default` user is disabled
 - **Ports**: standard container and host ports, `5432` and `6379`, overridable via `POSTGRES_PORT` / `REDIS_PORT`. Existing host ports in use: 2181, 5002, 5003, 5440–5442, 6380, 6387–6389, 8080, 9052, so there is no collision. The old per-service containers are untouched.
 - **Credentials**: PostgreSQL `admin`/`123456`, database `chatter`; Redis ACL user `admin`/`123456`.
 - **Persistence**: bind-mounted `./data` (matching Kafka/Vault) with Redis append-only persistence enabled.
-- **Not set**: `wal_level=logical` and replication slots (only needed for the dropped CDC engine).
+- **Not set**: `wal_level=logical` and replication slots (only needed for the dropped CDC engine). *Superseded by spec 013: `wal_level=logical` is now set for the identity-access outbox relay.*
 - **Network**: join `chatter-net` using the same `name: chatter-net` declaration the other components use.
 
 ## 11. Verification strategy

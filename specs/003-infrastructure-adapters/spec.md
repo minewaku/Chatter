@@ -158,7 +158,7 @@ A developer finds, under `infrastructure/components`, one ready-to-run stack for
 
 **Explicit exclusions**
 
-- **FR-024**: The following old-service items MUST NOT be carried over: outbox, change-data-capture engine, Kafka routing, in-process event queue and listeners, scheduled outbox and session cleanup, secrets-vault credential rotation, reversible refresh-token encryption, and the infrastructure-level global exception handler (HTTP errors belong to the presentation module).
+- **FR-024**: The following old-service items MUST NOT be carried over: outbox, change-data-capture engine, Kafka routing, in-process event queue and listeners, scheduled outbox and session cleanup, secrets-vault credential rotation, reversible refresh-token encryption, and the infrastructure-level global exception handler (HTTP errors belong to the presentation module). *Amended by spec 013: writing an account-deleted announcement row (an outbox table) is allowed; broker clients, Debezium, CDC engine code and Kafka routing remain banned.*
 - **FR-025**: Other services' own database definitions and their configuration MUST NOT be modified by this feature.
 
 ### Key Entities
@@ -183,7 +183,7 @@ A developer finds, under `infrastructure/components`, one ready-to-run stack for
 - **SC-007**: Each shared stack starts from a clean checkout with one documented command and accepts the `admin` credentials, and existing components start exactly as before.
 - **SC-009**: After the service starts against an empty shared database, 100% of its tables and its migration history sit in the identity-access schema, and a second service schema added to the same database migrates without conflict.
 - **SC-010**: For every persisted model, a round trip (core model → stored form → core model) in tests returns a model equal to the original, and for the account lookup path the mapping adds less than 1% to the measured time of a lookup against the real database.
-- **SC-008**: The infrastructure module contains zero references to messaging, outbox, change-data-capture, or secrets-vault credential rotation.
+- **SC-008**: The infrastructure module contains zero references to messaging clients, change-data-capture engine code, or secrets-vault credential rotation. *Amended by spec 013: this originally also listed "outbox"; the account-deleted announcement row is now allowed, and the Kafka, Debezium and CDC bans remain.*
 
 ## Assumptions
 
