@@ -48,6 +48,7 @@ import com.minewaku.chatter.identityaccess.user.internal.model.PlainPassword;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserAccount;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserId;
 import com.minewaku.chatter.identityaccess.user.internal.model.Username;
+import com.minewaku.chatter.identityaccess.user.internal.port.UserAccountEventPublisher;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -70,6 +71,8 @@ class UserAccountApplicationServiceTest {
     }
 
     private static final String CURRENT_PASSWORD = "Password1!";
+    /** Shared by call sites that do not assert on announcements; tests that do build their own. */
+    private static final RecordingPublisher PUBLISHER = new RecordingPublisher();
     private static final EmailVerificationTestFakes.Repository NO_PENDING_CHANGES =
             new EmailVerificationTestFakes.Repository();
     private static final AuthenticationSessionRevocationCoordinator SESSION_REVOCATION =
@@ -93,7 +96,7 @@ class UserAccountApplicationServiceTest {
                     .handle(new ReinstateUserAccountUseCase.Command(userId))
                     .changed();
     private static final ExistingAccountCommand SOFT_DELETE = (repository, hasher, userId) ->
-            new SoftDeleteUserAccountService(repository, hasher, NO_PENDING_CHANGES, SESSION_REVOCATION, guard())
+            new SoftDeleteUserAccountService(repository, hasher, NO_PENDING_CHANGES, SESSION_REVOCATION, guard(), PUBLISHER)
                     .handle(new SoftDeleteUserAccountUseCase.Command(userId, CURRENT_PASSWORD))
                     .changed();
     private static final ExistingAccountCommand CHANGE_PASSWORD =
@@ -143,7 +146,7 @@ class UserAccountApplicationServiceTest {
         ReauthenticationGuard shared = guard();
         ChangePasswordService passwords = new ChangePasswordService(repository, hasher, SESSION_REVOCATION, shared);
         SoftDeleteUserAccountService closing =
-                new SoftDeleteUserAccountService(repository, hasher, NO_PENDING_CHANGES, SESSION_REVOCATION, shared);
+                new SoftDeleteUserAccountService(repository, hasher, NO_PENDING_CHANGES, SESSION_REVOCATION, shared, PUBLISHER);
         for (int i = 0; i < 3; i++) {
             assertThrows(
                     InvalidCredentialsException.class,
@@ -362,11 +365,11 @@ class UserAccountApplicationServiceTest {
         assertFalse(new ReinstateUserAccountService(repository)
                 .handle(new ReinstateUserAccountUseCase.Command(42))
                 .changed());
-        assertTrue(new SoftDeleteUserAccountService(repository, hasher, NO_PENDING_CHANGES, SESSION_REVOCATION, guard())
+        assertTrue(new SoftDeleteUserAccountService(repository, hasher, NO_PENDING_CHANGES, SESSION_REVOCATION, guard(), PUBLISHER)
                 .handle(new SoftDeleteUserAccountUseCase.Command(42, CURRENT_PASSWORD))
                 .changed());
         assertThrows(InvalidCredentialsException.class, () -> new SoftDeleteUserAccountService(
-                        repository, hasher, NO_PENDING_CHANGES, SESSION_REVOCATION, guard())
+                        repository, hasher, NO_PENDING_CHANGES, SESSION_REVOCATION, guard(), PUBLISHER)
                 .handle(new SoftDeleteUserAccountUseCase.Command(42, CURRENT_PASSWORD)));
         assertEquals(5, repository.saveCalls);
     }
@@ -403,7 +406,7 @@ class UserAccountApplicationServiceTest {
                 .handle(new SuspendUserAccountUseCase.Command(42))
                 .changed());
         assertEquals(2, sessions.revokeAllCalls);
-        assertTrue(new SoftDeleteUserAccountService(repository, hasher, NO_PENDING_CHANGES, revocation, guard())
+        assertTrue(new SoftDeleteUserAccountService(repository, hasher, NO_PENDING_CHANGES, revocation, guard(), PUBLISHER)
                 .handle(new SoftDeleteUserAccountUseCase.Command(42, "NewPassword2@"))
                 .changed());
         assertEquals(3, sessions.revokeAllCalls);
@@ -424,7 +427,7 @@ class UserAccountApplicationServiceTest {
         AuthenticationSessionRevocationCoordinator revocation = new AuthenticationSessionRevocationCoordinator(
                 sessions, AuthenticationTestFakes.clockAt(AuthenticationTestFakes.NOW));
         SoftDeleteUserAccountService service =
-                new SoftDeleteUserAccountService(repository, hasher, NO_PENDING_CHANGES, revocation, guard());
+                new SoftDeleteUserAccountService(repository, hasher, NO_PENDING_CHANGES, revocation, guard(), PUBLISHER);
 
         assertThrows(
                 InvalidCredentialsException.class,
@@ -458,7 +461,7 @@ class UserAccountApplicationServiceTest {
                 fixed,
                 Duration.ofHours(24)));
         SoftDeleteUserAccountService service =
-                new SoftDeleteUserAccountService(repository, hasher, pending, SESSION_REVOCATION, guard());
+                new SoftDeleteUserAccountService(repository, hasher, pending, SESSION_REVOCATION, guard(), PUBLISHER);
 
         assertThrows(
                 InvalidCredentialsException.class,
@@ -478,7 +481,7 @@ class UserAccountApplicationServiceTest {
         UserAccountTestFakes.InMemoryRepository repository = new UserAccountTestFakes.InMemoryRepository();
         repository.add(activeAccount(hasher));
         SoftDeleteUserAccountService service =
-                new SoftDeleteUserAccountService(repository, hasher, NO_PENDING_CHANGES, SESSION_REVOCATION, guard());
+                new SoftDeleteUserAccountService(repository, hasher, NO_PENDING_CHANGES, SESSION_REVOCATION, guard(), PUBLISHER);
 
         assertThrows(
                 InvalidCredentialsException.class,
@@ -527,7 +530,7 @@ class UserAccountApplicationServiceTest {
         closed.softDelete();
         repository.add(closed);
         SoftDeleteUserAccountService service =
-                new SoftDeleteUserAccountService(repository, hasher, NO_PENDING_CHANGES, SESSION_REVOCATION, guard());
+                new SoftDeleteUserAccountService(repository, hasher, NO_PENDING_CHANGES, SESSION_REVOCATION, guard(), PUBLISHER);
 
         assertThrows(
                 InvalidCredentialsException.class,
@@ -758,6 +761,72 @@ class UserAccountApplicationServiceTest {
 
         @Override
         public void invalidateForUser(VerificationPurpose purpose, UserId userId) {}
+    }
+
+    @Test
+    void soft_delete_announces_the_deletion_once_with_the_accounts_own_deletion_time() {
+        UserAccountTestFakes.DeterministicPasswordHasher hasher =
+                new UserAccountTestFakes.DeterministicPasswordHasher();
+        UserAccountTestFakes.InMemoryRepository repository = new UserAccountTestFakes.InMemoryRepository();
+        UserAccount account = activeAccount(hasher);
+        repository.add(account);
+        RecordingPublisher publisher = new RecordingPublisher();
+        SoftDeleteUserAccountService service = new SoftDeleteUserAccountService(
+                repository, hasher, NO_PENDING_CHANGES, SESSION_REVOCATION, guard(), publisher);
+
+        assertTrue(service.handle(new SoftDeleteUserAccountUseCase.Command(42, CURRENT_PASSWORD))
+                .changed());
+
+        assertEquals(List.of(new Published(new UserId(42), account.deletedAt())), publisher.published);
+    }
+
+    @Test
+    void soft_delete_with_a_wrong_password_announces_nothing() {
+        UserAccountTestFakes.DeterministicPasswordHasher hasher =
+                new UserAccountTestFakes.DeterministicPasswordHasher();
+        UserAccountTestFakes.InMemoryRepository repository = new UserAccountTestFakes.InMemoryRepository();
+        repository.add(activeAccount(hasher));
+        RecordingPublisher publisher = new RecordingPublisher();
+        SoftDeleteUserAccountService service = new SoftDeleteUserAccountService(
+                repository, hasher, NO_PENDING_CHANGES, SESSION_REVOCATION, guard(), publisher);
+
+        assertThrows(
+                InvalidCredentialsException.class,
+                () -> service.handle(new SoftDeleteUserAccountUseCase.Command(42, "WrongPassword3#")));
+
+        assertTrue(publisher.published.isEmpty());
+    }
+
+    @Test
+    void repeated_soft_deletes_of_one_account_announce_exactly_once() {
+        UserAccountTestFakes.DeterministicPasswordHasher hasher =
+                new UserAccountTestFakes.DeterministicPasswordHasher();
+        UserAccountTestFakes.InMemoryRepository repository = new UserAccountTestFakes.InMemoryRepository();
+        repository.add(activeAccount(hasher));
+        RecordingPublisher publisher = new RecordingPublisher();
+        // one guard per attempt: this test is about announcements, not about the throttle
+        for (int attempt = 0; attempt < 100; attempt++) {
+            SoftDeleteUserAccountService service = new SoftDeleteUserAccountService(
+                    repository, hasher, NO_PENDING_CHANGES, SESSION_REVOCATION, guard(), publisher);
+            try {
+                service.handle(new SoftDeleteUserAccountUseCase.Command(42, CURRENT_PASSWORD));
+            } catch (InvalidCredentialsException expectedOnceTheAccountIsClosed) {
+                // the closed account no longer has a usable password, so later attempts are refused
+            }
+        }
+
+        assertEquals(1, publisher.published.size());
+    }
+
+    private record Published(UserId userId, Instant deletedAt) {}
+
+    private static final class RecordingPublisher implements UserAccountEventPublisher {
+        private final List<Published> published = new ArrayList<>();
+
+        @Override
+        public void publishDeleted(UserId userId, Instant deletedAt) {
+            published.add(new Published(userId, deletedAt));
+        }
     }
 
     private enum ExpectedEffect {

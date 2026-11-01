@@ -54,7 +54,8 @@ public final class StructureRules {
                     "emailverification.internal.port.VerificationNotifier",
                     "MailVerificationNotifier",
                     "verification.mail"),
-            row("user.internal.port.EmailChangeNotifier", "MailEmailChangeNotifier", "verification.mail"));
+            row("user.internal.port.EmailChangeNotifier", "MailEmailChangeNotifier", "verification.mail"),
+            row("user.internal.port.UserAccountEventPublisher", "JdbcUserAccountEventPublisher", "user.event.jdbc"));
 
     private StructureRules() {}
 

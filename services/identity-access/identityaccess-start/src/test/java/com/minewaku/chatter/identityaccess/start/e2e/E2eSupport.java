@@ -45,7 +45,8 @@ public abstract class E2eSupport {
     protected static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17")
             .withDatabaseName("chatter")
             .withUsername("admin")
-            .withPassword("123456");
+            .withPassword("123456")
+            .withCommand("postgres", "-c", "wal_level=logical");
 
     protected static final GenericContainer<?> REDIS =
             new GenericContainer<>(DockerImageName.parse("redis:7")).withExposedPorts(6379);

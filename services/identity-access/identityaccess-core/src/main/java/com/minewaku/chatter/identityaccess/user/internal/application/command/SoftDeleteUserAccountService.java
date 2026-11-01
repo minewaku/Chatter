@@ -7,6 +7,7 @@ import com.minewaku.chatter.identityaccess.user.api.command.SoftDeleteUserAccoun
 import com.minewaku.chatter.identityaccess.user.internal.application.ReauthenticationGuard;
 import com.minewaku.chatter.identityaccess.user.internal.model.UserAccount;
 import com.minewaku.chatter.identityaccess.user.internal.port.PasswordHasher;
+import com.minewaku.chatter.identityaccess.user.internal.port.UserAccountEventPublisher;
 import com.minewaku.chatter.identityaccess.user.internal.port.repository.UserAccountRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,18 +19,21 @@ public class SoftDeleteUserAccountService extends UserAccountCommandService impl
     private final EmailVerificationRepository verifications;
     private final AuthenticationSessionRevocationCoordinator sessionRevocation;
     private final ReauthenticationGuard guard;
+    private final UserAccountEventPublisher publisher;
 
     public SoftDeleteUserAccountService(
             UserAccountRepository repository,
             PasswordHasher passwordHasher,
             EmailVerificationRepository verifications,
             AuthenticationSessionRevocationCoordinator sessionRevocation,
-            ReauthenticationGuard guard) {
+            ReauthenticationGuard guard,
+            UserAccountEventPublisher publisher) {
         super(repository);
         this.passwordHasher = passwordHasher;
         this.verifications = verifications;
         this.sessionRevocation = sessionRevocation;
         this.guard = guard;
+        this.publisher = publisher;
     }
 
     @Override
@@ -41,6 +45,7 @@ public class SoftDeleteUserAccountService extends UserAccountCommandService impl
             if (changed) {
                 verifications.invalidateForUser(VerificationPurpose.EMAIL_CHANGE, account.id());
                 sessionRevocation.revokeAllFor(account.id());
+                publisher.publishDeleted(account.id(), account.deletedAt());
             }
             return new Result(changed);
         });

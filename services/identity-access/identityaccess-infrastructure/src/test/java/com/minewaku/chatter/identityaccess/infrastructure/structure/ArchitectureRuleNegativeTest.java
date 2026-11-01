@@ -3,7 +3,9 @@ package com.minewaku.chatter.identityaccess.infrastructure.structure;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.minewaku.chatter.identityaccess.infrastructure.adapter.outbound.user.KafkaRelayLeak;
 import com.minewaku.chatter.identityaccess.infrastructure.adapter.outbound.user.MisplacedAdapter;
+import com.minewaku.chatter.identityaccess.infrastructure.adapter.outbound.user.event.jdbc.JdbcUserAccountEventPublisher;
 import com.minewaku.chatter.identityaccess.user.internal.model.ViolatingCoreModel;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
@@ -43,5 +45,22 @@ class ArchitectureRuleNegativeTest {
         assertThatThrownBy(() -> StructureRules.assertPortMap(none, StructureRules.PORT_MAP))
                 .isInstanceOf(AssertionError.class)
                 .hasMessageContaining("expected exactly one implementation");
+    }
+
+    @Test
+    void aClassNamedAfterKafkaIsStillRejected() {
+        JavaClasses leak = new ClassFileImporter().importClasses(KafkaRelayLeak.class);
+
+        assertThatThrownBy(() -> ForbiddenDependencyTest.noClassesNamedAfterDroppedFeatures.check(leak))
+                .isInstanceOf(AssertionError.class)
+                .hasMessageContaining("KafkaRelayLeak");
+    }
+
+    @Test
+    void theAnnouncementPublisherIsAllowed() {
+        JavaClasses publisher = new ClassFileImporter().importClasses(JdbcUserAccountEventPublisher.class);
+
+        ForbiddenDependencyTest.noClassesNamedAfterDroppedFeatures.check(publisher);
+        ForbiddenDependencyTest.noMessagingVaultOrJjwtTypes.check(publisher);
     }
 }

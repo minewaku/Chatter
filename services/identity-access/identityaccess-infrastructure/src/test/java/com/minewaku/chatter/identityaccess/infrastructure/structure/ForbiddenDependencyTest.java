@@ -12,7 +12,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 
-/** SC-008 / FR-024: nothing from the old service's messaging, CDC, outbox, Vault rotation or custom auth filters. */
+/**
+ * Spec 013 FR-010 / FR-011 (amends spec 003 FR-024 and SC-008): writing the account-deleted announcement row is
+ * allowed; broker clients, Debezium, CDC code, Vault credential rotation and the legacy auth filters stay banned.
+ */
 @AnalyzeClasses(
         packages = "com.minewaku.chatter.identityaccess.infrastructure",
         importOptions = ImportOption.DoNotIncludeTests.class)
@@ -34,8 +37,6 @@ class ForbiddenDependencyTest {
     @ArchTest
     static final ArchRule noClassesNamedAfterDroppedFeatures = noClasses()
             .should()
-            .haveSimpleNameContaining("Outbox")
-            .orShould()
             .haveSimpleNameContaining("Debezium")
             .orShould()
             .haveSimpleNameContaining("Cdc")

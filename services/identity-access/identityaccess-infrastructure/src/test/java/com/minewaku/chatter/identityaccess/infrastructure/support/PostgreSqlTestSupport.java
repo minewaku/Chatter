@@ -15,7 +15,8 @@ public abstract class PostgreSqlTestSupport {
     protected static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17")
             .withDatabaseName("chatter")
             .withUsername("admin")
-            .withPassword("123456");
+            .withPassword("123456")
+            .withCommand("postgres", "-c", "wal_level=logical");
 
     static {
         POSTGRES.start();
