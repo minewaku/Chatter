@@ -1,0 +1,12 @@
+server:
+  port: ${PROFILE_NEXT_SERVER_PORT:5011}
+
+spring:
+  application:
+    name: profile-next
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
