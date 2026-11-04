@@ -8,6 +8,16 @@
 
 **Input**: User description: "Rebuild the `profile` service as `profile-next` with the same layered structure as `identity-access`, without the heavy domain-driven machinery of the legacy service. A user can exist without a profile; the profile service knows nothing about registration or other account lifecycle, except that an account was deleted. Include, as a separate scoped area, the messaging `identity-access` needs so it can announce account deletion reliably." The legacy `services/profile` is read-only reference material.
 
+## Clarifications
+
+### Session 2026-11-04
+
+- Q: If a profile edit or image confirmation lands just after the account-deleted notice was processed, how is the leftover profile handled? → A: Accepted as a documented residual race (rare, low-value data, bounded by the access-token window). The hard delete on the notice is the only removal path; no deleted-user record and no periodic profile sweep.
+- Q: When a save sends only one field, what happens to the omitted field? → A: Partial update: an omitted field is left unchanged; a field sent empty is cleared (bio only, since a blank display name is refused by FR-004).
+- Q: What limits does the upload permission put on an avatar or banner? → A: JPEG, PNG and WebP only; maximum 5 MB for an avatar and 10 MB for a banner.
+- Q: How many times is a failed image removal retried before it is reported, and how old must an unreferenced image be before the cleanup deletes it? → A: Up to 10 retries with increasing delays (about 6 hours in total), then reported for attention; the cleanup deletes unreferenced images older than 24 hours. Both values are configuration.
+- Q: Should FR-018 keep the "deleted or locked profile cannot be revived by an edit" example, given `profile-next` keeps no account state? → A: No. The example is removed; defects tied to account state are out of scope because that state is not mirrored.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - See anyone's profile, even one that was never filled in (Priority: P1)
@@ -108,9 +118,9 @@ This story belongs to `identity-access`, not to `profile-next`. When an account 
 - The user saves with no changes: the call succeeds and nothing is rewritten.
 - A signed-in user reads a profile id that is not a valid identifier: refused as a bad request, not as "not found".
 - A user's token is still valid for a few minutes after logout or ban: the profile service accepts it for that window (FR-006).
-- The account-deleted notice arrives while the same user is saving an edit: the edit may win the race and leave a profile behind. A later delivery of the notice, or the periodic cleanup, removes it (see Assumptions).
+- The account-deleted notice arrives while the same user is saving an edit: the edit may win the race and leave a profile behind. Only a later delivery of the notice removes it; this residual is accepted (see Assumptions).
 - The provider's confirmation arrives for a user whose profile does not exist yet: the profile is created with that image.
-- Image removal keeps failing: after a bounded number of retries it is reported for attention, never silently dropped.
+- Image removal keeps failing: after 10 retries it is reported for attention, never silently dropped.
 
 ## Requirements *(mandatory)*
 
@@ -120,17 +130,17 @@ This story belongs to `identity-access`, not to `profile-next`. When an account 
 
 - **FR-001**: The service MUST return a profile document for any valid user id when asked by a signed-in caller. If no profile has been saved, it MUST return defaults (the user id, empty display name, empty bio, no avatar, no banner) with a successful status.
 - **FR-002**: A signed-in user MUST be able to read their own profile through a "me" form that resolves the user from the access token.
-- **FR-003**: A signed-in user MUST be able to save a display name and bio. If no profile exists for them, saving MUST create it. Saving MUST apply only to the user named by the access token.
+- **FR-003**: A signed-in user MUST be able to save a display name and bio. If no profile exists for them, saving MUST create it. A save MUST change only the fields it sends: an omitted field is left unchanged, and a bio sent empty clears it. A save that sends neither field succeeds, changes nothing and creates no profile. Saving MUST apply only to the user named by the access token.
 - **FR-004**: Display names MUST be 1 to 32 characters after trimming and MUST NOT contain control characters. Bios MUST be at most 190 characters after trimming and MAY be empty. Lengths MUST be counted in user-perceived characters. Violations MUST be refused with a response that names the broken rule.
 - **FR-005**: Concurrent first-time saves for the same user MUST result in exactly one profile. Concurrent saves MUST each be applied whole: the final state equals the values of one of the saves, never a mix of the two.
 - **FR-006**: The service MUST accept any access token that `identity-access` issued, that is unexpired and correctly signed, even if the session behind it has since been logged out or the account banned. The service MUST NOT keep a revocation list.
-- **FR-007**: A signed-in user MUST be able to request a short-lived upload permission for their avatar and, separately, for their banner. The permission MUST be limited to that user's own image location and that one purpose.
+- **FR-007**: A signed-in user MUST be able to request a short-lived upload permission for their avatar and, separately, for their banner. The permission MUST be limited to that user's own image location and that one purpose, and MUST restrict the upload to JPEG, PNG or WebP files of at most 5 MB for an avatar and 10 MB for a banner.
 - **FR-008**: When the storage provider confirms an upload, the service MUST verify the confirmation's authenticity, update the user's avatar or banner reference, and schedule removal of the previous image. A confirmation that fails verification, names a different user, or is a repeat MUST NOT change anything.
-- **FR-009**: Image removal MUST happen only after the change that made the old image obsolete has been committed. A failed removal MUST NOT fail or undo the profile change, MUST be retried, and MUST eventually be reported if it never succeeds.
-- **FR-010**: A periodic cleanup MUST remove stored images that no profile references and that are older than a defined grace period.
+- **FR-009**: Image removal MUST happen only after the change that made the old image obsolete has been committed. A failed removal MUST NOT fail or undo the profile change, MUST be retried up to 10 times with increasing delays (about 6 hours in total), and MUST then be reported for attention if it never succeeds. A removal that has exhausted its retries and been reported MUST still be finished by the periodic cleanup (FR-010).
+- **FR-010**: A periodic cleanup MUST remove stored images that no profile references and that are older than a 24-hour grace period. The retry count, delays and grace period MUST be configuration values, not constants in code.
 - **FR-011**: The service MUST consume an account-deleted notice carrying an event id, the user id and the time it occurred, and MUST remove that user's profile and, after commit, their stored images. Processing MUST be idempotent and MUST succeed when no profile exists.
 - **FR-012**: Notices MUST be consumed in order per user. A notice that still fails after several retries with increasing delays MUST be moved to a dead-letter topic without blocking later notices. Unknown fields and unknown event types in a notice MUST be ignored, not treated as failures.
-- **FR-013**: The service MUST NOT publish any events. It MUST NOT react to any account event other than account deletion.
+- **FR-013**: The service MUST NOT publish any events; the only record it writes to the broker is a failed account-deleted notice to its own dead-letter topic (FR-012). It MUST NOT react to any account event other than account deletion.
 - **FR-014**: Each profile MUST record when it was created and last changed, using an injectable time source so the behaviour is testable.
 - **FR-015**: Errors MUST use the same error-response shape and code vocabulary as `identity-access`, so clients handle both services alike.
 
@@ -138,7 +148,7 @@ This story belongs to `identity-access`, not to `profile-next`. When an account 
 
 - **FR-016**: `profile-next` MUST follow the module and package layout of `identity-access`: a core module with no dependency on persistence, web or messaging frameworks, containing feature-sliced public contracts and internal application, model and port packages; separate infrastructure, presentation and start modules. Every use case MUST be a single-method handler of a command or query. This MUST be enforced by automated architecture tests, as `identity-access` does.
 - **FR-017**: The following legacy machinery MUST NOT exist in `profile-next`: an aggregate base class holding a queue of domain events; synchronous and asynchronous event dispatchers; a split between domain events and integration events; an asset record with content-addressed deduplication and reference counting; any outbox, change-data-capture or other loop in which the service consumes events it published itself.
-- **FR-018**: Every defect in `services/profile/profile-domain-review.txt` that concerns behaviour kept in `profile-next` MUST be absent from it, and a test MUST exist for each such defect (examples: updated timestamps always change on update; a profile in a deleted or locked state cannot be revived by an edit; a name length message states the real limits).
+- **FR-018**: Every defect in `services/profile/profile-domain-review.txt` that concerns behaviour kept in `profile-next` MUST be absent from it, and a test MUST exist for each such defect (examples: updated timestamps always change on update; a name length message states the real limits). Defects tied to account state (deleted, locked, banned, unverified) are out of scope, because `profile-next` does not mirror that state.
 
 **Account-deletion announcement in `identity-access` (separate scope)**
 
@@ -183,15 +193,15 @@ The message layout, topic, relay settings and database roles are in [contracts/a
 ## Assumptions
 
 - Only signed-in callers can read profiles; public, anonymous reading is out of scope.
-- The profile API keeps the legacy shape: reading by id and by "me", one save endpoint, and upload permissions for avatar and banner under `/api/v1/profiles`.
+- The profile API keeps the legacy shape for reads and upload permissions: reading by id and by "me", and upload permissions for avatar and banner under `/api/v1/profiles`. Saving is one endpoint, `PATCH /api/v1/profiles/@me`, because saves are partial (clarification 2026-11-04).
 - A profile does not store the username. Clients combine the profile with identity data for a name to show when the display name is empty.
 - Display name limits (1–32) and bio limit (190) carry over from the legacy service. Display names do not have to be unique.
 - Account state (locked, banned, unverified) is not mirrored in `profile-next`; the service neither checks it nor stores it. This is a deliberate removal of the legacy cross-service coupling.
 - Cloudinary stays the image provider, with signed direct uploads and a webhook confirmation, as in the legacy service. Per-user deduplication of identical images is not required.
 - A reading cache is not part of this feature. Reads go straight to the database; a cache is reconsidered only if measured read load justifies it.
 - The relay uses Debezium change-data-capture over the database's change log, running as a standalone process; Kafka Connect, decided by spec 013. It uses plain JSON, with no schema registry, and each service owns its own copy of the event's shape; there is no shared event library.
-- Each service has its own database inside one shared database instance, with logical decoding enabled once for that instance. *(Amended by spec 013: the shared instance is kept for now with logical decoding enabled on it, and each service is expected to get its own instance later.)*
-- A deleted account's edit racing with its own deletion may briefly leave a profile that the next redelivery or the sweep removes; the access-token window (FR-006) makes this unavoidable without a blacklist.
+- Each service has its own database inside one shared database instance, with logical decoding enabled once for that instance. *(Amended by spec 013: the shared instance is kept for now with logical decoding enabled on it, and each service is expected to get its own instance later.)* *(Amended by plan 012: each service starts with its own schema inside the shared database, as `identity-access` does; moving to a separate database later only changes the connection URL.)*
+- A deleted account's edit racing with its own deletion may leave a profile behind that only a redelivered notice removes. This is accepted: the access-token window (FR-006) makes it unavoidable without a blacklist, the window is short, and the data is low-value. No deleted-user record and no profile sweep are kept; the periodic cleanup (FR-010) concerns images only.
 - The message broker is already available to the environment. The standalone relay process and logical decoding are new platform requirements introduced here, with the connector definition kept alongside the other shared infrastructure.
 - The `message` service and the "access revoked" signal are out of scope for `profile-next` (FR-028).
 - How the service code is organised for the announcement (ports, packages, adapters) is a codebase decision for the plan, not part of this spec.
