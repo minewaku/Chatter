@@ -4,9 +4,67 @@ server:
 spring:
   application:
     name: profile-next
+  config:
+    import: optional:vault://
+  cloud:
+    vault:
+      # always on: the token public key can only come from Vault, so the service does not start without it
+      enabled: true
+      scheme: ${VAULT_SCHEME:http}
+      host: ${VAULT_HOST:localhost}
+      port: ${VAULT_PORT:5002}
+      authentication: TOKEN
+      token: ${VAULT_TOKEN:}
+      fail-fast: false
+      kv:
+        enabled: true
+        backend: secret
+        # reads secret/profilenext; the image storage credentials are the keys cloudinary.cloud-name, .api-key, .api-secret
+        application-name: profilenext
+        default-context: profilenext
+  datasource:
+    url: ${PROFILE_NEXT_DB_URL:jdbc:postgresql://localhost:5432/chatter?currentSchema=profile_next}
+    username: ${PROFILE_NEXT_DB_USERNAME:admin}
+    password: ${PROFILE_NEXT_DB_PASSWORD:123456}
+  flyway:
+    enabled: true
+    schemas: profile_next
+    default-schema: profile_next
+    create-schemas: true
+  kafka:
+    bootstrap-servers: ${PROFILE_NEXT_KAFKA_BOOTSTRAP_SERVERS:localhost:5003}
+    consumer:
+      group-id: profile-next
+      auto-offset-reset: earliest
+      enable-auto-commit: false
 
 management:
   endpoints:
     web:
       exposure:
         include: health
+
+profile-next:
+  security:
+    jwt:
+      # the public key is read once at start-up from Vault (secret/common/jwt/rs256: public-key); there is no local
+      # setting for it. keys.backend and keys.path can move the lookup, they default to those values
+      issuer: identity-access
+    public-endpoints:
+      - /api/v*/profiles/uploads/notifications
+    cors:
+      allowed-origins: []
+  messaging:
+    account-topic: identityaccess.user.v1
+    # a notice that fails is retried in place with this backoff, then goes to <topic>.profile-next.dlt
+    retry:
+      initial-interval: PT1S
+      multiplier: 2
+      max-interval: PT30S
+      max-elapsed: PT2M
+  images:
+    # from Vault (secret/profilenext: cloudinary.cloud-name, .api-key, .api-secret); the underscore spelling that
+    # configure-secrets.sh writes is accepted too. Empty when Vault is not reachable.
+    cloud-name: ${cloudinary.cloud-name:${cloudinary.cloud_name:}}
+    api-key: ${cloudinary.api-key:${cloudinary.api_key:}}
+    api-secret: ${cloudinary.api-secret:${cloudinary.api_secret:}}

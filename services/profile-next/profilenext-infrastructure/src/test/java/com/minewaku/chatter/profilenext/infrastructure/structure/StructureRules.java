@@ -22,8 +22,28 @@ public final class StructureRules {
     /** One row of the port to adapter table. */
     public record PortRow(String port, String adapterSimpleName, String adapterPackage) {}
 
-    /** Empty until a feature adds an outbound port: each row names the port, its single adapter and the adapter package. */
-    public static final List<PortRow> PORT_MAP = List.of();
+    /** Each row names an outbound port, its single adapter and the adapter package. */
+    public static final List<PortRow> PORT_MAP = List.of(
+            new PortRow(
+                    "com.minewaku.chatter.profilenext.profile.internal.port.repository.PendingImageRemovalRepository",
+                    "JdbcPendingImageRemovalRepository",
+                    INFRA + ".adapter.outbound.image.removal.jdbc"),
+            new PortRow(
+                    "com.minewaku.chatter.profilenext.profile.internal.port.ImageStorage",
+                    "CloudinaryImageStorage",
+                    INFRA + ".adapter.outbound.image.storage.cloudinary"),
+            new PortRow(
+                    "com.minewaku.chatter.profilenext.profile.internal.port.repository.ProfileRepository",
+                    "JdbcProfileRepository",
+                    INFRA + ".adapter.outbound.profile.write.jdbc"),
+            new PortRow(
+                    "com.minewaku.chatter.profilenext.profile.internal.port.query.ProfileQueryRepository",
+                    "JdbcProfileQueryRepository",
+                    INFRA + ".adapter.outbound.profile.read.jdbc"),
+            new PortRow(
+                    "com.minewaku.chatter.profilenext.shared.port.UniqueStringIdGenerator",
+                    "UuidV7IdGenerator",
+                    INFRA + ".adapter.outbound.shared.id"));
 
     private StructureRules() {}
 
