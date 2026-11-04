@@ -2,7 +2,7 @@
 # Push secrets from .env into Vault.
 #
 # Usage: configure-secrets.sh [--no-db] [--no-scylla] [service ...]
-#   services:   identityaccess profile apigateway message jwt   (default: all)
+#   services:   identityaccess profile profilenext apigateway message jwt   (default: all)
 #   --no-db     only write KV secrets and JWT keys; skip the database engine config
 #               (use it while the databases are down or the *_VAULT_* credentials are placeholders)
 #   --no-scylla skip the ScyllaDB config of the message service only
@@ -18,7 +18,7 @@ set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
-ALL_SERVICES=(identityaccess profile apigateway message jwt)
+ALL_SERVICES=(identityaccess profile profilenext apigateway message jwt)
 declare -A HAS_POSTGRES=([identityaccess]=1 [profile]=1 [message]=1)
 declare -A HAS_SCYLLA=([message]=1)
 POSTGRES_HOST="${VAULT_POSTGRES_HOST:-postgresql-chatter}"
