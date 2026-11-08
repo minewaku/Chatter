@@ -1,43 +1,65 @@
 package com.minewaku.chatter.profilenext.profile.internal.application.fakes;
 
+import com.minewaku.chatter.profilenext.profile.internal.model.ImageId;
+import com.minewaku.chatter.profilenext.profile.internal.model.OwnedImage;
+import com.minewaku.chatter.profilenext.profile.internal.port.ImageStorage;
+import com.minewaku.chatter.profilenext.profile.internal.port.ImageStorage.ConfirmedUpload;
+import com.minewaku.chatter.profilenext.profile.internal.port.ImageStorage.StoredImageInfo;
+import com.minewaku.chatter.profilenext.profile.internal.port.ImageStorage.StoredImagePage;
+import com.minewaku.chatter.profilenext.profile.internal.port.ImageStorage.UploadPermission;
 import com.minewaku.chatter.profilenext.profile.api.exception.ImageStorageRateLimitedException;
 import com.minewaku.chatter.profilenext.profile.api.exception.ImageStorageUnavailableException;
-import com.minewaku.chatter.profilenext.profile.internal.model.ConfirmedUpload;
-import com.minewaku.chatter.profilenext.profile.internal.model.ImageSlot;
-import com.minewaku.chatter.profilenext.profile.internal.model.StoredImageInfo;
-import com.minewaku.chatter.profilenext.profile.internal.model.StoredImagePage;
-import com.minewaku.chatter.profilenext.profile.internal.model.UploadPermission;
-import com.minewaku.chatter.profilenext.profile.internal.model.UserId;
-import com.minewaku.chatter.profilenext.profile.internal.port.ImageStorage;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
-/** A programmable stand-in for the provider. */
+/** A programmable stand-in for the provider. It lists only what a test gives it, as the real port lists permanent images only. */
 public class FakeImageStorage implements ImageStorage {
 
-    public record Permit(UserId userId, ImageSlot slot, String uploadId, Instant now) {}
+    public record Permit(OwnedImage image, Instant now) {}
 
     public final List<Permit> permits = new ArrayList<>();
-    public final List<String> removed = new ArrayList<>();
-    public final List<String> removeCalls = new ArrayList<>();
+    public final List<OwnedImage> promoteCalls = new ArrayList<>();
+    public final List<OwnedImage> removeCalls = new ArrayList<>();
+    public final List<OwnedImage> removed = new ArrayList<>();
     public final List<StoredImagePage> pages = new ArrayList<>();
     public final List<String> listCursors = new ArrayList<>();
 
-    /** What {@link #verify} answers; empty means "bad signature". */
+    /** What {@link #verify} answers; empty means "not accepted". */
     public Optional<ConfirmedUpload> verifyResult = Optional.empty();
 
+    /** Images whose promotion fails with an outage. */
+    public final Set<ImageId> failingPromotions = new HashSet<>();
+
+    /** Images whose removal fails with an outage (in addition to {@link #failRemoval}). */
+    public final Set<ImageId> failingRemovals = new HashSet<>();
+
     public boolean failRemoval;
+    public boolean failPermit;
+    public boolean rateLimitPermit;
     public int listsBeforeRateLimit = Integer.MAX_VALUE;
 
     @Override
-    public UploadPermission permit(UserId userId, ImageSlot slot, String uploadId, Instant now) {
-        permits.add(new Permit(userId, slot, uploadId, now));
-        String publicId = "chatter/profile/" + slot.folder() + "/" + userId.value() + "/" + uploadId;
+    public UploadPermission permit(OwnedImage image, Instant now) {
+        if (rateLimitPermit) {
+            throw new ImageStorageRateLimitedException("slow down");
+        }
+        if (failPermit) {
+            throw new ImageStorageUnavailableException("provider down");
+        }
+        permits.add(new Permit(image, now));
         return new UploadPermission(
-                "https://upload.example/image", "POST", Map.of("public_id", publicId), now.plusSeconds(900));
+                "https://upload.example/image",
+                "POST",
+                Map.of(
+                        "user_id", Long.toString(image.userId().value()),
+                        "slot", image.slot().name(),
+                        "image_id", image.imageId().value().toString()),
+                now.plusSeconds(900));
     }
 
     @Override
@@ -46,12 +68,20 @@ public class FakeImageStorage implements ImageStorage {
     }
 
     @Override
-    public void remove(String publicId) {
-        removeCalls.add(publicId);
-        if (failRemoval) {
+    public void promote(OwnedImage image) {
+        promoteCalls.add(image);
+        if (failingPromotions.contains(image.imageId())) {
             throw new ImageStorageUnavailableException("provider down");
         }
-        removed.add(publicId);
+    }
+
+    @Override
+    public void remove(OwnedImage image) {
+        removeCalls.add(image);
+        if (failRemoval || failingRemovals.contains(image.imageId())) {
+            throw new ImageStorageUnavailableException("provider down");
+        }
+        removed.add(image);
     }
 
     @Override

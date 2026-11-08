@@ -1,11 +1,11 @@
 package com.minewaku.chatter.profilenext.start.support;
 
 import com.minewaku.chatter.profilenext.profile.api.exception.ImageStorageUnavailableException;
-import com.minewaku.chatter.profilenext.profile.internal.model.ConfirmedUpload;
+import com.minewaku.chatter.profilenext.profile.internal.port.ImageStorage.ConfirmedUpload;
 import com.minewaku.chatter.profilenext.profile.internal.model.ImageSlot;
-import com.minewaku.chatter.profilenext.profile.internal.model.StoredImageInfo;
-import com.minewaku.chatter.profilenext.profile.internal.model.StoredImagePage;
-import com.minewaku.chatter.profilenext.profile.internal.model.UploadPermission;
+import com.minewaku.chatter.profilenext.profile.internal.port.ImageStorage.StoredImageInfo;
+import com.minewaku.chatter.profilenext.profile.internal.port.ImageStorage.StoredImagePage;
+import com.minewaku.chatter.profilenext.profile.internal.port.ImageStorage.UploadPermission;
 import com.minewaku.chatter.profilenext.profile.internal.model.UserId;
 import com.minewaku.chatter.profilenext.profile.internal.port.ImageStorage;
 import java.nio.charset.StandardCharsets;

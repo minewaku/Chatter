@@ -1,15 +1,20 @@
 package com.minewaku.chatter.profilenext.profile.internal.application.command;
 
 import com.minewaku.chatter.profilenext.profile.api.command.RequestImageUploadUseCase;
+import com.minewaku.chatter.profilenext.profile.internal.model.ImageId;
 import com.minewaku.chatter.profilenext.profile.internal.model.ImageSlot;
-import com.minewaku.chatter.profilenext.profile.internal.model.UploadPermission;
+import com.minewaku.chatter.profilenext.profile.internal.model.OwnedImage;
 import com.minewaku.chatter.profilenext.profile.internal.model.UserId;
 import com.minewaku.chatter.profilenext.profile.internal.port.ImageStorage;
+import com.minewaku.chatter.profilenext.profile.internal.port.ImageStorage.UploadPermission;
 import com.minewaku.chatter.profilenext.shared.port.UniqueStringIdGenerator;
 import java.time.Clock;
 import org.springframework.stereotype.Service;
 
-/** Issues an upload permission for the caller's own slot only. Nothing is stored until the provider confirms. */
+/**
+ * Issues an upload permission for the user in the command and the requested slot, under a fresh image id. Writes
+ * nothing: the profile changes only when the provider confirms the upload.
+ */
 @Service
 public class RequestImageUploadService implements RequestImageUploadUseCase {
 
@@ -27,7 +32,8 @@ public class RequestImageUploadService implements RequestImageUploadUseCase {
     public Result handle(Command command) {
         UserId userId = UserId.of(command.userId());
         ImageSlot slot = ImageSlot.valueOf(command.slot());
-        UploadPermission permission = storage.permit(userId, slot, ids.nextId(), clock.instant());
+        ImageId imageId = ImageId.of(ids.nextId());
+        UploadPermission permission = storage.permit(new OwnedImage(userId, slot, imageId), clock.instant());
         return new Result(permission.uploadUrl(), permission.method(), permission.fields(), permission.expiresAt());
     }
 }

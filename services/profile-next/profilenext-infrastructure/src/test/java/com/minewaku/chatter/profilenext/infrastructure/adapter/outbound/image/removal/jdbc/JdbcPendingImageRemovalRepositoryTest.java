@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.minewaku.chatter.profilenext.infrastructure.support.JdbcTestConfiguration;
 import com.minewaku.chatter.profilenext.infrastructure.support.PostgreSqlTestSupport;
 import com.minewaku.chatter.profilenext.profile.internal.model.ImageSlot;
-import com.minewaku.chatter.profilenext.profile.internal.model.PendingRemoval;
+import com.minewaku.chatter.profilenext.profile.internal.port.repository.PendingImageRemovalRepository.PendingRemoval;
 import com.minewaku.chatter.profilenext.profile.internal.port.repository.PendingImageRemovalRepository;
 import java.time.Duration;
 import java.time.Instant;

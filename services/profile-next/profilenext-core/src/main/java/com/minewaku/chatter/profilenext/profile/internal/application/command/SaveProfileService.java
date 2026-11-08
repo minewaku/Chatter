@@ -3,7 +3,6 @@ package com.minewaku.chatter.profilenext.profile.internal.application.command;
 import com.minewaku.chatter.profilenext.profile.api.command.SaveProfileUseCase;
 import com.minewaku.chatter.profilenext.profile.internal.model.Bio;
 import com.minewaku.chatter.profilenext.profile.internal.model.DisplayName;
-import com.minewaku.chatter.profilenext.profile.internal.model.ProfileEdit;
 import com.minewaku.chatter.profilenext.profile.internal.model.UserId;
 import com.minewaku.chatter.profilenext.profile.internal.port.repository.ProfileRepository;
 import java.time.Clock;
@@ -26,13 +25,11 @@ public class SaveProfileService implements SaveProfileUseCase {
     @Override
     public Result handle(Command command) {
         UserId userId = UserId.of(command.userId());
-        ProfileEdit edit = new ProfileEdit(
-                command.displayName() == null ? null : DisplayName.of(command.displayName()),
-                command.bio() == null ? null : Bio.of(command.bio()));
-        if (edit.isEmpty()) {
+        DisplayName displayName = command.displayName() == null ? null : DisplayName.of(command.displayName());
+        Bio bio = command.bio() == null ? null : Bio.of(command.bio());
+        if (displayName == null && bio == null) {
             return new Result(false);
         }
-        boolean written = profiles.applyEdit(userId, edit.displayName(), edit.bio(), clock.instant());
-        return new Result(written);
+        return new Result(profiles.applyEdit(userId, displayName, bio, clock.instant()));
     }
 }

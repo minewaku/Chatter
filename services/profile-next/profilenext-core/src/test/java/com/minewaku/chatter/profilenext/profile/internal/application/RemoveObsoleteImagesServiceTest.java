@@ -12,7 +12,10 @@ import com.minewaku.chatter.profilenext.profile.internal.application.command.Rem
 import com.minewaku.chatter.profilenext.profile.internal.application.fakes.FakeImageStorage;
 import com.minewaku.chatter.profilenext.profile.internal.application.fakes.FakeProfileStore;
 import com.minewaku.chatter.profilenext.profile.internal.application.fakes.FakeRemovalQueue;
+import com.minewaku.chatter.profilenext.profile.internal.application.fakes.ImageIds;
 import com.minewaku.chatter.profilenext.profile.internal.model.ImageSlot;
+import com.minewaku.chatter.profilenext.profile.internal.model.OwnedImage;
+import com.minewaku.chatter.profilenext.profile.internal.model.UserId;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -26,7 +29,7 @@ import org.slf4j.LoggerFactory;
 class RemoveObsoleteImagesServiceTest {
 
     private static final Instant START = Instant.parse("2026-11-04T10:00:00Z");
-    private static final String FILE = "chatter/profile/avatars/7/old";
+    private static final OwnedImage FILE = new OwnedImage(UserId.of(7), ImageSlot.AVATAR, ImageIds.at(1));
 
     private final AtomicReference<Instant> now = new AtomicReference<>(START);
     private final FakeImageStorage storage = new FakeImageStorage();
@@ -82,7 +85,7 @@ class RemoveObsoleteImagesServiceTest {
 
     @Test
     void aDueRowWhoseRemovalSucceedsIsDeletedFromTheQueue() {
-        queue.enqueue(FILE, ImageSlot.AVATAR, START);
+        queue.enqueue(FILE, START);
 
         var result = run();
 
@@ -94,27 +97,27 @@ class RemoveObsoleteImagesServiceTest {
     @Test
     void aFailureCountsAnAttemptAndSchedulesTheNextOneByTheDelays() {
         storage.failRemoval = true;
-        queue.enqueue(FILE, ImageSlot.AVATAR, START);
+        queue.enqueue(FILE, START);
 
         var result = run();
 
         assertThat(result.failed()).isEqualTo(1);
-        var row = queue.rows.get(FILE);
+        var row = queue.rows.get(FILE.imageId());
         assertThat(row.attempts).isEqualTo(1);
         assertThat(row.nextAttemptAt).isEqualTo(START.plus(Duration.ofMinutes(2)));
         assertThat(row.reportedAt).isNull();
 
         now.set(START.plus(Duration.ofMinutes(2)));
         run();
-        assertThat(queue.rows.get(FILE).attempts).isEqualTo(2);
-        assertThat(queue.rows.get(FILE).nextAttemptAt)
+        assertThat(queue.rows.get(FILE.imageId()).attempts).isEqualTo(2);
+        assertThat(queue.rows.get(FILE.imageId()).nextAttemptAt)
                 .isEqualTo(START.plus(Duration.ofMinutes(2)).plus(Duration.ofMinutes(4)));
     }
 
     @Test
     void aRowNotYetDueIsNotTouched() {
         storage.failRemoval = true;
-        queue.enqueue(FILE, ImageSlot.AVATAR, START);
+        queue.enqueue(FILE, START);
         run();
 
         now.set(START.plus(Duration.ofMinutes(1)));
@@ -126,7 +129,7 @@ class RemoveObsoleteImagesServiceTest {
     @Test
     void afterTheTenthFailedRetryTheRowIsReportedOnceAndNeverRetriedAgain() {
         storage.failRemoval = true;
-        queue.enqueue(FILE, ImageSlot.AVATAR, START);
+        queue.enqueue(FILE, START);
         Duration waited = Duration.ZERO;
 
         // first attempt, then ten retries, each at the moment the previous failure said it was due
@@ -134,14 +137,14 @@ class RemoveObsoleteImagesServiceTest {
             now.set(START.plus(waited));
             run();
             if (attempt < 10) {
-                Duration delay = Duration.between(now.get(), queue.rows.get(FILE).nextAttemptAt);
+                Duration delay = Duration.between(now.get(), queue.rows.get(FILE.imageId()).nextAttemptAt);
                 waited = waited.plus(delay);
             }
         }
 
         // the delays of the ten retries add up to 362 minutes
         assertThat(waited).isEqualTo(Duration.ofMinutes(362));
-        var row = queue.rows.get(FILE);
+        var row = queue.rows.get(FILE.imageId());
         assertThat(row.attempts).isEqualTo(11);
         assertThat(row.reportedAt).isNotNull();
 
@@ -150,7 +153,7 @@ class RemoveObsoleteImagesServiceTest {
                 .toList();
         assertThat(errors).hasSize(1);
         String message = errors.get(0).getFormattedMessage();
-        assertThat(message).contains(FILE).contains("11");
+        assertThat(message).contains(FILE.imageId().value().toString()).contains("11");
         assertThat(Pattern.compile("(?i)password|hash|token|secret|credential|privateKey")
                         .matcher(message)
                         .find())
@@ -166,18 +169,46 @@ class RemoveObsoleteImagesServiceTest {
     @Test
     void aFailureNeverTouchesAnyProfile() {
         FakeProfileStore profiles = new FakeProfileStore();
-        profiles.replaceImage(
-                com.minewaku.chatter.profilenext.profile.internal.model.UserId.of(7),
-                ImageSlot.AVATAR,
-                new com.minewaku.chatter.profilenext.profile.internal.model.StoredImage(
-                        "chatter/profile/avatars/7/new", "https://img/new"),
-                START);
+        profiles.applyEdit(UserId.of(7), null, null, START);
+        profiles.setImage(UserId.of(7), ImageSlot.AVATAR, ImageIds.at(2), START);
         storage.failRemoval = true;
-        queue.enqueue(FILE, ImageSlot.AVATAR, START);
+        queue.enqueue(FILE, START);
 
         run();
 
         // the service has no way to reach a profile; the stored image is exactly what it was
-        assertThat(profiles.rows.get(7L).avatar().publicId()).isEqualTo("chatter/profile/avatars/7/new");
+        assertThat(profiles.rows.get(7L).avatar()).isEqualTo(ImageIds.at(2));
+    }
+
+    @Test
+    void theStorageIsAskedToRemoveExactlyTheOwnerSlotAndIdOfTheRow() {
+        OwnedImage banner = new OwnedImage(UserId.of(8), ImageSlot.BANNER, ImageIds.at(5));
+        queue.enqueue(banner, START);
+
+        run();
+
+        assertThat(storage.removeCalls).containsExactly(banner);
+    }
+
+    @Test
+    void aRowWhoseOwnerHasNoProfileAnymoreIsStillRemoved() {
+        OwnedImage orphan = new OwnedImage(UserId.of(99), ImageSlot.AVATAR, ImageIds.at(6));
+        queue.enqueue(orphan, START);
+
+        var result = run();
+
+        assertThat(result.removed()).isEqualTo(1);
+        assertThat(storage.removed).containsExactly(orphan);
+    }
+
+    @Test
+    void theSameImageQueuedTwiceIsRemovedOnce() {
+        queue.enqueue(FILE, START);
+        queue.enqueue(FILE, START);
+
+        var result = run();
+
+        assertThat(result.removed()).isEqualTo(1);
+        assertThat(storage.removeCalls).hasSize(1);
     }
 }

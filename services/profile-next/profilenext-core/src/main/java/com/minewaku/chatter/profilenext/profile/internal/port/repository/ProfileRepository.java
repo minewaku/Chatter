@@ -2,8 +2,9 @@ package com.minewaku.chatter.profilenext.profile.internal.port.repository;
 
 import com.minewaku.chatter.profilenext.profile.internal.model.Bio;
 import com.minewaku.chatter.profilenext.profile.internal.model.DisplayName;
+import com.minewaku.chatter.profilenext.profile.internal.model.ImageId;
 import com.minewaku.chatter.profilenext.profile.internal.model.ImageSlot;
-import com.minewaku.chatter.profilenext.profile.internal.model.StoredImage;
+import com.minewaku.chatter.profilenext.profile.internal.model.Profile;
 import com.minewaku.chatter.profilenext.profile.internal.model.UserId;
 import java.time.Instant;
 import java.util.Optional;
@@ -17,16 +18,23 @@ public interface ProfileRepository {
     boolean applyEdit(UserId userId, DisplayName displayName, Bio bio, Instant now);
 
     /**
-     * Puts {@code image} in the slot if its upload id is newer than the stored one, creating the row if needed. When
-     * applied, {@code previous} is the image that was replaced (null if the slot was empty). When not applied, the
-     * confirmation was a repeat or an older one and {@code previous} is the image currently stored.
+     * Loads the user's profile and holds an exclusive lock on it until the surrounding transaction ends, so concurrent
+     * image confirmations for one user serialise. Empty when there is no row. Must be called inside a transaction.
      */
-    Replacement replaceImage(UserId userId, ImageSlot slot, StoredImage image, Instant now);
+    Optional<Profile> findForUpdate(UserId userId);
+
+    /** Sets one slot (and the update time) on an existing row. Not called when there is no row. */
+    void setImage(UserId userId, ImageSlot slot, ImageId imageId, Instant now);
+
+    /**
+     * Empties a slot, but only if it currently holds {@code imageId}. Returns whether it did; false (and no change)
+     * when the slot holds something else or there is no row.
+     */
+    boolean clearImageIf(UserId userId, ImageSlot slot, ImageId imageId, Instant now);
 
     /** Removes the user's row and returns the images it held; empty when there was no row. */
     Optional<DeletedProfile> deleteByUserId(UserId userId);
 
-    record Replacement(boolean applied, StoredImage previous) {}
-
-    record DeletedProfile(StoredImage avatar, StoredImage banner) {}
+    /** The images a deleted row held; either may be null. */
+    record DeletedProfile(ImageId avatar, ImageId banner) {}
 }

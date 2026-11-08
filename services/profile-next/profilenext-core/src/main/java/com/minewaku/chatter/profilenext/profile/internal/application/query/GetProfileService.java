@@ -1,14 +1,17 @@
 package com.minewaku.chatter.profilenext.profile.internal.application.query;
 
 import com.minewaku.chatter.profilenext.profile.api.query.GetProfileUseCase;
-import com.minewaku.chatter.profilenext.profile.internal.model.Profile;
-import com.minewaku.chatter.profilenext.profile.internal.model.StoredImage;
+import com.minewaku.chatter.profilenext.profile.internal.model.ImageRef;
 import com.minewaku.chatter.profilenext.profile.internal.model.UserId;
 import com.minewaku.chatter.profilenext.profile.internal.port.query.ProfileQueryRepository;
+import com.minewaku.chatter.profilenext.profile.internal.port.query.ProfileQueryRepository.ProfileView;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Reads a profile; a user who never saved one gets the defaults, never an absence. */
+/**
+ * Reads a profile; a user who never saved one gets the defaults, never an absence. Images come back as an id and a
+ * promoted flag: building an address from them is not the core's job.
+ */
 @Service
 @Transactional(readOnly = true)
 public class GetProfileService implements GetProfileUseCase {
@@ -22,18 +25,18 @@ public class GetProfileService implements GetProfileUseCase {
     @Override
     public Result handle(Query query) {
         UserId userId = UserId.of(query.userId());
-        Profile profile = profiles.findByUserId(userId).orElseGet(() -> Profile.defaultsFor(userId));
+        ProfileView profile = profiles.findByUserId(userId).orElseGet(() -> ProfileView.defaultsFor(userId));
         return new Result(
                 profile.userId().value(),
-                profile.displayName(),
-                profile.bio(),
-                urlOf(profile.avatar()),
-                urlOf(profile.banner()),
+                profile.displayName() == null ? "" : profile.displayName().value(),
+                profile.bio().value(),
+                resultOf(profile.avatar()),
+                resultOf(profile.banner()),
                 profile.createdAt(),
                 profile.updatedAt());
     }
 
-    private static String urlOf(StoredImage image) {
-        return image == null ? null : image.url();
+    private static ImageResult resultOf(ImageRef image) {
+        return image == null ? null : new ImageResult(image.id().value().toString(), image.promoted());
     }
 }

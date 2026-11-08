@@ -1,5 +1,7 @@
 package com.minewaku.chatter.profilenext.infrastructure.adapter.outbound.profile.read.jdbc;
 
+import com.minewaku.chatter.profilenext.profile.internal.model.Bio;
+import com.minewaku.chatter.profilenext.profile.internal.model.DisplayName;
 import com.minewaku.chatter.profilenext.profile.internal.model.Profile;
 import com.minewaku.chatter.profilenext.profile.internal.model.StoredImage;
 import com.minewaku.chatter.profilenext.profile.internal.model.UserId;
@@ -55,12 +57,16 @@ public class JdbcProfileQueryRepository implements ProfileQueryRepository {
     private static Profile map(ResultSet rs, int rowNum) throws SQLException {
         return new Profile(
                 UserId.of(rs.getLong("user_id")),
-                rs.getString("display_name"),
-                rs.getString("bio"),
+                displayName(rs.getString("display_name")),
+                Bio.of(rs.getString("bio")),
                 image(rs.getString("avatar_public_id"), rs.getString("avatar_url")),
                 image(rs.getString("banner_public_id"), rs.getString("banner_url")),
                 instant(rs, "created_at"),
                 instant(rs, "updated_at"));
+    }
+
+    private static DisplayName displayName(String stored) {
+        return stored == null || stored.isBlank() ? null : DisplayName.of(stored);
     }
 
     private static StoredImage image(String publicId, String url) {

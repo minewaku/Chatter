@@ -4,8 +4,7 @@ package com.minewaku.chatter.profilenext.profile.api.exception;
 public class UploadConfirmationRejectedException extends RuntimeException {
 
     public enum Reason {
-        INVALID_SIGNATURE,
-        USER_MISMATCH
+        INVALID_SIGNATURE
     }
 
     private final Reason reason;

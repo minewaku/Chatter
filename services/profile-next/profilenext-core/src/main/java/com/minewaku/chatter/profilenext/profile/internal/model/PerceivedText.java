@@ -11,10 +11,6 @@ final class PerceivedText {
 
     private PerceivedText() {}
 
-    static String trim(String raw) {
-        return raw.strip();
-    }
-
     /**
      * Control characters, line and paragraph separators, and invisible format characters (zero-width space,
      * direction overrides, byte-order mark). The joiners and the tag characters that emoji sequences are built from

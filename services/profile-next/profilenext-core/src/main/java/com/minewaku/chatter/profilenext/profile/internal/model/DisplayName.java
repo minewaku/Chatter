@@ -19,7 +19,7 @@ public record DisplayName(String value) {
         if (value.length() > PerceivedText.MAX_RAW_UNITS) {
             throw new InvalidProfileValueException(FIELD, "display_name_length", LENGTH_MESSAGE);
         }
-        String trimmed = PerceivedText.trim(value);
+        String trimmed = value.strip();
         if (trimmed.isEmpty()) {
             throw new InvalidProfileValueException(FIELD, "display_name_blank", LENGTH_MESSAGE);
         }

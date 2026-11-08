@@ -3,8 +3,10 @@ package com.minewaku.chatter.profilenext.profile.internal.application.command;
 import com.minewaku.chatter.profilenext.profile.api.command.SweepUnreferencedImagesUseCase;
 import com.minewaku.chatter.profilenext.profile.api.exception.ImageStorageRateLimitedException;
 import com.minewaku.chatter.profilenext.profile.api.exception.ImageStorageUnavailableException;
-import com.minewaku.chatter.profilenext.profile.internal.model.StoredImageInfo;
-import com.minewaku.chatter.profilenext.profile.internal.model.StoredImagePage;
+import com.minewaku.chatter.profilenext.profile.internal.model.ImageId;
+import com.minewaku.chatter.profilenext.profile.internal.model.OwnedImage;
+import com.minewaku.chatter.profilenext.profile.internal.port.ImageStorage.StoredImageInfo;
+import com.minewaku.chatter.profilenext.profile.internal.port.ImageStorage.StoredImagePage;
 import com.minewaku.chatter.profilenext.profile.internal.port.ImageStorage;
 import com.minewaku.chatter.profilenext.profile.internal.port.query.ProfileQueryRepository;
 import com.minewaku.chatter.profilenext.profile.internal.port.repository.PendingImageRemovalRepository;
@@ -17,9 +19,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
- * Removes provider files that no profile references: uploads that were permitted but never confirmed, and files whose
- * queued removal was given up on. Files younger than the grace period, referenced files, and files with a live queue
- * row are left alone.
+ * Removes permanent provider files that no profile references: files whose queued removal was given up on, and strays
+ * left by races. Files younger than the grace period, referenced files, and files with a live queue row are left alone.
+ * The storage port lists permanent images only, so temporary uploads are never touched here.
  */
 @Service
 public class SweepUnreferencedImagesService implements SweepUnreferencedImagesUseCase {
@@ -63,28 +65,31 @@ public class SweepUnreferencedImagesService implements SweepUnreferencedImagesUs
     }
 
     private int sweep(List<StoredImageInfo> items, Instant cutoff) {
-        List<String> old = items.stream()
+        List<OwnedImage> old = items.stream()
                 .filter(item -> item.createdAt().isBefore(cutoff))
-                .map(StoredImageInfo::publicId)
+                .map(StoredImageInfo::image)
                 .toList();
         if (old.isEmpty()) {
             return 0;
         }
-        Set<String> referenced = profiles.findReferencedPublicIds(old);
-        Set<String> active = removals.findActivePublicIds(old);
+        Set<ImageId> referenced = profiles.findReferenced(old);
+        Set<ImageId> active = removals.findActive(old.stream().map(OwnedImage::imageId).toList());
         int removed = 0;
-        for (String publicId : old) {
-            if (referenced.contains(publicId) || active.contains(publicId)) {
+        for (OwnedImage image : old) {
+            if (referenced.contains(image.imageId()) || active.contains(image.imageId())) {
                 continue;
             }
             try {
-                storage.remove(publicId);
-                removals.clear(publicId);
+                storage.remove(image);
+                removals.clear(image.imageId());
                 removed++;
             } catch (ImageStorageRateLimitedException e) {
                 throw e;
             } catch (ImageStorageUnavailableException e) {
-                log.warn("image sweep could not remove a file, will retry next run publicId={}", publicId);
+                log.warn(
+                        "image sweep could not remove a file, will retry next run imageId={} userId={}",
+                        image.imageId().value(),
+                        image.userId().value());
             }
         }
         return removed;

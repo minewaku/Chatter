@@ -13,9 +13,9 @@ public interface ConfirmImageUploadUseCase
     enum Outcome {
         /** The profile now shows the new image. */
         APPLIED,
-        /** A repeat or an older upload: nothing changed. */
+        /** A repeat, an older upload, or an upload for a user who has no profile: nothing changed. */
         IGNORED,
-        /** The file broke the format or size rule; it was queued for removal and the profile is unchanged. */
+        /** The file broke the format, size or dimension rule; nothing was written and the file is left to expire. */
         FILE_NOT_ALLOWED
     }
 }

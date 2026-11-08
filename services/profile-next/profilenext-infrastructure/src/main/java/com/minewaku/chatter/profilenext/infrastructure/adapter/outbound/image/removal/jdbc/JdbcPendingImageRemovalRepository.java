@@ -1,7 +1,7 @@
 package com.minewaku.chatter.profilenext.infrastructure.adapter.outbound.image.removal.jdbc;
 
 import com.minewaku.chatter.profilenext.profile.internal.model.ImageSlot;
-import com.minewaku.chatter.profilenext.profile.internal.model.PendingRemoval;
+import com.minewaku.chatter.profilenext.profile.internal.port.repository.PendingImageRemovalRepository.PendingRemoval;
 import com.minewaku.chatter.profilenext.profile.internal.port.repository.PendingImageRemovalRepository;
 import java.time.Duration;
 import java.time.Instant;

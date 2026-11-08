@@ -78,7 +78,7 @@ public class JdbcProfileRepository implements ProfileRepository {
                 .single()
                 .orElse(null);
 
-        if (current != null && image.uploadId().compareTo(current.uploadId()) <= 0) {
+        if (current != null && !image.isNewerThan(current)) {
             return new Replacement(false, current);
         }
         jdbc.sql("UPDATE profile SET " + publicIdColumn + " = :publicId, " + urlColumn

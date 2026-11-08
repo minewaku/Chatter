@@ -16,7 +16,7 @@ public record Bio(String value) {
         if (value.length() > PerceivedText.MAX_RAW_UNITS) {
             throw new InvalidProfileValueException(FIELD, "bio_length", LENGTH_MESSAGE);
         }
-        String trimmed = PerceivedText.trim(value);
+        String trimmed = value.strip();
         if (PerceivedText.hasControlCharacters(trimmed)) {
             throw new InvalidProfileValueException(
                     FIELD, "bio_control_characters", "Bio must not contain control characters.");

@@ -5,16 +5,23 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.minewaku.chatter.profilenext.profile.api.command.ConfirmImageUploadUseCase;
 import com.minewaku.chatter.profilenext.profile.api.command.ConfirmImageUploadUseCase.Outcome;
+import com.minewaku.chatter.profilenext.profile.api.command.DeleteProfileDataUseCase;
 import com.minewaku.chatter.profilenext.profile.api.exception.UploadConfirmationRejectedException;
 import com.minewaku.chatter.profilenext.profile.api.exception.UploadConfirmationRejectedException.Reason;
 import com.minewaku.chatter.profilenext.profile.internal.application.command.ConfirmImageUploadService;
+import com.minewaku.chatter.profilenext.profile.internal.application.command.DeleteProfileDataService;
 import com.minewaku.chatter.profilenext.profile.internal.application.command.ImagePolicy;
 import com.minewaku.chatter.profilenext.profile.internal.application.fakes.FakeImageStorage;
 import com.minewaku.chatter.profilenext.profile.internal.application.fakes.FakeProfileStore;
+import com.minewaku.chatter.profilenext.profile.internal.application.fakes.FakePromotionQueue;
 import com.minewaku.chatter.profilenext.profile.internal.application.fakes.FakeRemovalQueue;
-import com.minewaku.chatter.profilenext.profile.internal.model.ConfirmedUpload;
+import com.minewaku.chatter.profilenext.profile.internal.application.fakes.ImageIds;
+import com.minewaku.chatter.profilenext.profile.internal.model.DisplayName;
+import com.minewaku.chatter.profilenext.profile.internal.model.ImageDimensions;
 import com.minewaku.chatter.profilenext.profile.internal.model.ImageSlot;
+import com.minewaku.chatter.profilenext.profile.internal.model.OwnedImage;
 import com.minewaku.chatter.profilenext.profile.internal.model.UserId;
+import com.minewaku.chatter.profilenext.profile.internal.port.ImageStorage.ConfirmedUpload;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -26,28 +33,46 @@ import org.junit.jupiter.api.Test;
 class ConfirmImageUploadServiceTest {
 
     private static final Instant NOW = Instant.parse("2026-11-04T10:00:00Z");
-    private static final String OLD = "0197aaaa-0000-7000-8000-000000000001";
-    private static final String NEW = "0197aaab-0000-7000-8000-000000000001";
+    private static final long AVATAR_BYTES = 5L * 1024 * 1024;
+    private static final long BANNER_BYTES = 10L * 1024 * 1024;
 
     private final FakeImageStorage storage = new FakeImageStorage();
-    private final FakeProfileStore profiles = new FakeProfileStore();
+    private final FakePromotionQueue promotions = new FakePromotionQueue();
+    private final FakeProfileStore profiles = new FakeProfileStore(promotions);
     private final FakeRemovalQueue removals = new FakeRemovalQueue();
     private final ImagePolicy policy = new ImagePolicy(
-            5L * 1024 * 1024,
-            10L * 1024 * 1024,
+            AVATAR_BYTES,
+            BANNER_BYTES,
+            1024,
+            2048,
             Set.of("jpg", "png", "webp"),
             Duration.ofMinutes(15),
             Duration.ofHours(2));
+    private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
     private final ConfirmImageUploadService service =
-            new ConfirmImageUploadService(storage, profiles, removals, policy, Clock.fixed(NOW, ZoneOffset.UTC));
+            new ConfirmImageUploadService(storage, profiles, removals, promotions, policy, clock);
 
-    private static String avatarId(long user, String uploadId) {
-        return "chatter/profile/avatars/" + user + "/" + uploadId;
+    private static OwnedImage image(long user, ImageSlot slot, int n) {
+        return new OwnedImage(UserId.of(user), slot, ImageIds.at(n));
     }
 
-    private static ConfirmedUpload avatar(long user, String uploadId) {
+    private static ConfirmedUpload upload(long user, ImageSlot slot, int n) {
+        return upload(user, slot, n, "png", 1000, 100, 100);
+    }
+
+    private static ConfirmedUpload upload(long user, ImageSlot slot, int n, String format, long bytes, int w, int h) {
         return new ConfirmedUpload(
-                UserId.of(user), ImageSlot.AVATAR, avatarId(user, uploadId), "https://img/" + uploadId, "png", 1000);
+                UserId.of(user), slot, ImageIds.at(n), format, bytes, new ImageDimensions(w, h));
+    }
+
+    /** A user with a saved profile (the row exists) and, optionally, an avatar already stored. */
+    private void profileWithAvatar(long user, Integer avatarId) {
+        profiles.applyEdit(UserId.of(user), DisplayName.of("User " + user), null, NOW);
+        if (avatarId != null) {
+            profiles.setImage(UserId.of(user), ImageSlot.AVATAR, ImageIds.at(avatarId), NOW);
+            promotions.enqueue(image(user, ImageSlot.AVATAR, avatarId), NOW);
+        }
+        profiles.calls.clear();
     }
 
     private ConfirmImageUploadUseCase.Result confirm(ConfirmedUpload upload) {
@@ -56,105 +81,164 @@ class ConfirmImageUploadServiceTest {
     }
 
     @Test
-    void aBadSignatureIsRejectedBeforeAnyRepositoryCall() {
+    void aNotificationThatFailsVerificationIsRejectedAndTouchesNothing() {
         storage.verifyResult = Optional.empty();
 
         assertThatThrownBy(() -> service.handle(new ConfirmImageUploadUseCase.Command(new byte[0], "x", "1")))
                 .isInstanceOfSatisfying(
                         UploadConfirmationRejectedException.class,
                         e -> assertThat(e.reason()).isEqualTo(Reason.INVALID_SIGNATURE));
+        assertThat(profiles.calls).isEmpty();
         assertThat(profiles.rows).isEmpty();
         assertThat(removals.rows).isEmpty();
+        assertThat(promotions.rows).isEmpty();
     }
 
     @Test
-    void aPublicIdOwnedBySomeoneElseIsAUserMismatchAndChangesNothing() {
-        ConfirmedUpload mismatch = new ConfirmedUpload(
-                UserId.of(7), ImageSlot.AVATAR, avatarId(8, NEW), "https://img/x", "png", 1000);
+    void aFormatOutsideTheAllowedListIsNotAllowedAndWritesNothing() {
+        profileWithAvatar(7, null);
 
-        assertThatThrownBy(() -> confirm(mismatch))
-                .isInstanceOfSatisfying(
-                        UploadConfirmationRejectedException.class,
-                        e -> assertThat(e.reason()).isEqualTo(Reason.USER_MISMATCH));
-        assertThat(profiles.rows).isEmpty();
-        assertThat(removals.rows).isEmpty();
-    }
-
-    @Test
-    void aFormatOutsideTheAllowedListIsReturnedAsNotAllowedAndTheFileIsQueued() {
-        ConfirmedUpload gif = new ConfirmedUpload(
-                UserId.of(7), ImageSlot.AVATAR, avatarId(7, NEW), "https://img/x", "gif", 1000);
-
-        var result = confirm(gif);
+        var result = confirm(upload(7, ImageSlot.AVATAR, 5, "gif", 1000, 100, 100));
 
         assertThat(result.outcome()).isEqualTo(Outcome.FILE_NOT_ALLOWED);
+        assertThat(profiles.calls).isEmpty();
+        assertThat(removals.rows).isEmpty();
+        assertThat(promotions.rows).isEmpty();
+        assertThat(profiles.rows.get(7L).avatar()).isNull();
+    }
+
+    @Test
+    void aFileOverTheByteOrDimensionLimitIsNotAllowedAndOneAtTheLimitIsNot() {
+        profileWithAvatar(7, null);
+
+        assertThat(confirm(upload(7, ImageSlot.AVATAR, 5, "png", AVATAR_BYTES + 1, 100, 100)).outcome())
+                .isEqualTo(Outcome.FILE_NOT_ALLOWED);
+        assertThat(confirm(upload(7, ImageSlot.AVATAR, 5, "png", 1000, 1025, 100)).outcome())
+                .isEqualTo(Outcome.FILE_NOT_ALLOWED);
+        assertThat(confirm(upload(7, ImageSlot.AVATAR, 5, "png", 1000, 100, 1025)).outcome())
+                .isEqualTo(Outcome.FILE_NOT_ALLOWED);
+        assertThat(profiles.calls).isEmpty();
+
+        assertThat(confirm(upload(7, ImageSlot.AVATAR, 5, "png", AVATAR_BYTES, 1024, 1024)).outcome())
+                .isEqualTo(Outcome.APPLIED);
+    }
+
+    @Test
+    void anUploadForAUserWithNoProfileIsIgnoredAndNoRowIsCreated() {
+        var result = confirm(upload(7, ImageSlot.AVATAR, 5));
+
+        assertThat(result.outcome()).isEqualTo(Outcome.IGNORED);
+        assertThat(profiles.calls).containsExactly("findForUpdate:7");
         assertThat(profiles.rows).isEmpty();
-        assertThat(removals.rows).containsKey(avatarId(7, NEW));
+        assertThat(removals.rows).isEmpty();
+        assertThat(promotions.rows).isEmpty();
     }
 
     @Test
-    void aFileOverTheSlotLimitIsNotAllowed() {
-        ConfirmedUpload big = new ConfirmedUpload(
-                UserId.of(7), ImageSlot.AVATAR, avatarId(7, NEW), "https://img/x", "png", 5L * 1024 * 1024 + 1);
-        ConfirmedUpload bigBanner = new ConfirmedUpload(
-                UserId.of(7),
-                ImageSlot.BANNER,
-                "chatter/profile/banners/7/" + NEW,
-                "https://img/b",
-                "png",
-                5L * 1024 * 1024 + 1);
+    void anEmptySlotTakesTheImageAndQueuesItForPromotion() {
+        profileWithAvatar(7, null);
 
-        assertThat(confirm(big).outcome()).isEqualTo(Outcome.FILE_NOT_ALLOWED);
-        // the same size is fine for a banner, whose limit is 10 MB
-        assertThat(confirm(bigBanner).outcome()).isEqualTo(Outcome.APPLIED);
-    }
-
-    @Test
-    void aValidConfirmationReplacesTheSlotAndQueuesThePreviousFile() {
-        confirm(avatar(7, OLD));
-
-        var result = confirm(avatar(7, NEW));
+        var result = confirm(upload(7, ImageSlot.AVATAR, 5));
 
         assertThat(result.outcome()).isEqualTo(Outcome.APPLIED);
-        assertThat(profiles.rows.get(7L).avatar().publicId()).isEqualTo(avatarId(7, NEW));
-        assertThat(removals.rows).containsOnlyKeys(avatarId(7, OLD));
-    }
-
-    @Test
-    void aProfileWithNoRowIsCreatedWithTheImage() {
-        var result = confirm(avatar(9, NEW));
-
-        assertThat(result.outcome()).isEqualTo(Outcome.APPLIED);
-        assertThat(profiles.rows.get(9L).avatar().url()).isEqualTo("https://img/" + NEW);
-        assertThat(profiles.rows.get(9L).displayName()).isEmpty();
-    }
-
-    @Test
-    void queuesNothingWhenSlotWasEmpty() {
-        confirm(avatar(7, NEW));
-
+        assertThat(profiles.rows.get(7L).avatar()).isEqualTo(ImageIds.at(5));
+        assertThat(promotions.rows).containsOnlyKeys(ImageIds.at(5));
+        assertThat(promotions.rows.get(ImageIds.at(5)).image).isEqualTo(image(7, ImageSlot.AVATAR, 5));
         assertThat(removals.rows).isEmpty();
     }
 
     @Test
-    void theSameConfirmationTwiceChangesNothingTheSecondTime() {
-        confirm(avatar(7, NEW));
+    void aNewerImageReplacesTheStoredOneQueuesItForRemovalAndCancelsItsPromotion() {
+        profileWithAvatar(7, 3);
 
-        var second = confirm(avatar(7, NEW));
+        var result = confirm(upload(7, ImageSlot.AVATAR, 5));
 
-        assertThat(second.outcome()).isEqualTo(Outcome.IGNORED);
-        assertThat(profiles.rows.get(7L).avatar().publicId()).isEqualTo(avatarId(7, NEW));
+        assertThat(result.outcome()).isEqualTo(Outcome.APPLIED);
+        assertThat(profiles.rows.get(7L).avatar()).isEqualTo(ImageIds.at(5));
+        assertThat(removals.rows).containsOnlyKeys(ImageIds.at(3));
+        assertThat(removals.rows.get(ImageIds.at(3)).image).isEqualTo(image(7, ImageSlot.AVATAR, 3));
+        assertThat(promotions.rows).containsOnlyKeys(ImageIds.at(5));
+    }
+
+    @Test
+    void anOlderImageIsIgnoredAndChangesNothing() {
+        profileWithAvatar(7, 5);
+
+        var result = confirm(upload(7, ImageSlot.AVATAR, 3));
+
+        assertThat(result.outcome()).isEqualTo(Outcome.IGNORED);
+        assertThat(profiles.rows.get(7L).avatar()).isEqualTo(ImageIds.at(5));
+        assertThat(removals.rows).isEmpty();
+        assertThat(promotions.rows).containsOnlyKeys(ImageIds.at(5));
+    }
+
+    @Test
+    void aRepeatOfTheStoredImageIsIgnoredAndChangesNothing() {
+        profileWithAvatar(7, 5);
+
+        var result = confirm(upload(7, ImageSlot.AVATAR, 5));
+
+        assertThat(result.outcome()).isEqualTo(Outcome.IGNORED);
+        assertThat(profiles.calls).containsExactly("findForUpdate:7");
+        assertThat(removals.rows).isEmpty();
+        assertThat(promotions.rows).hasSize(1);
+    }
+
+    @Test
+    void replayingTheSameNotificationLeavesOnePromotionAndNoRemoval() {
+        profileWithAvatar(7, null);
+
+        assertThat(confirm(upload(7, ImageSlot.AVATAR, 5)).outcome()).isEqualTo(Outcome.APPLIED);
+        assertThat(confirm(upload(7, ImageSlot.AVATAR, 5)).outcome()).isEqualTo(Outcome.IGNORED);
+        assertThat(confirm(upload(7, ImageSlot.AVATAR, 5)).outcome()).isEqualTo(Outcome.IGNORED);
+
+        assertThat(promotions.rows).hasSize(1);
         assertThat(removals.rows).isEmpty();
     }
 
     @Test
-    void anOlderUploadArrivingAfterANewerOneChangesNothingAndItsFileIsQueued() {
-        confirm(avatar(7, NEW));
+    void deliveringNotificationsOutOfOrderKeepsTheNewestImage() {
+        profileWithAvatar(7, null);
 
-        var late = confirm(avatar(7, OLD));
+        confirm(upload(7, ImageSlot.AVATAR, 6));
+        confirm(upload(7, ImageSlot.AVATAR, 4));
 
-        assertThat(late.outcome()).isEqualTo(Outcome.IGNORED);
-        assertThat(profiles.rows.get(7L).avatar().publicId()).isEqualTo(avatarId(7, NEW));
-        assertThat(removals.rows).containsOnlyKeys(avatarId(7, OLD));
+        assertThat(profiles.rows.get(7L).avatar()).isEqualTo(ImageIds.at(6));
+        assertThat(removals.rows).isEmpty();
+    }
+
+    @Test
+    void avatarAndBannerAreUpdatedIndependentlyInEitherOrder() {
+        profileWithAvatar(7, null);
+
+        confirm(upload(7, ImageSlot.BANNER, 8));
+        confirm(upload(7, ImageSlot.AVATAR, 5));
+
+        assertThat(profiles.rows.get(7L).avatar()).isEqualTo(ImageIds.at(5));
+        assertThat(profiles.rows.get(7L).banner()).isEqualTo(ImageIds.at(8));
+        assertThat(promotions.rows).containsOnlyKeys(ImageIds.at(5), ImageIds.at(8));
+    }
+
+    @Test
+    void theProfileIsLockedBeforeAnythingIsReadOrWritten() {
+        profileWithAvatar(7, 3);
+
+        confirm(upload(7, ImageSlot.AVATAR, 5));
+
+        assertThat(profiles.calls).containsExactly("findForUpdate:7", "setImage:7:AVATAR");
+    }
+
+    @Test
+    void aConfirmationAfterTheAccountWasDeletedIsIgnoredAndRecreatesNothing() {
+        profileWithAvatar(7, 3);
+        new DeleteProfileDataService(profiles, removals, promotions, clock)
+                .handle(new DeleteProfileDataUseCase.Command("0197-event", 7, NOW));
+
+        var result = confirm(upload(7, ImageSlot.AVATAR, 5));
+
+        assertThat(result.outcome()).isEqualTo(Outcome.IGNORED);
+        assertThat(profiles.rows).isEmpty();
+        assertThat(promotions.rows).isEmpty();
+        assertThat(removals.rows).containsOnlyKeys(ImageIds.at(3));
     }
 }

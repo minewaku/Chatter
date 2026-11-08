@@ -11,8 +11,11 @@ public interface GetProfileUseCase extends UseCaseHandler<GetProfileUseCase.Quer
             long userId,
             String displayName,
             String bio,
-            String avatarUrl,
-            String bannerUrl,
+            ImageResult avatar,
+            ImageResult banner,
             Instant createdAt,
             Instant updatedAt) {}
+
+    /** An image of the profile: its id, and whether it has been moved to permanent storage yet. */
+    record ImageResult(String imageId, boolean promoted) {}
 }

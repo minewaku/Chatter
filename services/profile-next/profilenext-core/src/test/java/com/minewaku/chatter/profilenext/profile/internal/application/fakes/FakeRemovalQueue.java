@@ -1,7 +1,7 @@
 package com.minewaku.chatter.profilenext.profile.internal.application.fakes;
 
-import com.minewaku.chatter.profilenext.profile.internal.model.ImageSlot;
-import com.minewaku.chatter.profilenext.profile.internal.model.PendingRemoval;
+import com.minewaku.chatter.profilenext.profile.internal.model.ImageId;
+import com.minewaku.chatter.profilenext.profile.internal.model.OwnedImage;
 import com.minewaku.chatter.profilenext.profile.internal.port.repository.PendingImageRemovalRepository;
 import java.time.Duration;
 import java.time.Instant;
@@ -13,28 +13,26 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-/** An in-memory removal queue that follows the SQL adapter's rules (lease, reported rows, ignore duplicates). */
+/** An in-memory removal queue that follows the port's rules (lease, reported rows, ignore duplicates). */
 public class FakeRemovalQueue implements PendingImageRemovalRepository {
 
     public static final class Row {
-        public final String publicId;
-        public final ImageSlot slot;
+        public final OwnedImage image;
         public int attempts;
         public Instant nextAttemptAt;
         public Instant reportedAt;
 
-        Row(String publicId, ImageSlot slot, Instant nextAttemptAt) {
-            this.publicId = publicId;
-            this.slot = slot;
+        Row(OwnedImage image, Instant nextAttemptAt) {
+            this.image = image;
             this.nextAttemptAt = nextAttemptAt;
         }
     }
 
-    public final Map<String, Row> rows = new LinkedHashMap<>();
+    public final Map<ImageId, Row> rows = new LinkedHashMap<>();
 
     @Override
-    public void enqueue(String publicId, ImageSlot slot, Instant now) {
-        rows.putIfAbsent(publicId, new Row(publicId, slot, now));
+    public void enqueue(OwnedImage image, Instant now) {
+        rows.putIfAbsent(image.imageId(), new Row(image, now));
     }
 
     @Override
@@ -45,32 +43,32 @@ public class FakeRemovalQueue implements PendingImageRemovalRepository {
                 .limit(limit)
                 .toList();
         due.forEach(row -> row.nextAttemptAt = now.plus(lease));
-        return due.stream().map(row -> new PendingRemoval(row.publicId, row.slot, row.attempts)).toList();
+        return due.stream().map(row -> new PendingRemoval(row.image, row.attempts)).toList();
     }
 
     @Override
-    public void markRemoved(String publicId) {
-        rows.remove(publicId);
+    public void markRemoved(ImageId imageId) {
+        rows.remove(imageId);
     }
 
     @Override
-    public void markFailed(String publicId, int attempts, Instant nextAttemptAt, Instant reportedAt) {
-        Row row = rows.get(publicId);
+    public void markFailed(ImageId imageId, int attempts, Instant nextAttemptAt, Instant reportedAt) {
+        Row row = rows.get(imageId);
         row.attempts = attempts;
         row.nextAttemptAt = nextAttemptAt;
         row.reportedAt = reportedAt;
     }
 
     @Override
-    public Set<String> findActivePublicIds(Collection<String> publicIds) {
+    public Set<ImageId> findActive(Collection<ImageId> imageIds) {
         return rows.values().stream()
-                .filter(row -> row.reportedAt == null && publicIds.contains(row.publicId))
-                .map(row -> row.publicId)
+                .filter(row -> row.reportedAt == null && imageIds.contains(row.image.imageId()))
+                .map(row -> row.image.imageId())
                 .collect(Collectors.toSet());
     }
 
     @Override
-    public void clear(String publicId) {
-        rows.remove(publicId);
+    public void clear(ImageId imageId) {
+        rows.remove(imageId);
     }
 }

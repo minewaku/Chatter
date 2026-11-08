@@ -1,7 +1,7 @@
 package com.minewaku.chatter.profilenext.profile.internal.application.command;
 
 import com.minewaku.chatter.profilenext.profile.api.command.RemoveObsoleteImagesUseCase;
-import com.minewaku.chatter.profilenext.profile.internal.model.PendingRemoval;
+import com.minewaku.chatter.profilenext.profile.internal.port.repository.PendingImageRemovalRepository.PendingRemoval;
 import com.minewaku.chatter.profilenext.profile.internal.port.ImageStorage;
 import com.minewaku.chatter.profilenext.profile.internal.port.repository.PendingImageRemovalRepository;
 import java.time.Clock;
@@ -43,8 +43,8 @@ public class RemoveObsoleteImagesService implements RemoveObsoleteImagesUseCase 
         int reported = 0;
         for (PendingRemoval row : due) {
             try {
-                storage.remove(row.publicId());
-                removals.markRemoved(row.publicId());
+                storage.remove(row.image());
+                removals.markRemoved(row.image().imageId());
                 removed++;
             } catch (RuntimeException e) {
                 failed++;
@@ -60,12 +60,20 @@ public class RemoveObsoleteImagesService implements RemoveObsoleteImagesUseCase 
     private boolean recordFailure(PendingRemoval row, Instant now) {
         int attempts = row.attempts() + 1;
         if (attempts > policy.maxRetries()) {
-            removals.markFailed(row.publicId(), attempts, now, now);
-            log.error("image removal gave up publicId={} attempts={}", row.publicId(), attempts);
+            removals.markFailed(row.image().imageId(), attempts, now, now);
+            log.error(
+                    "image removal gave up imageId={} userId={} attempts={}",
+                    row.image().imageId().value(),
+                    row.image().userId().value(),
+                    attempts);
             return true;
         }
-        removals.markFailed(row.publicId(), attempts, now.plus(policy.delayBeforeRetry(attempts)), null);
-        log.warn("image removal failed, will retry publicId={} attempts={}", row.publicId(), attempts);
+        removals.markFailed(row.image().imageId(), attempts, now.plus(policy.delayBeforeRetry(attempts)), null);
+        log.warn(
+                "image removal failed, will retry imageId={} userId={} attempts={}",
+                row.image().imageId().value(),
+                row.image().userId().value(),
+                attempts);
         return false;
     }
 }

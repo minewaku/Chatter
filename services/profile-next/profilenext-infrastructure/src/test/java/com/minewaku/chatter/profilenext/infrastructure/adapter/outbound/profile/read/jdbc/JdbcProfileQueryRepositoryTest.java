@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.minewaku.chatter.profilenext.infrastructure.support.JdbcTestConfiguration;
 import com.minewaku.chatter.profilenext.infrastructure.support.PostgreSqlTestSupport;
+import com.minewaku.chatter.profilenext.profile.internal.model.Bio;
+import com.minewaku.chatter.profilenext.profile.internal.model.DisplayName;
 import com.minewaku.chatter.profilenext.profile.internal.model.Profile;
 import com.minewaku.chatter.profilenext.profile.internal.model.UserId;
 import com.minewaku.chatter.profilenext.profile.internal.port.query.ProfileQueryRepository;
@@ -47,8 +49,8 @@ class JdbcProfileQueryRepositoryTest extends PostgreSqlTestSupport {
         assertThat(found).isPresent();
         Profile profile = found.get();
         assertThat(profile.userId().value()).isEqualTo(9_000_002L);
-        assertThat(profile.displayName()).isEqualTo("Mine");
-        assertThat(profile.bio()).isEqualTo("Hello");
+        assertThat(profile.displayName()).isEqualTo(DisplayName.of("Mine"));
+        assertThat(profile.bio()).isEqualTo(Bio.of("Hello"));
         assertThat(profile.avatar().publicId()).isEqualTo("chatter/profile/avatars/9000002/a");
         assertThat(profile.avatar().url()).isEqualTo("https://img/a");
         assertThat(profile.banner().publicId()).isEqualTo("chatter/profile/banners/9000002/b");
@@ -66,8 +68,8 @@ class JdbcProfileQueryRepositoryTest extends PostgreSqlTestSupport {
 
         assertThat(profile.avatar()).isNull();
         assertThat(profile.banner()).isNull();
-        assertThat(profile.displayName()).isEmpty();
-        assertThat(profile.bio()).isEmpty();
+        assertThat(profile.displayName()).isNull();
+        assertThat(profile.bio()).isEqualTo(Bio.of(""));
     }
 
     @Test

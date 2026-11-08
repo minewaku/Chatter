@@ -2,31 +2,52 @@ package com.minewaku.chatter.profilenext.profile.internal.application.fakes;
 
 import com.minewaku.chatter.profilenext.profile.internal.model.Bio;
 import com.minewaku.chatter.profilenext.profile.internal.model.DisplayName;
+import com.minewaku.chatter.profilenext.profile.internal.model.ImageId;
+import com.minewaku.chatter.profilenext.profile.internal.model.ImageRef;
 import com.minewaku.chatter.profilenext.profile.internal.model.ImageSlot;
+import com.minewaku.chatter.profilenext.profile.internal.model.OwnedImage;
 import com.minewaku.chatter.profilenext.profile.internal.model.Profile;
-import com.minewaku.chatter.profilenext.profile.internal.model.StoredImage;
 import com.minewaku.chatter.profilenext.profile.internal.model.UserId;
 import com.minewaku.chatter.profilenext.profile.internal.port.query.ProfileQueryRepository;
 import com.minewaku.chatter.profilenext.profile.internal.port.repository.ProfileRepository;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
-/** An in-memory stand-in for both profile ports, with the same rules as the SQL adapters. */
+/**
+ * An in-memory stand-in for both profile ports, with the same rules as the SQL adapters. It cannot show real mutual
+ * exclusion, so it records the order of calls in {@link #calls} for tests that check "lock first".
+ */
 public class FakeProfileStore implements ProfileRepository, ProfileQueryRepository {
 
     public final Map<Long, Profile> rows = new HashMap<>();
 
+    /** Calls made, in order, as {@code findForUpdate:<user>}, {@code setImage:<user>:<slot>}, {@code clearImageIf:<user>:<slot>}. */
+    public final List<String> calls = new ArrayList<>();
+
+    private final FakePromotionQueue promotions;
+
+    public FakeProfileStore(FakePromotionQueue promotions) {
+        this.promotions = promotions;
+    }
+
+    public FakeProfileStore() {
+        this(new FakePromotionQueue());
+    }
+
     @Override
     public boolean applyEdit(UserId userId, DisplayName displayName, Bio bio, Instant now) {
         Profile existing = rows.get(userId.value());
-        String name = displayName != null ? displayName.value() : existing == null ? "" : existing.displayName();
-        String text = bio != null ? bio.value() : existing == null ? "" : existing.bio();
-        if (existing != null && existing.displayName().equals(name) && existing.bio().equals(text)) {
+        DisplayName name = displayName != null ? displayName : existing == null ? null : existing.displayName();
+        Bio text = bio != null ? bio : existing == null ? Bio.of("") : existing.bio();
+        if (existing != null && Objects.equals(existing.displayName(), name) && existing.bio().equals(text)) {
             return false;
         }
         rows.put(
@@ -43,28 +64,41 @@ public class FakeProfileStore implements ProfileRepository, ProfileQueryReposito
     }
 
     @Override
-    public Replacement replaceImage(UserId userId, ImageSlot slot, StoredImage image, Instant now) {
-        Profile existing = rows.getOrDefault(userId.value(), emptyRow(userId, now));
-        StoredImage current = slot == ImageSlot.AVATAR ? existing.avatar() : existing.banner();
-        if (current != null && image.uploadId().compareTo(current.uploadId()) <= 0) {
-            rows.putIfAbsent(userId.value(), existing);
-            return new Replacement(false, current);
-        }
-        rows.put(
-                userId.value(),
-                new Profile(
-                        userId,
-                        existing.displayName(),
-                        existing.bio(),
-                        slot == ImageSlot.AVATAR ? image : existing.avatar(),
-                        slot == ImageSlot.BANNER ? image : existing.banner(),
-                        existing.createdAt(),
-                        now));
-        return new Replacement(true, current);
+    public Optional<Profile> findForUpdate(UserId userId) {
+        calls.add("findForUpdate:" + userId.value());
+        return Optional.ofNullable(rows.get(userId.value()));
     }
 
-    private static Profile emptyRow(UserId userId, Instant now) {
-        return new Profile(userId, "", "", null, null, now, now);
+    @Override
+    public void setImage(UserId userId, ImageSlot slot, ImageId imageId, Instant now) {
+        calls.add("setImage:" + userId.value() + ":" + slot);
+        Profile existing = rows.get(userId.value());
+        if (existing == null) {
+            throw new IllegalStateException("setImage called without a row for user " + userId.value());
+        }
+        rows.put(userId.value(), withImage(existing, slot, imageId, now));
+    }
+
+    @Override
+    public boolean clearImageIf(UserId userId, ImageSlot slot, ImageId imageId, Instant now) {
+        calls.add("clearImageIf:" + userId.value() + ":" + slot);
+        Profile existing = rows.get(userId.value());
+        if (existing == null || !imageId.equals(existing.imageIn(slot))) {
+            return false;
+        }
+        rows.put(userId.value(), withImage(existing, slot, null, now));
+        return true;
+    }
+
+    private static Profile withImage(Profile profile, ImageSlot slot, ImageId imageId, Instant now) {
+        return new Profile(
+                profile.userId(),
+                profile.displayName(),
+                profile.bio(),
+                slot == ImageSlot.AVATAR ? imageId : profile.avatar(),
+                slot == ImageSlot.BANNER ? imageId : profile.banner(),
+                profile.createdAt(),
+                now);
     }
 
     @Override
@@ -74,18 +108,32 @@ public class FakeProfileStore implements ProfileRepository, ProfileQueryReposito
     }
 
     @Override
-    public Optional<Profile> findByUserId(UserId userId) {
-        return Optional.ofNullable(rows.get(userId.value()));
+    public Optional<ProfileView> findByUserId(UserId userId) {
+        Profile profile = rows.get(userId.value());
+        if (profile == null) {
+            return Optional.empty();
+        }
+        return Optional.of(new ProfileView(
+                profile.userId(),
+                profile.displayName(),
+                profile.bio(),
+                refOf(profile.avatar()),
+                refOf(profile.banner()),
+                profile.createdAt(),
+                profile.updatedAt()));
+    }
+
+    private ImageRef refOf(ImageId id) {
+        return id == null ? null : new ImageRef(id, !promotions.rows.containsKey(id));
     }
 
     @Override
-    public Set<String> findReferencedPublicIds(Collection<String> publicIds) {
-        Set<String> referenced = new HashSet<>();
-        for (Profile profile : rows.values()) {
-            for (StoredImage image : new StoredImage[] {profile.avatar(), profile.banner()}) {
-                if (image != null && publicIds.contains(image.publicId())) {
-                    referenced.add(image.publicId());
-                }
+    public Set<ImageId> findReferenced(Collection<OwnedImage> images) {
+        Set<ImageId> referenced = new HashSet<>();
+        for (OwnedImage image : images) {
+            Profile owner = rows.get(image.userId().value());
+            if (owner != null && image.imageId().equals(owner.imageIn(image.slot()))) {
+                referenced.add(image.imageId());
             }
         }
         return referenced;

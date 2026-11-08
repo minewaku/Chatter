@@ -8,7 +8,9 @@ import com.minewaku.chatter.profilenext.profile.api.exception.InvalidProfileValu
 import com.minewaku.chatter.profilenext.profile.internal.application.command.SaveProfileService;
 import com.minewaku.chatter.profilenext.profile.internal.application.fakes.FakeProfileStore;
 import com.minewaku.chatter.profilenext.profile.internal.model.Bio;
+import com.minewaku.chatter.profilenext.profile.internal.application.fakes.ImageIds;
 import com.minewaku.chatter.profilenext.profile.internal.model.DisplayName;
+import com.minewaku.chatter.profilenext.profile.internal.model.ImageSlot;
 import com.minewaku.chatter.profilenext.profile.internal.model.UserId;
 import java.time.Clock;
 import java.time.Instant;
@@ -102,5 +104,31 @@ class SaveProfileServiceTest {
         serviceAt(later).handle(new SaveProfileUseCase.Command(7, "Mine", null));
 
         assertThat(profiles.calls).extracting(Call::now).containsExactly(NOW, later);
+    }
+
+    @Test
+    void savingTextLeavesBothImageSlotsUntouched() {
+        FakeProfileStore store = new FakeProfileStore();
+        store.applyEdit(UserId.of(7), DisplayName.of("Before"), null, NOW);
+        store.setImage(UserId.of(7), ImageSlot.AVATAR, ImageIds.at(1), NOW);
+        store.setImage(UserId.of(7), ImageSlot.BANNER, ImageIds.at(2), NOW);
+
+        var result = new SaveProfileService(store, Clock.fixed(NOW.plusSeconds(60), ZoneOffset.UTC))
+                .handle(new SaveProfileUseCase.Command(7, "After", "New bio"));
+
+        assertThat(result.changed()).isTrue();
+        assertThat(store.rows.get(7L).displayName().value()).isEqualTo("After");
+        assertThat(store.rows.get(7L).avatar()).isEqualTo(ImageIds.at(1));
+        assertThat(store.rows.get(7L).banner()).isEqualTo(ImageIds.at(2));
+    }
+
+    @Test
+    void anInvalidBioIsRefusedAndNothingIsWritten() {
+        FakeProfileStore store = new FakeProfileStore();
+        SaveProfileService service = new SaveProfileService(store, Clock.fixed(NOW, ZoneOffset.UTC));
+
+        assertThatThrownBy(() -> service.handle(new SaveProfileUseCase.Command(7, null, "x".repeat(5000))))
+                .isInstanceOf(InvalidProfileValueException.class);
+        assertThat(store.rows).isEmpty();
     }
 }
