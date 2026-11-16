@@ -37,15 +37,16 @@ class ImageFlowE2eTest extends ImageE2eSupport {
     }
 
     @Test
-    void theTicketPointsStraightAtTheStorageAndSignsExactlyTheDeclaredFile() throws Exception {
+    void theTicketIsASignedFormPostToCloudinaryAtTheImagePath() throws Exception {
         long user = newUser();
 
         HttpResponse<String> ticket = requestTicket(user, "banner", "image/webp", 4321);
 
         assertThat(ticket.statusCode()).isEqualTo(200);
         String imageId = string(ticket.body(), "imageId");
-        assertThat(string(ticket.body(), "uploadUrl")).contains("/" + BUCKET + "/" + keyOf(user, "banner", imageId));
-        assertThat(ticket.body()).contains("\"method\":\"PUT\"").contains("\"Content-Type\":\"image/webp\"").contains("\"Content-Length\":\"4321\"");
+        assertThat(string(ticket.body(), "uploadUrl")).isEqualTo("https://api.cloudinary.com/v1_1/demo/image/upload");
+        assertThat(string(ticket.body(), "public_id")).isEqualTo(keyOf(user, "banner", imageId));
+        assertThat(ticket.body()).contains("\"method\":\"POST\"").contains("\"overwrite\":\"false\"").contains("\"signature\":\"fake-signature\"");
         assertThat(ledgerRows(user)).isEqualTo(1);
     }
 
@@ -127,7 +128,7 @@ class ImageFlowE2eTest extends ImageE2eSupport {
         assertThat(early.statusCode()).isEqualTo(409);
         assertThat(early.body()).contains("\"code\":\"upload_incomplete\"");
 
-        STORAGE.putViaUrl(string(ticket.body(), "uploadUrl"), ImageFixtures.png(512, 512), "image/png");
+        STORAGE.upload(string(ticket.body(), "public_id"), ImageFixtures.png(512, 512), "image/png");
         assertThat(commit(user, "avatar", imageId).statusCode()).isEqualTo(200);
     }
 

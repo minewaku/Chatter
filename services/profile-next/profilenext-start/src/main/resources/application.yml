@@ -62,17 +62,17 @@ profile-next:
       max-interval: PT30S
       max-elapsed: PT2M
   images:
-    # one S3-compatible bucket: clients upload to it with a short-lived signed PUT, the service never receives the file
-    endpoint: ${PROFILE_NEXT_STORAGE_ENDPOINT:}
-    region: ${PROFILE_NEXT_STORAGE_REGION:auto}
-    path-style: ${PROFILE_NEXT_STORAGE_PATH_STYLE:false}
-    bucket: ${PROFILE_NEXT_STORAGE_BUCKET:}
-    # public address of the bucket (a CDN in front of it); an image is shown at {public-base-url}/profiles/{userId}/{slot}/{imageId}
+    # Cloudinary: clients upload to it with a short-lived signed form POST, the service never receives the file.
+    # The three credentials come from Vault (secret/profilenext: cloudinary.cloud-name, .api-key, .api-secret); the
+    # underscore spelling that configure-secrets.sh writes is accepted too. Empty when Vault is not reachable.
+    cloud-name: ${cloudinary.cloud-name:${cloudinary.cloud_name:}}
+    api-key: ${cloudinary.api-key:${cloudinary.api_key:}}
+    api-secret: ${cloudinary.api-secret:${cloudinary.api_secret:}}
+    # must match the signature algorithm set in the Cloudinary console (SHA-1 is the default there)
+    signature-algorithm: SHA-1
+    # address images are shown at: {public-base-url}/profiles/{userId}/{slot}/{imageId}
+    # for Cloudinary: https://res.cloudinary.com/<cloud-name>/image/upload (or a CDN / custom domain in front of it)
     public-base-url: ${PROFILE_NEXT_PUBLIC_BASE_URL:}
-    # from Vault (secret/profilenext: storage.access-key, storage.secret-key); the underscore spelling that
-    # configure-secrets.sh writes is accepted too. Empty when Vault is not reachable.
-    access-key: ${storage.access-key:${storage.access_key:}}
-    secret-key: ${storage.secret-key:${storage.secret_key:}}
     # how long an upload ticket works, and how long after that its key is still left alone by the sweeper
     ticket-lifetime: PT5M
     grace: PT10M

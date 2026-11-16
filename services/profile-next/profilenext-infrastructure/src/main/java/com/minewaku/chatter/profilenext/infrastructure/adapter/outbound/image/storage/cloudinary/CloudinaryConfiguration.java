@@ -1,9 +1,11 @@
-package com.minewaku.chatter.profilenext.infrastructure.adapter.outbound.image.storage.s3;
+package com.minewaku.chatter.profilenext.infrastructure.adapter.outbound.image.storage.cloudinary;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.SignatureAlgorithm;
+import com.cloudinary.utils.ObjectUtils;
 import com.minewaku.chatter.profilenext.profile.api.exception.ImageStorageUnavailableException;
 import com.minewaku.chatter.profilenext.profile.internal.application.command.ImagePolicy;
 import com.minewaku.chatter.profilenext.profile.internal.application.command.SweepPolicy;
-import java.time.Duration;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
@@ -12,28 +14,28 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/** Builds the storage client and the plain-record policies the core's services are constructed with. */
+/** Builds the Cloudinary client and the plain-record policies the core's services are constructed with. */
 @Configuration
 @EnableConfigurationProperties(ImageStorageProperties.class)
-public class ObjectStorageConfiguration {
+public class CloudinaryConfiguration {
 
     /**
      * Without credentials the service still starts, as it does without Vault; every storage call then fails as
      * "unavailable" instead of the bean failing at start-up.
      */
     @Bean
-    ObjectStoreClient objectStoreClient(ImageStorageProperties properties) {
+    CloudinaryClient cloudinaryClient(ImageStorageProperties properties) {
         if (!properties.credentialsConfigured()) {
-            return new UnconfiguredObjectStoreClient();
+            return new UnconfiguredCloudinaryClient();
         }
-        return new SdkObjectStoreClient(
-                properties.endpoint(),
-                properties.region(),
-                properties.pathStyle(),
-                properties.accessKey(),
-                properties.secretKey(),
-                properties.apiCallTimeout(),
-                properties.apiCallAttemptTimeout());
+        Cloudinary cloudinary = new Cloudinary(ObjectUtils.asMap(
+                "cloud_name", properties.cloudName(),
+                "api_key", properties.apiKey(),
+                "api_secret", properties.apiSecret(),
+                "secure", true));
+        cloudinary.config.signatureAlgorithm =
+                properties.signatureAlgorithm().equals("SHA-256") ? SignatureAlgorithm.SHA256 : SignatureAlgorithm.SHA1;
+        return new SdkCloudinaryClient(cloudinary, properties.deliveryUrl(), properties.apiCallTimeout());
     }
 
     @Bean
@@ -57,30 +59,30 @@ public class ObjectStorageConfiguration {
         return new SweepPolicy(properties.sweep().batchSize(), properties.sweep().retryDelay());
     }
 
-    /** Stands in while no storage credentials are configured. */
-    static final class UnconfiguredObjectStoreClient implements ObjectStoreClient {
+    /** Stands in while no Cloudinary credentials are configured. */
+    static final class UnconfiguredCloudinaryClient implements CloudinaryClient {
 
         private static ImageStorageUnavailableException unavailable() {
             return new ImageStorageUnavailableException("image storage is not configured");
         }
 
         @Override
-        public PresignedPut presignPut(String bucket, String key, String contentType, long contentLength, Duration validFor) {
+        public String sign(java.util.Map<String, Object> params) {
             throw unavailable();
         }
 
         @Override
-        public Optional<ObjectHead> head(String bucket, String key) {
+        public Optional<Asset> asset(String publicId) {
             throw unavailable();
         }
 
         @Override
-        public byte[] readRange(String bucket, String key, long from, long toInclusive) {
+        public byte[] readHeader(String publicId, int maxBytes) {
             throw unavailable();
         }
 
         @Override
-        public void delete(String bucket, String key) {
+        public void destroy(String publicId) {
             throw unavailable();
         }
     }

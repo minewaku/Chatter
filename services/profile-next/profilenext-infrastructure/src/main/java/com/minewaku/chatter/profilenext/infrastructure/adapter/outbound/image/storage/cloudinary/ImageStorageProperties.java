@@ -1,4 +1,4 @@
-package com.minewaku.chatter.profilenext.infrastructure.adapter.outbound.image.storage.s3;
+package com.minewaku.chatter.profilenext.infrastructure.adapter.outbound.image.storage.cloudinary;
 
 import java.time.Duration;
 import java.util.List;
@@ -6,18 +6,16 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.util.unit.DataSize;
 
 /**
- * Image settings ({@code profile-next.images.*}). The two storage credentials arrive through placeholders that read
- * Vault; {@link #toString()} leaves them out so a property dump never shows them.
+ * Image settings ({@code profile-next.images.*}). The three Cloudinary credentials arrive through placeholders that
+ * read Vault; {@link #toString()} leaves them out so a property dump never shows them.
  */
 @ConfigurationProperties("profile-next.images")
 public record ImageStorageProperties(
-        String endpoint,
-        String region,
-        Boolean pathStyle,
-        String accessKey,
-        String secretKey,
-        String bucket,
-        String publicBaseUrl,
+        String cloudName,
+        String apiKey,
+        String apiSecret,
+        String signatureAlgorithm,
+        String deliveryUrl,
         Duration ticketLifetime,
         Duration grace,
         MaxBytes maxBytes,
@@ -25,17 +23,21 @@ public record ImageStorageProperties(
         List<String> allowedFormats,
         DataSize inspectBytes,
         Duration apiCallTimeout,
-        Duration apiCallAttemptTimeout,
         Sweep sweep) {
 
     public ImageStorageProperties {
-        endpoint = endpoint == null ? "" : endpoint.strip();
-        region = region == null || region.isBlank() ? "auto" : region.strip();
-        pathStyle = pathStyle != null && pathStyle;
-        accessKey = accessKey == null ? "" : accessKey;
-        secretKey = secretKey == null ? "" : secretKey;
-        bucket = bucket == null ? "" : bucket.strip();
-        publicBaseUrl = publicBaseUrl == null ? "" : publicBaseUrl.strip();
+        cloudName = cloudName == null ? "" : cloudName.strip();
+        apiKey = apiKey == null ? "" : apiKey.strip();
+        apiSecret = apiSecret == null ? "" : apiSecret;
+        if (signatureAlgorithm == null || signatureAlgorithm.isBlank()) {
+            signatureAlgorithm = "SHA-1";
+        }
+        if (!signatureAlgorithm.equals("SHA-1") && !signatureAlgorithm.equals("SHA-256")) {
+            throw new IllegalArgumentException("profile-next.images.signature-algorithm must be SHA-1 or SHA-256");
+        }
+        deliveryUrl = deliveryUrl == null || deliveryUrl.isBlank()
+                ? "https://res.cloudinary.com/" + cloudName + "/image/upload"
+                : stripTrailingSlashes(deliveryUrl.strip());
         ticketLifetime = ticketLifetime == null ? Duration.ofMinutes(5) : ticketLifetime;
         grace = grace == null ? Duration.ofMinutes(10) : grace;
         maxBytes = maxBytes == null ? new MaxBytes(null, null) : maxBytes;
@@ -44,13 +46,20 @@ public record ImageStorageProperties(
                 allowedFormats == null || allowedFormats.isEmpty() ? List.of("jpg", "png", "webp") : allowedFormats;
         inspectBytes = inspectBytes == null ? DataSize.ofKilobytes(512) : inspectBytes;
         apiCallTimeout = apiCallTimeout == null ? Duration.ofSeconds(5) : apiCallTimeout;
-        apiCallAttemptTimeout = apiCallAttemptTimeout == null ? Duration.ofSeconds(3) : apiCallAttemptTimeout;
         sweep = sweep == null ? new Sweep(null, null) : sweep;
     }
 
-    /** True when the credentials and the bucket name are set; without them every storage call is "unavailable". */
+    /** True when all three credentials are set; without them every storage call is "unavailable". */
     public boolean credentialsConfigured() {
-        return !accessKey.isBlank() && !secretKey.isBlank() && !bucket.isBlank();
+        return !cloudName.isBlank() && !apiKey.isBlank() && !apiSecret.isBlank();
+    }
+
+    private static String stripTrailingSlashes(String value) {
+        String result = value;
+        while (result.endsWith("/")) {
+            result = result.substring(0, result.length() - 1);
+        }
+        return result;
     }
 
     public record MaxBytes(DataSize avatar, DataSize banner) {
@@ -80,7 +89,7 @@ public record ImageStorageProperties(
 
     @Override
     public String toString() {
-        return "ImageStorageProperties[endpoint=" + endpoint + ", region=" + region + ", bucket=" + bucket
+        return "ImageStorageProperties[cloudName=" + cloudName + ", deliveryUrl=" + deliveryUrl
                 + ", credentialsConfigured=" + credentialsConfigured() + "]";
     }
 }
