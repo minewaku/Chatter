@@ -3,13 +3,14 @@ package com.minewaku.chatter.profilenext.infrastructure.adapter.outbound.profile
 import com.minewaku.chatter.profilenext.profile.internal.model.Bio;
 import com.minewaku.chatter.profilenext.profile.internal.model.DisplayName;
 import com.minewaku.chatter.profilenext.profile.internal.model.ImageSlot;
-import com.minewaku.chatter.profilenext.profile.internal.model.StoredImage;
+import com.minewaku.chatter.profilenext.profile.internal.model.ImageId;
 import com.minewaku.chatter.profilenext.profile.internal.model.UserId;
 import com.minewaku.chatter.profilenext.profile.internal.port.repository.ProfileRepository;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,17 +50,23 @@ public class JdbcProfileRepository implements ProfileRepository {
         return written > 0;
     }
 
+    @Override
+    public Optional<ImageId> currentImage(UserId userId, ImageSlot slot) {
+        return jdbc.sql("SELECT " + column(slot) + " FROM profile WHERE user_id = :userId")
+                .param("userId", userId.value())
+                .query((rs, rowNum) -> Optional.ofNullable(rs.getObject(1, UUID.class)).map(ImageId::new))
+                .optional()
+                .flatMap(image -> image);
+    }
+
     /**
-     * Makes sure the row exists, locks it, and replaces the slot only when the new upload id is greater (ids are
-     * time-ordered and compare as text). {@code updated_at} moves only when the slot changed.
+     * Makes sure the row exists, locks it, and sets the slot; the lock is what serialises two commits of one user.
+     * Returns what the slot held before.
      */
     @Override
     @Transactional
-    public Replacement replaceImage(UserId userId, ImageSlot slot, StoredImage image, Instant now) {
+    public Optional<ImageId> replaceImage(UserId userId, ImageSlot slot, ImageId imageId, Instant now) {
         OffsetDateTime at = OffsetDateTime.ofInstant(now, ZoneOffset.UTC);
-        String publicIdColumn = slot == ImageSlot.AVATAR ? "avatar_public_id" : "banner_public_id";
-        String urlColumn = slot == ImageSlot.AVATAR ? "avatar_url" : "banner_url";
-
         jdbc.sql("""
                         INSERT INTO profile (user_id, created_at, updated_at) VALUES (:userId, :now, :now)
                         ON CONFLICT (user_id) DO NOTHING
@@ -67,44 +74,55 @@ public class JdbcProfileRepository implements ProfileRepository {
                 .param("userId", userId.value())
                 .param("now", at)
                 .update();
-
-        StoredImage current = jdbc.sql("SELECT " + publicIdColumn + ", " + urlColumn
-                        + " FROM profile WHERE user_id = :userId FOR UPDATE")
-                .param("userId", userId.value())
-                .query((rs, rowNum) -> {
-                    String publicId = rs.getString(1);
-                    return Optional.ofNullable(publicId == null ? null : new StoredImage(publicId, rs.getString(2)));
-                })
-                .single()
-                .orElse(null);
-
-        if (current != null && !image.isNewerThan(current)) {
-            return new Replacement(false, current);
-        }
-        jdbc.sql("UPDATE profile SET " + publicIdColumn + " = :publicId, " + urlColumn
-                        + " = :url, updated_at = :now WHERE user_id = :userId")
-                .param("publicId", image.publicId())
-                .param("url", image.url())
+        Optional<ImageId> previous = lockedImage(userId, slot);
+        jdbc.sql("UPDATE profile SET " + column(slot) + " = :imageId, updated_at = :now WHERE user_id = :userId")
+                .param("imageId", imageId.value())
                 .param("now", at)
                 .param("userId", userId.value())
                 .update();
-        return new Replacement(true, current);
+        return previous;
+    }
+
+    @Override
+    @Transactional
+    public Optional<ImageId> removeImage(UserId userId, ImageSlot slot, Instant now) {
+        Optional<ImageId> previous = lockedImage(userId, slot);
+        if (previous.isPresent()) {
+            jdbc.sql("UPDATE profile SET " + column(slot) + " = NULL, updated_at = :now WHERE user_id = :userId")
+                    .param("now", OffsetDateTime.ofInstant(now, ZoneOffset.UTC))
+                    .param("userId", userId.value())
+                    .update();
+        }
+        return previous;
+    }
+
+    private Optional<ImageId> lockedImage(UserId userId, ImageSlot slot) {
+        return jdbc.sql("SELECT " + column(slot) + " FROM profile WHERE user_id = :userId FOR UPDATE")
+                .param("userId", userId.value())
+                .query((rs, rowNum) -> Optional.ofNullable(rs.getObject(1, UUID.class)).map(ImageId::new))
+                .optional()
+                .flatMap(image -> image);
+    }
+
+    /** One of two fixed column names, never request text. */
+    private static String column(ImageSlot slot) {
+        return slot == ImageSlot.AVATAR ? "avatar_image_id" : "banner_image_id";
     }
 
     @Override
     public Optional<DeletedProfile> deleteByUserId(UserId userId) {
         return jdbc.sql("""
                         DELETE FROM profile WHERE user_id = :userId
-                        RETURNING avatar_public_id, avatar_url, banner_public_id, banner_url
+                        RETURNING avatar_image_id, banner_image_id
                         """)
                 .param("userId", userId.value())
                 .query((rs, rowNum) -> new DeletedProfile(
-                        rs.getString("avatar_public_id") == null
-                                ? null
-                                : new StoredImage(rs.getString("avatar_public_id"), rs.getString("avatar_url")),
-                        rs.getString("banner_public_id") == null
-                                ? null
-                                : new StoredImage(rs.getString("banner_public_id"), rs.getString("banner_url"))))
+                        imageId(rs.getObject("avatar_image_id", UUID.class)),
+                        imageId(rs.getObject("banner_image_id", UUID.class))))
                 .optional();
+    }
+
+    private static ImageId imageId(UUID value) {
+        return value == null ? null : new ImageId(value);
     }
 }

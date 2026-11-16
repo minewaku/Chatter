@@ -3,44 +3,21 @@ package com.minewaku.chatter.profilenext.profile.internal.application.fakes;
 import com.minewaku.chatter.profilenext.profile.internal.model.Bio;
 import com.minewaku.chatter.profilenext.profile.internal.model.DisplayName;
 import com.minewaku.chatter.profilenext.profile.internal.model.ImageId;
-import com.minewaku.chatter.profilenext.profile.internal.model.ImageRef;
 import com.minewaku.chatter.profilenext.profile.internal.model.ImageSlot;
-import com.minewaku.chatter.profilenext.profile.internal.model.OwnedImage;
 import com.minewaku.chatter.profilenext.profile.internal.model.Profile;
 import com.minewaku.chatter.profilenext.profile.internal.model.UserId;
 import com.minewaku.chatter.profilenext.profile.internal.port.query.ProfileQueryRepository;
 import com.minewaku.chatter.profilenext.profile.internal.port.repository.ProfileRepository;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 
-/**
- * An in-memory stand-in for both profile ports, with the same rules as the SQL adapters. It cannot show real mutual
- * exclusion, so it records the order of calls in {@link #calls} for tests that check "lock first".
- */
+/** An in-memory stand-in for both profile ports, with the same rules as the SQL adapters. */
 public class FakeProfileStore implements ProfileRepository, ProfileQueryRepository {
 
     public final Map<Long, Profile> rows = new HashMap<>();
-
-    /** Calls made, in order, as {@code findForUpdate:<user>}, {@code setImage:<user>:<slot>}, {@code clearImageIf:<user>:<slot>}. */
-    public final List<String> calls = new ArrayList<>();
-
-    private final FakePromotionQueue promotions;
-
-    public FakeProfileStore(FakePromotionQueue promotions) {
-        this.promotions = promotions;
-    }
-
-    public FakeProfileStore() {
-        this(new FakePromotionQueue());
-    }
 
     @Override
     public boolean applyEdit(UserId userId, DisplayName displayName, Bio bio, Instant now) {
@@ -64,30 +41,31 @@ public class FakeProfileStore implements ProfileRepository, ProfileQueryReposito
     }
 
     @Override
-    public Optional<Profile> findForUpdate(UserId userId) {
-        calls.add("findForUpdate:" + userId.value());
-        return Optional.ofNullable(rows.get(userId.value()));
+    public Optional<ImageId> currentImage(UserId userId, ImageSlot slot) {
+        Profile profile = rows.get(userId.value());
+        return profile == null ? Optional.empty() : Optional.ofNullable(profile.imageIn(slot));
     }
 
     @Override
-    public void setImage(UserId userId, ImageSlot slot, ImageId imageId, Instant now) {
-        calls.add("setImage:" + userId.value() + ":" + slot);
+    public Optional<ImageId> replaceImage(UserId userId, ImageSlot slot, ImageId imageId, Instant now) {
         Profile existing = rows.get(userId.value());
         if (existing == null) {
-            throw new IllegalStateException("setImage called without a row for user " + userId.value());
+            existing = new Profile(userId, null, Bio.of(""), null, null, now, now);
         }
+        ImageId previous = existing.imageIn(slot);
         rows.put(userId.value(), withImage(existing, slot, imageId, now));
+        return Optional.ofNullable(previous);
     }
 
     @Override
-    public boolean clearImageIf(UserId userId, ImageSlot slot, ImageId imageId, Instant now) {
-        calls.add("clearImageIf:" + userId.value() + ":" + slot);
+    public Optional<ImageId> removeImage(UserId userId, ImageSlot slot, Instant now) {
         Profile existing = rows.get(userId.value());
-        if (existing == null || !imageId.equals(existing.imageIn(slot))) {
-            return false;
+        if (existing == null || existing.imageIn(slot) == null) {
+            return Optional.empty();
         }
+        ImageId previous = existing.imageIn(slot);
         rows.put(userId.value(), withImage(existing, slot, null, now));
-        return true;
+        return Optional.of(previous);
     }
 
     private static Profile withImage(Profile profile, ImageSlot slot, ImageId imageId, Instant now) {
@@ -110,32 +88,15 @@ public class FakeProfileStore implements ProfileRepository, ProfileQueryReposito
     @Override
     public Optional<ProfileView> findByUserId(UserId userId) {
         Profile profile = rows.get(userId.value());
-        if (profile == null) {
-            return Optional.empty();
-        }
-        return Optional.of(new ProfileView(
-                profile.userId(),
-                profile.displayName(),
-                profile.bio(),
-                refOf(profile.avatar()),
-                refOf(profile.banner()),
-                profile.createdAt(),
-                profile.updatedAt()));
-    }
-
-    private ImageRef refOf(ImageId id) {
-        return id == null ? null : new ImageRef(id, !promotions.rows.containsKey(id));
-    }
-
-    @Override
-    public Set<ImageId> findReferenced(Collection<OwnedImage> images) {
-        Set<ImageId> referenced = new HashSet<>();
-        for (OwnedImage image : images) {
-            Profile owner = rows.get(image.userId().value());
-            if (owner != null && image.imageId().equals(owner.imageIn(image.slot()))) {
-                referenced.add(image.imageId());
-            }
-        }
-        return referenced;
+        return profile == null
+                ? Optional.empty()
+                : Optional.of(new ProfileView(
+                        profile.userId(),
+                        profile.displayName(),
+                        profile.bio(),
+                        profile.avatar(),
+                        profile.banner(),
+                        profile.createdAt(),
+                        profile.updatedAt()));
     }
 }

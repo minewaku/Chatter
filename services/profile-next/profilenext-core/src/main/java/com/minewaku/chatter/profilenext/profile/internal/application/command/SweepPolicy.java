@@ -2,5 +2,5 @@ package com.minewaku.chatter.profilenext.profile.internal.application.command;
 
 import java.time.Duration;
 
-/** A stored file younger than {@code gracePeriod} is never swept, so a pending upload is not removed early. */
-public record SweepPolicy(Duration gracePeriod) {}
+/** How one sweep run behaves: how many keys it handles at most, and how long a failed delete waits before its next try. */
+public record SweepPolicy(int batchSize, Duration retryDelay) {}

@@ -6,14 +6,15 @@ import com.minewaku.chatter.profilenext.infrastructure.support.JdbcTestConfigura
 import com.minewaku.chatter.profilenext.infrastructure.support.PostgreSqlTestSupport;
 import com.minewaku.chatter.profilenext.profile.internal.model.Bio;
 import com.minewaku.chatter.profilenext.profile.internal.model.DisplayName;
+import com.minewaku.chatter.profilenext.profile.internal.model.ImageId;
 import com.minewaku.chatter.profilenext.profile.internal.model.ImageSlot;
-import com.minewaku.chatter.profilenext.profile.internal.model.StoredImage;
 import com.minewaku.chatter.profilenext.profile.internal.model.UserId;
 import com.minewaku.chatter.profilenext.profile.internal.port.repository.ProfileRepository;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -159,69 +160,44 @@ class JdbcProfileRepositoryTest extends PostgreSqlTestSupport {
         }
     }
 
-    private static final String OLD_ID = "0197aaaa-0000-7000-8000-000000000001";
-    private static final String NEW_ID = "0197aaab-0000-7000-8000-000000000001";
-
-    private static StoredImage avatar(UserId user, String uploadId) {
-        return new StoredImage(
-                "chatter/profile/avatars/" + user.value() + "/" + uploadId, "https://img/" + uploadId);
-    }
+    private static final ImageId OLD_ID = new ImageId(UUID.fromString("0197aaaa-0000-7000-8000-000000000001"));
+    private static final ImageId NEW_ID = new ImageId(UUID.fromString("0197aaab-0000-7000-8000-000000000001"));
 
     @Test
     void replacingAnImageOnAMissingRowCreatesTheRowWithEmptyText() {
         UserId user = freshUser();
 
-        var replacement = profiles.replaceImage(user, ImageSlot.AVATAR, avatar(user, OLD_ID), T1);
+        Optional<ImageId> previous = profiles.replaceImage(user, ImageSlot.AVATAR, OLD_ID, T1);
 
-        assertThat(replacement.applied()).isTrue();
-        assertThat(replacement.previous()).isNull();
+        assertThat(previous).isEmpty();
         Map<String, Object> row = row(user);
-        assertThat(row.get("avatar_public_id")).isEqualTo(avatar(user, OLD_ID).publicId());
-        assertThat(row.get("avatar_url")).isEqualTo("https://img/" + OLD_ID);
+        assertThat(row.get("avatar_image_id")).isEqualTo(OLD_ID.value());
+        assertThat(row.get("banner_image_id")).isNull();
         assertThat(row.get("display_name")).isEqualTo("");
-        assertThat(row.get("banner_public_id")).isNull();
+        assertThat(((java.sql.Timestamp) row.get("created_at")).toInstant()).isEqualTo(T1);
     }
 
     @Test
-    void aNewerUploadIdReplacesTheSlotAndReturnsThePreviousImage() {
+    void replacingReturnsThePreviousImageAndMovesUpdatedAt() {
         UserId user = freshUser();
-        profiles.replaceImage(user, ImageSlot.AVATAR, avatar(user, OLD_ID), T1);
+        profiles.replaceImage(user, ImageSlot.AVATAR, OLD_ID, T1);
 
-        var replacement = profiles.replaceImage(user, ImageSlot.AVATAR, avatar(user, NEW_ID), T2);
+        Optional<ImageId> previous = profiles.replaceImage(user, ImageSlot.AVATAR, NEW_ID, T2);
 
-        assertThat(replacement.applied()).isTrue();
-        assertThat(replacement.previous()).isEqualTo(avatar(user, OLD_ID));
-        assertThat(row(user).get("avatar_public_id")).isEqualTo(avatar(user, NEW_ID).publicId());
+        assertThat(previous).contains(OLD_ID);
+        assertThat(row(user).get("avatar_image_id")).isEqualTo(NEW_ID.value());
         assertThat(updatedAt(user)).isEqualTo(T2);
     }
 
     @Test
-    void theSameOrAnOlderUploadIdChangesNothingAndReportsTheStoredImage() {
+    void theOtherSlotIsUntouchedByAReplacement() {
         UserId user = freshUser();
-        profiles.replaceImage(user, ImageSlot.AVATAR, avatar(user, NEW_ID), T1);
+        profiles.replaceImage(user, ImageSlot.BANNER, OLD_ID, T1);
 
-        var same = profiles.replaceImage(user, ImageSlot.AVATAR, avatar(user, NEW_ID), T2);
-        var older = profiles.replaceImage(user, ImageSlot.AVATAR, avatar(user, OLD_ID), T3);
+        profiles.replaceImage(user, ImageSlot.AVATAR, NEW_ID, T2);
 
-        assertThat(same.applied()).isFalse();
-        assertThat(same.previous()).isEqualTo(avatar(user, NEW_ID));
-        assertThat(older.applied()).isFalse();
-        assertThat(older.previous()).isEqualTo(avatar(user, NEW_ID));
-        assertThat(row(user).get("avatar_public_id")).isEqualTo(avatar(user, NEW_ID).publicId());
-        assertThat(updatedAt(user)).isEqualTo(T1);
-    }
-
-    @Test
-    void theOtherSlotIsUntouched() {
-        UserId user = freshUser();
-        StoredImage banner = new StoredImage(
-                "chatter/profile/banners/" + user.value() + "/" + OLD_ID, "https://img/banner");
-        profiles.replaceImage(user, ImageSlot.BANNER, banner, T1);
-
-        profiles.replaceImage(user, ImageSlot.AVATAR, avatar(user, NEW_ID), T2);
-
-        assertThat(row(user).get("banner_public_id")).isEqualTo(banner.publicId());
-        assertThat(row(user).get("avatar_public_id")).isEqualTo(avatar(user, NEW_ID).publicId());
+        assertThat(row(user).get("banner_image_id")).isEqualTo(OLD_ID.value());
+        assertThat(row(user).get("avatar_image_id")).isEqualTo(NEW_ID.value());
     }
 
     @Test
@@ -229,25 +205,98 @@ class JdbcProfileRepositoryTest extends PostgreSqlTestSupport {
         UserId user = freshUser();
         profiles.applyEdit(user, DisplayName.of("Mine"), Bio.of("Hello"), T1);
 
-        profiles.replaceImage(user, ImageSlot.AVATAR, avatar(user, OLD_ID), T2);
+        profiles.replaceImage(user, ImageSlot.AVATAR, OLD_ID, T2);
 
         assertThat(row(user).get("display_name")).isEqualTo("Mine");
         assertThat(row(user).get("bio")).isEqualTo("Hello");
     }
 
     @Test
+    void aTextSaveKeepsBothImages() {
+        UserId user = freshUser();
+        profiles.replaceImage(user, ImageSlot.AVATAR, OLD_ID, T1);
+        profiles.replaceImage(user, ImageSlot.BANNER, NEW_ID, T1);
+
+        profiles.applyEdit(user, DisplayName.of("Mine"), null, T2);
+
+        assertThat(profiles.currentImage(user, ImageSlot.AVATAR)).contains(OLD_ID);
+        assertThat(profiles.currentImage(user, ImageSlot.BANNER)).contains(NEW_ID);
+    }
+
+    @Test
+    void currentImageIsEmptyForAnEmptySlotAndForNoRow() {
+        UserId user = freshUser();
+        assertThat(profiles.currentImage(user, ImageSlot.AVATAR)).isEmpty();
+
+        profiles.applyEdit(user, DisplayName.of("Mine"), null, T1);
+
+        assertThat(profiles.currentImage(user, ImageSlot.AVATAR)).isEmpty();
+    }
+
+    @Test
+    void removingEmptiesTheSlotAndReturnsWhatItHeld() {
+        UserId user = freshUser();
+        profiles.replaceImage(user, ImageSlot.AVATAR, OLD_ID, T1);
+
+        Optional<ImageId> removed = profiles.removeImage(user, ImageSlot.AVATAR, T2);
+
+        assertThat(removed).contains(OLD_ID);
+        assertThat(row(user).get("avatar_image_id")).isNull();
+        assertThat(updatedAt(user)).isEqualTo(T2);
+    }
+
+    @Test
+    void removingAnEmptySlotOrAMissingRowChangesNothing() {
+        UserId user = freshUser();
+        assertThat(profiles.removeImage(user, ImageSlot.AVATAR, T1)).isEmpty();
+        assertThat(rowCount(user)).isZero();
+
+        profiles.applyEdit(user, DisplayName.of("Mine"), null, T1);
+        assertThat(profiles.removeImage(user, ImageSlot.AVATAR, T2)).isEmpty();
+        assertThat(updatedAt(user)).isEqualTo(T1);
+    }
+
+    @Test
+    void twoConcurrentReplacementsEachSeeTheOtherOrTheOriginalAndNeverTheSamePrevious() throws Exception {
+        UserId user = freshUser();
+        profiles.replaceImage(user, ImageSlot.AVATAR, OLD_ID, T1);
+        ImageId a = new ImageId(UUID.fromString("0197aaac-0000-7000-8000-000000000001"));
+        ImageId b = new ImageId(UUID.fromString("0197aaad-0000-7000-8000-000000000001"));
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            CountDownLatch go = new CountDownLatch(1);
+            Future<Optional<ImageId>> first = pool.submit(() -> {
+                go.await();
+                return profiles.replaceImage(user, ImageSlot.AVATAR, a, T2);
+            });
+            Future<Optional<ImageId>> second = pool.submit(() -> {
+                go.await();
+                return profiles.replaceImage(user, ImageSlot.AVATAR, b, T3);
+            });
+            go.countDown();
+
+            List<ImageId> previous = List.of(first.get().orElseThrow(), second.get().orElseThrow());
+
+            // a chain, not a fork: exactly one saw the original, the other saw the winner of the first
+            assertThat(previous).contains(OLD_ID);
+            assertThat(previous).doesNotHaveDuplicates();
+            assertThat(profiles.currentImage(user, ImageSlot.AVATAR)).isPresent().get().isIn(a, b);
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    @Test
     void deleteByUserIdReturnsBothImagesAndRemovesTheRow() {
         UserId user = freshUser();
-        StoredImage banner = new StoredImage(
-                "chatter/profile/banners/" + user.value() + "/" + OLD_ID, "https://img/banner");
-        profiles.replaceImage(user, ImageSlot.AVATAR, avatar(user, NEW_ID), T1);
-        profiles.replaceImage(user, ImageSlot.BANNER, banner, T1);
+        profiles.replaceImage(user, ImageSlot.AVATAR, NEW_ID, T1);
+        profiles.replaceImage(user, ImageSlot.BANNER, OLD_ID, T1);
 
         Optional<ProfileRepository.DeletedProfile> deleted = profiles.deleteByUserId(user);
 
         assertThat(deleted).isPresent();
-        assertThat(deleted.get().avatar()).isEqualTo(avatar(user, NEW_ID));
-        assertThat(deleted.get().banner()).isEqualTo(banner);
+        assertThat(deleted.get().avatar()).isEqualTo(NEW_ID);
+        assertThat(deleted.get().banner()).isEqualTo(OLD_ID);
         assertThat(rowCount(user)).isZero();
     }
 

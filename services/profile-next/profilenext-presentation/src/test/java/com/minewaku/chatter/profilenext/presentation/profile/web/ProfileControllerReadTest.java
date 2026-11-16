@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.minewaku.chatter.profilenext.presentation.image.ImageUrlResolver;
 import com.minewaku.chatter.profilenext.presentation.support.TestSecurityConfiguration;
 import com.minewaku.chatter.profilenext.profile.api.command.SaveProfileUseCase;
 import com.minewaku.chatter.profilenext.profile.api.query.GetProfileUseCase;
@@ -20,11 +21,13 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(ProfileController.class)
-@Import(TestSecurityConfiguration.class)
+@Import({TestSecurityConfiguration.class, ImageUrlResolver.class})
+@TestPropertySource(properties = "profile-next.images.public-base-url=https://img.test")
 class ProfileControllerReadTest {
 
     @Autowired
@@ -38,7 +41,13 @@ class ProfileControllerReadTest {
 
     private static GetProfileUseCase.Result result(long userId) {
         return new GetProfileUseCase.Result(
-                userId, "Mine", "Hello", "https://img/a", null, Instant.parse("2026-11-01T10:00:00Z"), null);
+                userId,
+                "Mine",
+                "Hello",
+                new GetProfileUseCase.ImageResult("abc", "profiles/" + userId + "/avatar/abc"),
+                null,
+                Instant.parse("2026-11-01T10:00:00Z"),
+                null);
     }
 
     @Test
@@ -58,7 +67,7 @@ class ProfileControllerReadTest {
                 .andExpect(jsonPath("$.userId").value(123))
                 .andExpect(jsonPath("$.displayName").value("Mine"))
                 .andExpect(jsonPath("$.bio").value("Hello"))
-                .andExpect(jsonPath("$.avatarUrl").value("https://img/a"))
+                .andExpect(jsonPath("$.avatarUrl").value("https://img.test/profiles/123/avatar/abc"))
                 .andExpect(jsonPath("$.bannerUrl").doesNotExist())
                 .andExpect(jsonPath("$.updatedAt").doesNotExist());
 

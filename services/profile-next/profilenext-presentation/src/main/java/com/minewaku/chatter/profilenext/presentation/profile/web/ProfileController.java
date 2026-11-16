@@ -1,5 +1,6 @@
 package com.minewaku.chatter.profilenext.presentation.profile.web;
 
+import com.minewaku.chatter.profilenext.presentation.image.ImageUrlResolver;
 import com.minewaku.chatter.profilenext.presentation.profile.dto.ProfileResponse;
 import com.minewaku.chatter.profilenext.presentation.profile.dto.SaveProfileRequest;
 import com.minewaku.chatter.profilenext.presentation.shared.error.InvalidIdentifierException;
@@ -28,6 +29,7 @@ public class ProfileController {
 
     private final GetProfileUseCase getProfile;
     private final SaveProfileUseCase saveProfile;
+    private final ImageUrlResolver urls;
 
     @GetMapping("/@me")
     public ProfileResponse readMine(@AuthenticationPrincipal Jwt jwt) {
@@ -48,7 +50,7 @@ public class ProfileController {
     }
 
     private ProfileResponse read(long userId) {
-        return ProfileResponse.from(getProfile.handle(new GetProfileUseCase.Query(userId)));
+        return ProfileResponse.from(getProfile.handle(new GetProfileUseCase.Query(userId)), urls);
     }
 
     private static long parseUserId(String value) {

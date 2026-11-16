@@ -2,7 +2,7 @@ package com.minewaku.chatter.profilenext.presentation.shared.error;
 
 import com.minewaku.chatter.profilenext.profile.api.exception.ImageStorageUnavailableException;
 import com.minewaku.chatter.profilenext.profile.api.exception.InvalidProfileValueException;
-import com.minewaku.chatter.profilenext.profile.api.exception.UploadConfirmationRejectedException;
+import com.minewaku.chatter.profilenext.profile.api.exception.ImageUploadRejectedException;
 import jakarta.validation.ConstraintViolationException;
 import java.util.List;
 import java.util.UUID;
@@ -51,13 +51,33 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
                         List.of(new ApiError.FieldError(exception.field(), exception.getMessage()))));
     }
 
-    /** A bad signature is an authentication failure; a user mismatch is a refusal. Both leave the profile unchanged. */
-    @ExceptionHandler(UploadConfirmationRejectedException.class)
-    ResponseEntity<ApiError> uploadRejected(UploadConfirmationRejectedException exception) {
-        return body(
-                exception.reason() == UploadConfirmationRejectedException.Reason.INVALID_SIGNATURE
-                        ? ErrorCode.UNAUTHENTICATED
-                        : ErrorCode.FORBIDDEN);
+    /**
+     * A refused upload or commit. A file the rules reject is a 422 naming the rule in a fixed sentence; a ticket that is
+     * unknown, expired, unfinished or contended has its own status, so a client knows whether to retry or start over.
+     */
+    @ExceptionHandler(ImageUploadRejectedException.class)
+    ResponseEntity<ApiError> imageRejected(ImageUploadRejectedException exception) {
+        return switch (exception.reason()) {
+            case UPLOAD_NOT_FOUND -> body(ErrorCode.NOT_FOUND);
+            case UPLOAD_EXPIRED -> body(ErrorCode.UPLOAD_EXPIRED);
+            case UPLOAD_INCOMPLETE -> body(ErrorCode.UPLOAD_INCOMPLETE);
+            case UPLOAD_CONFLICT -> body(ErrorCode.CONFLICT);
+            default -> ResponseEntity.status(ErrorCode.IMAGE_REJECTED.status())
+                    .body(ApiError.of(
+                            ErrorCode.IMAGE_REJECTED,
+                            List.of(new ApiError.FieldError("image", imageRuleMessage(exception.reason())))));
+        };
+    }
+
+    private static String imageRuleMessage(ImageUploadRejectedException.Reason reason) {
+        return switch (reason) {
+            case FORMAT_NOT_ALLOWED -> "The image must be a JPEG, PNG or WebP file.";
+            case FILE_TOO_LARGE -> "The file is larger than this image allows.";
+            case DIMENSIONS_NOT_ALLOWED -> "The image is wider or taller than this image allows.";
+            case UNREADABLE_IMAGE -> "The file could not be read as an image.";
+            case CONTENT_TYPE_MISMATCH -> "The file is not the type it was declared as.";
+            default -> "The image was rejected.";
+        };
     }
 
     @ExceptionHandler(ImageStorageUnavailableException.class)

@@ -2,17 +2,14 @@ package com.minewaku.chatter.profilenext.infrastructure.adapter.outbound.profile
 
 import com.minewaku.chatter.profilenext.profile.internal.model.Bio;
 import com.minewaku.chatter.profilenext.profile.internal.model.DisplayName;
-import com.minewaku.chatter.profilenext.profile.internal.model.Profile;
-import com.minewaku.chatter.profilenext.profile.internal.model.StoredImage;
+import com.minewaku.chatter.profilenext.profile.internal.model.ImageId;
 import com.minewaku.chatter.profilenext.profile.internal.model.UserId;
 import com.minewaku.chatter.profilenext.profile.internal.port.query.ProfileQueryRepository;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
-import java.util.Collection;
-import java.util.HashSet;
 import java.util.Optional;
-import java.util.Set;
+import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
@@ -26,10 +23,9 @@ public class JdbcProfileQueryRepository implements ProfileQueryRepository {
     }
 
     @Override
-    public Optional<Profile> findByUserId(UserId userId) {
+    public Optional<ProfileView> findByUserId(UserId userId) {
         return jdbc.sql("""
-                        SELECT user_id, display_name, bio, avatar_public_id, avatar_url,
-                               banner_public_id, banner_url, created_at, updated_at
+                        SELECT user_id, display_name, bio, avatar_image_id, banner_image_id, created_at, updated_at
                         FROM profile
                         WHERE user_id = :userId
                         """)
@@ -38,29 +34,13 @@ public class JdbcProfileQueryRepository implements ProfileQueryRepository {
                 .optional();
     }
 
-    @Override
-    public Set<String> findReferencedPublicIds(Collection<String> publicIds) {
-        if (publicIds.isEmpty()) {
-            return Set.of();
-        }
-        Set<String> referenced = new HashSet<>(jdbc.sql("""
-                        SELECT avatar_public_id FROM profile WHERE avatar_public_id IN (:ids)
-                        UNION
-                        SELECT banner_public_id FROM profile WHERE banner_public_id IN (:ids)
-                        """)
-                .param("ids", publicIds)
-                .query(String.class)
-                .list());
-        return referenced;
-    }
-
-    private static Profile map(ResultSet rs, int rowNum) throws SQLException {
-        return new Profile(
+    private static ProfileView map(ResultSet rs, int rowNum) throws SQLException {
+        return new ProfileView(
                 UserId.of(rs.getLong("user_id")),
                 displayName(rs.getString("display_name")),
                 Bio.of(rs.getString("bio")),
-                image(rs.getString("avatar_public_id"), rs.getString("avatar_url")),
-                image(rs.getString("banner_public_id"), rs.getString("banner_url")),
+                imageId(rs.getObject("avatar_image_id", UUID.class)),
+                imageId(rs.getObject("banner_image_id", UUID.class)),
                 instant(rs, "created_at"),
                 instant(rs, "updated_at"));
     }
@@ -69,8 +49,8 @@ public class JdbcProfileQueryRepository implements ProfileQueryRepository {
         return stored == null || stored.isBlank() ? null : DisplayName.of(stored);
     }
 
-    private static StoredImage image(String publicId, String url) {
-        return publicId == null || url == null ? null : new StoredImage(publicId, url);
+    private static ImageId imageId(UUID value) {
+        return value == null ? null : new ImageId(value);
     }
 
     private static Instant instant(ResultSet rs, String column) throws SQLException {

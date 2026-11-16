@@ -3,107 +3,184 @@ package com.minewaku.chatter.profilenext.profile.internal.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.minewaku.chatter.profilenext.profile.api.command.RequestImageUploadUseCase;
-import com.minewaku.chatter.profilenext.profile.api.exception.ImageStorageRateLimitedException;
-import com.minewaku.chatter.profilenext.profile.api.exception.ImageStorageUnavailableException;
+import com.minewaku.chatter.profilenext.profile.api.command.RequestImageUploadUseCase.Command;
+import com.minewaku.chatter.profilenext.profile.api.command.RequestImageUploadUseCase.Result;
+import com.minewaku.chatter.profilenext.profile.api.exception.ImageUploadRejectedException;
+import com.minewaku.chatter.profilenext.profile.api.exception.ImageUploadRejectedException.Reason;
 import com.minewaku.chatter.profilenext.profile.internal.application.command.RequestImageUploadService;
 import com.minewaku.chatter.profilenext.profile.internal.application.fakes.FakeImageStorage;
+import com.minewaku.chatter.profilenext.profile.internal.application.fakes.FakePendingUploads;
 import com.minewaku.chatter.profilenext.profile.internal.application.fakes.ImageIds;
+import com.minewaku.chatter.profilenext.profile.internal.application.fakes.Policies;
+import com.minewaku.chatter.profilenext.profile.internal.application.fakes.RecordingTransactionManager;
+import com.minewaku.chatter.profilenext.profile.internal.application.fakes.SequentialIds;
+import com.minewaku.chatter.profilenext.profile.internal.application.fakes.TestClock;
+import com.minewaku.chatter.profilenext.profile.internal.model.ImageId;
 import com.minewaku.chatter.profilenext.profile.internal.model.ImageSlot;
 import com.minewaku.chatter.profilenext.profile.internal.model.OwnedImage;
+import com.minewaku.chatter.profilenext.profile.internal.model.PendingUpload;
 import com.minewaku.chatter.profilenext.profile.internal.model.UserId;
-import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneOffset;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 class RequestImageUploadServiceTest {
 
-    private static final Instant NOW = Instant.parse("2026-11-04T10:00:00Z");
+    private static final UserId USER = UserId.of(7);
 
-    private final FakeImageStorage storage = new FakeImageStorage();
-    private final RequestImageUploadService service =
-            new RequestImageUploadService(storage, () -> ImageIds.at(1).value().toString(), Clock.fixed(NOW, ZoneOffset.UTC));
+    private final TestClock clock = TestClock.at("2026-11-04T10:00:00Z");
+    private final RecordingTransactionManager transactions = new RecordingTransactionManager();
+    private FakePendingUploads ledger = new FakePendingUploads();
+    private FakeImageStorage storage = new FakeImageStorage();
 
-    @Test
-    void asksStorageForTheCallersOwnAvatarLocation() {
-        var result = service.handle(new RequestImageUploadUseCase.Command(7, "AVATAR"));
+    private RequestImageUploadService service() {
+        return new RequestImageUploadService(
+                storage, ledger, Policies.standard(), new SequentialIds(), clock, transactions.template());
+    }
 
-        assertThat(storage.permits).hasSize(1);
-        var permit = storage.permits.get(0);
-        assertThat(permit.image()).isEqualTo(new OwnedImage(UserId.of(7), ImageSlot.AVATAR, ImageIds.at(1)));
-        assertThat(permit.now()).isEqualTo(NOW);
-        assertThat(result.fields()).containsEntry("user_id", "7").containsEntry("slot", "AVATAR");
-        assertThat(result.method()).isEqualTo("POST");
-        assertThat(result.expiresAt()).isAfter(NOW);
+    private static Command avatar(String contentType, long size) {
+        return new Command(7, "AVATAR", contentType, size);
     }
 
     @Test
-    void aBannerRequestAsksForTheBannerSlot() {
-        var result = service.handle(new RequestImageUploadUseCase.Command(7, "BANNER"));
+    void issuesATicketForANewImageIdAndRecordsItInTheLedger() {
+        Result result = service().handle(avatar("image/png", 1000));
 
-        assertThat(storage.permits.get(0).image().slot()).isEqualTo(ImageSlot.BANNER);
-        assertThat(result.fields()).containsEntry("slot", "BANNER");
+        assertThat(result.imageId()).isEqualTo(ImageIds.at(1).value().toString());
+        assertThat(result.method()).isEqualTo("PUT");
+        assertThat(result.uploadUrl()).endsWith("profiles/7/avatar/" + ImageIds.at(1).value());
+        assertThat(result.expiresAt()).isEqualTo(clock.instant().plus(Duration.ofMinutes(5)));
+        PendingUpload row = ledger.rows.get(ImageIds.at(1));
+        assertThat(row.state()).isEqualTo(PendingUpload.State.PENDING);
+        assertThat(row.expiresAt()).isEqualTo(clock.instant().plus(Duration.ofMinutes(5)));
+        assertThat(row.deleteAfter()).isEqualTo(clock.instant().plus(Duration.ofMinutes(15)));
+        assertThat(storage.lastValidFor).isEqualTo(Duration.ofMinutes(5));
+        assertThat(storage.lastContentType).isEqualTo("image/png");
+        assertThat(storage.lastSizeBytes).isEqualTo(1000);
     }
 
     @Test
-    void twoRequestsForTheSameSlotUseDifferentIdsAndTheSecondIsNewer() {
-        AtomicInteger counter = new AtomicInteger();
-        RequestImageUploadService counting = new RequestImageUploadService(
-                storage, () -> ImageIds.at(counter.incrementAndGet()).value().toString(), Clock.fixed(NOW, ZoneOffset.UTC));
+    void theLedgerRowIsCommittedBeforeTheTicketIsSigned() {
+        storage = new FakeImageStorage() {
+            @Override
+            public UploadTicket issueUpload(OwnedImage image, String contentType, long sizeBytes, Duration validFor) {
+                assertThat(ledger.rows).containsKey(image.imageId());
+                assertThat(transactions.events).endsWith("commit");
+                return super.issueUpload(image, contentType, sizeBytes, validFor);
+            }
+        };
 
-        counting.handle(new RequestImageUploadUseCase.Command(7, "AVATAR"));
-        counting.handle(new RequestImageUploadUseCase.Command(7, "AVATAR"));
+        service().handle(avatar("image/png", 1000));
 
-        var first = storage.permits.get(0).image().imageId();
-        var second = storage.permits.get(1).image().imageId();
-        assertThat(second).isNotEqualTo(first);
-        assertThat(second.isNewerThan(first)).isTrue();
+        assertThat(storage.calls).hasSize(1);
     }
 
     @Test
-    void theServiceHasNoRepositoryToWriteTo() {
-        var constructor = RequestImageUploadService.class.getConstructors()[0];
+    void askingAgainWhileTheTicketIsUsableReusesTheSameImageId() {
+        RequestImageUploadService service = service();
+        Result first = service.handle(avatar("image/png", 1000));
+        clock.advance(Duration.ofMinutes(2));
 
-        assertThat(constructor.getParameterTypes())
-                .noneMatch(type -> type.getPackageName().contains(".port.repository")
-                        || type.getPackageName().contains(".port.query"));
+        Result second = service.handle(avatar("image/jpeg", 2000));
+
+        assertThat(second.imageId()).isEqualTo(first.imageId());
+        assertThat(ledger.rows).hasSize(1);
+        assertThat(second.expiresAt()).isEqualTo(first.expiresAt());
+        assertThat(storage.lastValidFor).isEqualTo(Duration.ofMinutes(3));
     }
 
     @Test
-    void usesExactlyTheUserOfTheCommand() {
-        service.handle(new RequestImageUploadUseCase.Command(7, "AVATAR"));
-        service.handle(new RequestImageUploadUseCase.Command(8, "BANNER"));
+    void anExpiredTicketIsRetiredKeepingItsSweepTimeAndANewOneStarts() {
+        RequestImageUploadService service = service();
+        Result first = service.handle(avatar("image/png", 1000));
+        Instant firstSweep = ledger.rows.get(ImageIds.at(1)).deleteAfter();
+        clock.advance(Duration.ofMinutes(6));
 
-        assertThat(storage.permits.get(0).image().userId()).isEqualTo(UserId.of(7));
-        assertThat(storage.permits.get(1).image().userId()).isEqualTo(UserId.of(8));
+        Result second = service.handle(avatar("image/png", 1000));
+
+        assertThat(second.imageId()).isNotEqualTo(first.imageId());
+        PendingUpload retired = ledger.rows.get(ImageIds.at(1));
+        assertThat(retired.state()).isEqualTo(PendingUpload.State.DISCARD);
+        assertThat(retired.deleteAfter()).isEqualTo(firstSweep);
+        assertThat(ledger.rows.get(ImageIds.at(2)).isPending()).isTrue();
     }
 
     @Test
-    void anOutageOfTheProviderPropagatesUnchanged() {
-        storage.failPermit = true;
+    void aTicketAboutToExpireIsReplacedInsteadOfHandedOutAgain() {
+        RequestImageUploadService service = service();
+        Result first = service.handle(avatar("image/png", 1000));
+        clock.advance(Duration.ofMinutes(5).minusSeconds(10));
 
-        assertThatThrownBy(() -> service.handle(new RequestImageUploadUseCase.Command(7, "AVATAR")))
-                .isInstanceOf(ImageStorageUnavailableException.class);
-        assertThat(storage.permits).isEmpty();
+        Result second = service.handle(avatar("image/png", 1000));
+
+        assertThat(second.imageId()).isNotEqualTo(first.imageId());
     }
 
     @Test
-    void aRateLimitFromTheProviderPropagatesUnchanged() {
-        storage.rateLimitPermit = true;
+    void eachSlotAndEachUserHasItsOwnTicket() {
+        RequestImageUploadService service = service();
 
-        assertThatThrownBy(() -> service.handle(new RequestImageUploadUseCase.Command(7, "AVATAR")))
-                .isInstanceOf(ImageStorageRateLimitedException.class);
+        Result avatar = service.handle(avatar("image/png", 1000));
+        Result banner = service.handle(new Command(7, "BANNER", "image/png", 1000));
+        Result other = service.handle(new Command(8, "AVATAR", "image/png", 1000));
+
+        assertThat(java.util.Set.of(avatar.imageId(), banner.imageId(), other.imageId())).hasSize(3);
     }
 
     @Test
-    void anIdThatIsNotAUuidFailsBeforeAnyStorageCall() {
-        RequestImageUploadService broken =
-                new RequestImageUploadService(storage, () -> "upload-1", Clock.fixed(NOW, ZoneOffset.UTC));
+    void aLostRaceUsesTheTicketThatWon() {
+        PendingUpload winner = PendingUpload.issue(
+                new OwnedImage(USER, ImageSlot.AVATAR, ImageIds.at(99)),
+                clock.instant(),
+                Duration.ofMinutes(5),
+                Duration.ofMinutes(10));
+        ledger = new FakePendingUploads() {
+            @Override
+            public boolean insertPending(PendingUpload upload) {
+                rows.put(winner.image().imageId(), winner); // the other request commits first
+                return super.insertPending(upload);
+            }
+        };
 
-        assertThatThrownBy(() -> broken.handle(new RequestImageUploadUseCase.Command(7, "AVATAR")))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThat(storage.permits).isEmpty();
+        Result result = service().handle(avatar("image/png", 1000));
+
+        assertThat(result.imageId()).isEqualTo(ImageIds.at(99).value().toString());
+        assertThat(ledger.rows).hasSize(1);
+    }
+
+    @Test
+    void aRaceThatLeavesNothingUsableIsReportedAsAConflict() {
+        ledger = new FakePendingUploads() {
+            @Override
+            public boolean insertPending(PendingUpload upload) {
+                return false;
+            }
+        };
+
+        assertThatThrownBy(() -> service().handle(avatar("image/png", 1000)))
+                .isInstanceOfSatisfying(
+                        ImageUploadRejectedException.class, e -> assertThat(e.reason()).isEqualTo(Reason.UPLOAD_CONFLICT));
+    }
+
+    @Test
+    void aRefusedRequestWritesAndSignsNothing() {
+        assertThatThrownBy(() -> service().handle(avatar("image/gif", 1000)))
+                .isInstanceOfSatisfying(
+                        ImageUploadRejectedException.class,
+                        e -> assertThat(e.reason()).isEqualTo(Reason.FORMAT_NOT_ALLOWED));
+        assertThatThrownBy(() -> service().handle(avatar("image/png", 9_000_000)))
+                .isInstanceOfSatisfying(
+                        ImageUploadRejectedException.class, e -> assertThat(e.reason()).isEqualTo(Reason.FILE_TOO_LARGE));
+
+        assertThat(ledger.rows).isEmpty();
+        assertThat(storage.calls).isEmpty();
+        assertThat(transactions.events).isEmpty();
+    }
+
+    @Test
+    void ticketIdsAreRealImageIds() {
+        Result result = service().handle(avatar("image/png", 1000));
+
+        assertThat(ImageId.of(result.imageId())).isEqualTo(ImageIds.at(1));
     }
 }

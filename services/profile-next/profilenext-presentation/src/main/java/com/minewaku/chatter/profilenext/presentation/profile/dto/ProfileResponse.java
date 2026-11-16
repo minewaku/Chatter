@@ -1,6 +1,7 @@
 package com.minewaku.chatter.profilenext.presentation.profile.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.minewaku.chatter.profilenext.presentation.image.ImageUrlResolver;
 import com.minewaku.chatter.profilenext.profile.api.query.GetProfileUseCase;
 import java.time.Instant;
 
@@ -15,14 +16,19 @@ public record ProfileResponse(
         Instant createdAt,
         Instant updatedAt) {
 
-    public static ProfileResponse from(GetProfileUseCase.Result result) {
+    /** {@code urls} turns each image's relative path into its public address; an empty slot stays null. */
+    public static ProfileResponse from(GetProfileUseCase.Result result, ImageUrlResolver urls) {
         return new ProfileResponse(
                 result.userId(),
                 result.displayName(),
                 result.bio(),
-                result.avatarUrl(),
-                result.bannerUrl(),
+                urlOf(result.avatar(), urls),
+                urlOf(result.banner(), urls),
                 result.createdAt(),
                 result.updatedAt());
+    }
+
+    private static String urlOf(GetProfileUseCase.ImageResult image, ImageUrlResolver urls) {
+        return image == null ? null : urls.resolve(image.path());
     }
 }

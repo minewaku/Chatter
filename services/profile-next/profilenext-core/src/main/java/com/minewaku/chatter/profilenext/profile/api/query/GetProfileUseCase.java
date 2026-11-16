@@ -16,6 +16,6 @@ public interface GetProfileUseCase extends UseCaseHandler<GetProfileUseCase.Quer
             Instant createdAt,
             Instant updatedAt) {}
 
-    /** An image of the profile: its id, and whether it has been moved to permanent storage yet. */
-    record ImageResult(String imageId, boolean promoted) {}
+    /** An image of the profile: its id and its provider-neutral relative path (never an address). */
+    record ImageResult(String imageId, String path) {}
 }

@@ -26,6 +26,6 @@ import org.springframework.context.annotation.Import;
 @Import({PostgreSqlConfiguration.class, UuidV7IdGenerator.class})
 @ComponentScan({
     "com.minewaku.chatter.profilenext.infrastructure.adapter.outbound.profile",
-    "com.minewaku.chatter.profilenext.infrastructure.adapter.outbound.image.removal"
+    "com.minewaku.chatter.profilenext.infrastructure.adapter.outbound.image.pending"
 })
 public class JdbcTestConfiguration {}

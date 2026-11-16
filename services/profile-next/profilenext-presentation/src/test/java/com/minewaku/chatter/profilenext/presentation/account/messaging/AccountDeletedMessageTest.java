@@ -3,6 +3,7 @@ package com.minewaku.chatter.profilenext.presentation.account.messaging;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.minewaku.chatter.profilenext.presentation.shared.messaging.UnreadableMessageException;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -44,11 +45,11 @@ class AccountDeletedMessageTest {
         "[]"
     })
     void anythingUnreadableIsANonRetryableFailure(String value) {
-        assertThatThrownBy(() -> AccountDeletedMessage.parse(value)).isInstanceOf(UnreadableNoticeException.class);
+        assertThatThrownBy(() -> AccountDeletedMessage.parse(value)).isInstanceOf(UnreadableMessageException.class);
     }
 
     @Test
     void aMissingValueIsUnreadable() {
-        assertThatThrownBy(() -> AccountDeletedMessage.parse(null)).isInstanceOf(UnreadableNoticeException.class);
+        assertThatThrownBy(() -> AccountDeletedMessage.parse(null)).isInstanceOf(UnreadableMessageException.class);
     }
 }

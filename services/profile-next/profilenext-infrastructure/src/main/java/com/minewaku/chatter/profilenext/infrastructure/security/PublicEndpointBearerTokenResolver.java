@@ -8,7 +8,7 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 
 /**
  * Ignores the {@code Authorization} header on public endpoints. Without this the framework validates any bearer
- * token it sees and answers {@code 401} for a bad one even on a permitted path, such as the provider's webhook.
+ * token it sees and answers {@code 401} for a bad one even on a permitted path.
  */
 public final class PublicEndpointBearerTokenResolver implements BearerTokenResolver {
 

@@ -1,100 +1,87 @@
 package com.minewaku.chatter.profilenext.profile.internal.application.fakes;
 
-import com.minewaku.chatter.profilenext.profile.internal.model.ImageId;
+import com.minewaku.chatter.profilenext.profile.api.exception.ImageStorageUnavailableException;
+import com.minewaku.chatter.profilenext.profile.internal.model.ImagePath;
 import com.minewaku.chatter.profilenext.profile.internal.model.OwnedImage;
 import com.minewaku.chatter.profilenext.profile.internal.port.ImageStorage;
-import com.minewaku.chatter.profilenext.profile.internal.port.ImageStorage.ConfirmedUpload;
-import com.minewaku.chatter.profilenext.profile.internal.port.ImageStorage.StoredImageInfo;
-import com.minewaku.chatter.profilenext.profile.internal.port.ImageStorage.StoredImagePage;
-import com.minewaku.chatter.profilenext.profile.internal.port.ImageStorage.UploadPermission;
-import com.minewaku.chatter.profilenext.profile.api.exception.ImageStorageRateLimitedException;
-import com.minewaku.chatter.profilenext.profile.api.exception.ImageStorageUnavailableException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
-/** A programmable stand-in for the provider. It lists only what a test gives it, as the real port lists permanent images only. */
+/** An in-memory object store: what a client "uploaded" is put straight into {@link #objects}. */
 public class FakeImageStorage implements ImageStorage {
 
-    public record Permit(OwnedImage image, Instant now) {}
+    public record Stored(byte[] bytes, String contentType) {}
 
-    public final List<Permit> permits = new ArrayList<>();
-    public final List<OwnedImage> promoteCalls = new ArrayList<>();
-    public final List<OwnedImage> removeCalls = new ArrayList<>();
-    public final List<OwnedImage> removed = new ArrayList<>();
-    public final List<StoredImagePage> pages = new ArrayList<>();
-    public final List<String> listCursors = new ArrayList<>();
+    public final Map<OwnedImage, Stored> objects = new LinkedHashMap<>();
 
-    /** What {@link #verify} answers; empty means "not accepted". */
-    public Optional<ConfirmedUpload> verifyResult = Optional.empty();
+    /** Calls in order: {@code issue:<path>}, {@code stat:<path>}, {@code header:<path>}, {@code delete:<path>}. */
+    public final List<String> calls = new ArrayList<>();
 
-    /** Images whose promotion fails with an outage. */
-    public final Set<ImageId> failingPromotions = new HashSet<>();
+    public boolean validatesOnUpload;
+    public boolean failDeletes;
+    public boolean failStat;
+    public Duration lastValidFor;
+    public String lastContentType;
+    public long lastSizeBytes;
 
-    /** Images whose removal fails with an outage (in addition to {@link #failRemoval}). */
-    public final Set<ImageId> failingRemovals = new HashSet<>();
+    private final Instant now = Instant.parse("2026-11-04T10:00:00Z");
 
-    public boolean failRemoval;
-    public boolean failPermit;
-    public boolean rateLimitPermit;
-    public int listsBeforeRateLimit = Integer.MAX_VALUE;
-
-    @Override
-    public UploadPermission permit(OwnedImage image, Instant now) {
-        if (rateLimitPermit) {
-            throw new ImageStorageRateLimitedException("slow down");
-        }
-        if (failPermit) {
-            throw new ImageStorageUnavailableException("provider down");
-        }
-        permits.add(new Permit(image, now));
-        return new UploadPermission(
-                "https://upload.example/image",
-                "POST",
-                Map.of(
-                        "user_id", Long.toString(image.userId().value()),
-                        "slot", image.slot().name(),
-                        "image_id", image.imageId().value().toString()),
-                now.plusSeconds(900));
+    /** Simulates a client finishing an upload to the ticket's location. */
+    public void upload(OwnedImage image, byte[] bytes, String contentType) {
+        objects.put(image, new Stored(bytes, contentType));
     }
 
     @Override
-    public Optional<ConfirmedUpload> verify(byte[] rawBody, String signature, String timestamp, Instant now) {
-        return verifyResult;
+    public UploadTicket issueUpload(OwnedImage image, String contentType, long sizeBytes, Duration validFor) {
+        calls.add("issue:" + ImagePath.of(image));
+        lastValidFor = validFor;
+        lastContentType = contentType;
+        lastSizeBytes = sizeBytes;
+        return new UploadTicket(
+                "https://storage.test/" + ImagePath.of(image),
+                "PUT",
+                Map.of("Content-Type", contentType),
+                Map.of(),
+                now.plus(validFor));
     }
 
     @Override
-    public void promote(OwnedImage image) {
-        promoteCalls.add(image);
-        if (failingPromotions.contains(image.imageId())) {
-            throw new ImageStorageUnavailableException("provider down");
+    public Optional<StoredObject> stat(OwnedImage image) {
+        calls.add("stat:" + ImagePath.of(image));
+        if (failStat) {
+            throw new ImageStorageUnavailableException("stat failed");
         }
+        Stored stored = objects.get(image);
+        return stored == null ? Optional.empty() : Optional.of(new StoredObject(stored.bytes().length, stored.contentType()));
     }
 
     @Override
-    public void remove(OwnedImage image) {
-        removeCalls.add(image);
-        if (failRemoval || failingRemovals.contains(image.imageId())) {
-            throw new ImageStorageUnavailableException("provider down");
+    public byte[] readHeader(OwnedImage image, int maxBytes) {
+        calls.add("header:" + ImagePath.of(image));
+        Stored stored = objects.get(image);
+        if (stored == null) {
+            throw new ImageStorageUnavailableException("nothing stored");
         }
-        removed.add(image);
+        return Arrays.copyOf(stored.bytes(), Math.min(maxBytes, stored.bytes().length));
     }
 
     @Override
-    public StoredImagePage list(String cursor) {
-        listCursors.add(cursor);
-        if (listCursors.size() > listsBeforeRateLimit) {
-            throw new ImageStorageRateLimitedException("slow down");
+    public void delete(OwnedImage image) {
+        calls.add("delete:" + ImagePath.of(image));
+        if (failDeletes) {
+            throw new ImageStorageUnavailableException("delete failed");
         }
-        int index = cursor == null ? 0 : Integer.parseInt(cursor);
-        return pages.get(index);
+        objects.remove(image);
     }
 
-    public static StoredImagePage page(String nextCursor, StoredImageInfo... items) {
-        return new StoredImagePage(List.of(items), nextCursor);
+    @Override
+    public boolean validatesOnUpload() {
+        return validatesOnUpload;
     }
 }

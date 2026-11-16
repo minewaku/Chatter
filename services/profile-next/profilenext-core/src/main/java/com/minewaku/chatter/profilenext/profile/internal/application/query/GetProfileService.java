@@ -1,7 +1,9 @@
 package com.minewaku.chatter.profilenext.profile.internal.application.query;
 
 import com.minewaku.chatter.profilenext.profile.api.query.GetProfileUseCase;
-import com.minewaku.chatter.profilenext.profile.internal.model.ImageRef;
+import com.minewaku.chatter.profilenext.profile.internal.model.ImageId;
+import com.minewaku.chatter.profilenext.profile.internal.model.ImagePath;
+import com.minewaku.chatter.profilenext.profile.internal.model.ImageSlot;
 import com.minewaku.chatter.profilenext.profile.internal.model.UserId;
 import com.minewaku.chatter.profilenext.profile.internal.port.query.ProfileQueryRepository;
 import com.minewaku.chatter.profilenext.profile.internal.port.query.ProfileQueryRepository.ProfileView;
@@ -10,7 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Reads a profile; a user who never saved one gets the defaults, never an absence. Images come back as an id and a
- * promoted flag: building an address from them is not the core's job.
+ * relative path: turning that into an address is not the core's job.
  */
 @Service
 @Transactional(readOnly = true)
@@ -30,13 +32,13 @@ public class GetProfileService implements GetProfileUseCase {
                 profile.userId().value(),
                 profile.displayName() == null ? "" : profile.displayName().value(),
                 profile.bio().value(),
-                resultOf(profile.avatar()),
-                resultOf(profile.banner()),
+                imageOf(userId, ImageSlot.AVATAR, profile.avatar()),
+                imageOf(userId, ImageSlot.BANNER, profile.banner()),
                 profile.createdAt(),
                 profile.updatedAt());
     }
 
-    private static ImageResult resultOf(ImageRef image) {
-        return image == null ? null : new ImageResult(image.id().value().toString(), image.promoted());
+    private static ImageResult imageOf(UserId userId, ImageSlot slot, ImageId id) {
+        return id == null ? null : new ImageResult(id.value().toString(), ImagePath.of(userId, slot, id));
     }
 }

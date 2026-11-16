@@ -28,6 +28,9 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 @Import(TestSecurityConfiguration.class)
 class ProfileControllerSaveTest {
 
+    @MockitoBean
+    private com.minewaku.chatter.profilenext.presentation.image.ImageUrlResolver urls;
+
     @Autowired
     private MockMvc mvc;
 

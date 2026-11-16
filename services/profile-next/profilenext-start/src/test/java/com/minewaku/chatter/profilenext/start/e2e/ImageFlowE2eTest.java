@@ -3,192 +3,289 @@ package com.minewaku.chatter.profilenext.start.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-import com.minewaku.chatter.profilenext.profile.api.command.SweepUnreferencedImagesUseCase;
-import com.minewaku.chatter.profilenext.profile.internal.model.ImageSlot;
-import com.minewaku.chatter.profilenext.start.support.FakeCloudStorage;
-import com.minewaku.chatter.profilenext.start.support.StartTestSupport;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
+import com.minewaku.chatter.profilenext.start.support.ImageE2eSupport;
+import com.minewaku.chatter.profilenext.start.support.ImageFixtures;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import org.junit.jupiter.api.BeforeEach;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.simple.JdbcClient;
 
-class ImageFlowE2eTest extends StartTestSupport {
+/** The whole image workflow against real PostgreSQL, the real adapter and use cases, and an in-memory object store. */
+class ImageFlowE2eTest extends ImageE2eSupport {
 
-    private static final AtomicLong IDS = new AtomicLong(6_000_000L);
+    private static final Duration PATIENCE = Duration.ofSeconds(30);
 
-    // UUIDv7-shaped ids that order by their first group, as the production generator's do
-    private static String uploadId(int order) {
-        return String.format("0197%04x-0000-7000-8000-%012d", order, order);
-    }
+    @Test
+    void ticketUploadCommitShowsTheImageAndLeavesNothingBehind() throws Exception {
+        long user = newUser();
 
-    @Autowired
-    private JdbcClient jdbc;
+        String imageId = upload(user, "avatar", "image/png", ImageFixtures.png(512, 512));
+        assertThat(profileOf(user)).contains("\"avatarUrl\":null");
 
-    @Autowired
-    private SweepUnreferencedImagesUseCase sweep;
+        HttpResponse<String> committed = commit(user, "avatar", imageId);
 
-    @BeforeEach
-    void reset() {
-        STORAGE.failing = false;
-        STORAGE.files.clear();
-        jdbc.sql("DELETE FROM pending_image_removal").update();
-    }
-
-    private HttpResponse<String> notify(String body, String signature) throws Exception {
-        HttpRequest request = HttpRequest.newBuilder(URI.create(url("/api/v1/profiles/uploads/notifications")))
-                .header("Content-Type", "application/json")
-                .header("X-Cld-Signature", signature)
-                .header("X-Cld-Timestamp", Long.toString(System.currentTimeMillis() / 1000))
-                .POST(HttpRequest.BodyPublishers.ofString(body))
-                .build();
-        return HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
-    }
-
-    /** Upload to the provider, then deliver its confirmation. */
-    private HttpResponse<String> uploadAndConfirm(long user, ImageSlot slot, String uploadId) throws Exception {
-        STORAGE.upload(user, slot, uploadId);
-        String body = FakeCloudStorage.body(user, slot, uploadId, "png", 2048);
-        return notify(body, FakeCloudStorage.signatureFor(body));
-    }
-
-    private String profileOf(long user) throws Exception {
-        return send("GET", "/api/v1/profiles/" + user, bearer(user), null).body();
-    }
-
-    private Integer attemptsFor(String publicId) {
-        return jdbc.sql("SELECT attempts FROM pending_image_removal WHERE public_id = :id")
-                .param("id", publicId)
-                .query(Integer.class)
-                .optional()
-                .orElse(null);
+        assertThat(committed.statusCode()).isEqualTo(200);
+        assertThat(committed.body())
+                .contains("\"outcome\":\"applied\"")
+                .contains("\"imageUrl\":\"" + addressOf(user, "avatar", imageId) + "\"");
+        assertThat(profileOf(user)).contains("\"avatarUrl\":\"" + addressOf(user, "avatar", imageId) + "\"");
+        assertThat(storedKeys(user)).containsExactly(keyOf(user, "avatar", imageId));
+        assertThat(ledgerRows(user)).isZero();
     }
 
     @Test
-    void permissionThenConfirmationShowsTheNewImage() throws Exception {
-        long user = IDS.incrementAndGet();
+    void theTicketPointsStraightAtTheStorageAndSignsExactlyTheDeclaredFile() throws Exception {
+        long user = newUser();
 
-        HttpResponse<String> permission = send("POST", "/api/v1/profiles/avatar/upload-signature", bearer(user), null);
-        assertThat(permission.statusCode()).isEqualTo(200);
-        Matcher publicId = Pattern.compile("chatter/profile/avatars/" + user + "/([0-9a-f-]+)")
-                .matcher(permission.body());
-        assertThat(publicId.find()).isTrue();
-        assertThat(permission.body()).contains("\"uploadUrl\"").contains("\"expiresAt\"");
+        HttpResponse<String> ticket = requestTicket(user, "banner", "image/webp", 4321);
 
-        String uploadId = publicId.group(1);
-        assertThat(uploadAndConfirm(user, ImageSlot.AVATAR, uploadId).statusCode()).isEqualTo(204);
+        assertThat(ticket.statusCode()).isEqualTo(200);
+        String imageId = string(ticket.body(), "imageId");
+        assertThat(string(ticket.body(), "uploadUrl")).contains("/" + BUCKET + "/" + keyOf(user, "banner", imageId));
+        assertThat(ticket.body()).contains("\"method\":\"PUT\"").contains("\"Content-Type\":\"image/webp\"").contains("\"Content-Length\":\"4321\"");
+        assertThat(ledgerRows(user)).isEqualTo(1);
+    }
+
+    @Test
+    void replacingAnImageSwitchesTheAddressAndTheOldFileIsDeleted() throws Exception {
+        long user = newUser();
+        String first = setImage(user, "avatar", 512);
+
+        String second = setImage(user, "avatar", 256);
+
+        assertThat(profileOf(user)).contains(addressOf(user, "avatar", second)).doesNotContain(first);
+        await().atMost(PATIENCE).untilAsserted(() -> {
+            assertThat(storedKeys(user)).containsExactly(keyOf(user, "avatar", second));
+            assertThat(ledgerRows(user)).isZero();
+        });
+    }
+
+    @Test
+    void theTwoSlotsAreIndependent() throws Exception {
+        long user = newUser();
+
+        String avatar = setImage(user, "avatar", 512);
+        String banner = upload(user, "banner", "image/png", ImageFixtures.png(1500, 500));
+        assertThat(commit(user, "banner", banner).statusCode()).isEqualTo(200);
 
         assertThat(profileOf(user))
-                .contains("\"avatarUrl\":\"" + FakeCloudStorage.urlOf(FakeCloudStorage.publicId(user, ImageSlot.AVATAR, uploadId)) + "\"")
-                .contains("\"bannerUrl\":null");
+                .contains(addressOf(user, "avatar", avatar))
+                .contains(addressOf(user, "banner", banner));
     }
 
     @Test
-    void aSecondUploadQueuesTheFirstAndTheWorkerRemovesIt() throws Exception {
-        long user = IDS.incrementAndGet();
-        String first = FakeCloudStorage.publicId(user, ImageSlot.AVATAR, uploadId(1));
-        String second = FakeCloudStorage.publicId(user, ImageSlot.AVATAR, uploadId(2));
-        uploadAndConfirm(user, ImageSlot.AVATAR, uploadId(1));
+    void aRepeatedCommitIsAlreadyApplied() throws Exception {
+        long user = newUser();
+        String imageId = setImage(user, "avatar", 512);
 
-        assertThat(uploadAndConfirm(user, ImageSlot.AVATAR, uploadId(2)).statusCode()).isEqualTo(204);
+        HttpResponse<String> again = commit(user, "avatar", imageId);
 
-        assertThat(profileOf(user)).contains(FakeCloudStorage.urlOf(second));
-        await().atMost(Duration.ofSeconds(20)).untilAsserted(() -> {
-            assertThat(STORAGE.files.keySet()).containsExactly(second);
-            assertThat(attemptsFor(first)).isNull();
+        assertThat(again.statusCode()).isEqualTo(200);
+        assertThat(again.body()).contains("\"outcome\":\"already_applied\"");
+    }
+
+    @Test
+    void manyCommitsOfOneTicketAtOnceApplyItExactlyOnce() throws Exception {
+        long user = newUser();
+        String imageId = upload(user, "avatar", "image/png", ImageFixtures.png(512, 512));
+        AtomicInteger applied = new AtomicInteger();
+        AtomicInteger alreadyApplied = new AtomicInteger();
+        List<CompletableFuture<Void>> calls = new ArrayList<>();
+        for (int i = 0; i < 8; i++) {
+            calls.add(CompletableFuture.runAsync(() -> {
+                try {
+                    HttpResponse<String> response = commit(user, "avatar", imageId);
+                    assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
+                    if (response.body().contains("\"outcome\":\"applied\"")) {
+                        applied.incrementAndGet();
+                    } else {
+                        alreadyApplied.incrementAndGet();
+                    }
+                } catch (Exception e) {
+                    throw new IllegalStateException(e);
+                }
+            }));
+        }
+        CompletableFuture.allOf(calls.toArray(CompletableFuture[]::new)).join();
+
+        assertThat(applied).hasValue(1);
+        assertThat(alreadyApplied).hasValue(7);
+        assertThat(storedKeys(user)).containsExactly(keyOf(user, "avatar", imageId));
+    }
+
+    @Test
+    void committingBeforeTheFileArrivedCanBeRetriedOnceItHas() throws Exception {
+        long user = newUser();
+        HttpResponse<String> ticket = requestTicket(user, "avatar", "image/png", 33);
+        String imageId = string(ticket.body(), "imageId");
+
+        HttpResponse<String> early = commit(user, "avatar", imageId);
+
+        assertThat(early.statusCode()).isEqualTo(409);
+        assertThat(early.body()).contains("\"code\":\"upload_incomplete\"");
+
+        STORAGE.putViaUrl(string(ticket.body(), "uploadUrl"), ImageFixtures.png(512, 512), "image/png");
+        assertThat(commit(user, "avatar", imageId).statusCode()).isEqualTo(200);
+    }
+
+    @Test
+    void askingForTheSameSlotAgainWhileTheTicketIsUsableGivesTheSameImageId() throws Exception {
+        long user = newUser();
+
+        String first = string(requestTicket(user, "avatar", "image/png", 100).body(), "imageId");
+        String second = string(requestTicket(user, "avatar", "image/jpeg", 200).body(), "imageId");
+
+        assertThat(second).isEqualTo(first);
+        assertThat(ledgerRows(user)).isEqualTo(1);
+    }
+
+    // ---- refusals
+
+    @Test
+    void aFileThatIsNotAnImageIsRefusedAndDeletedAndNeverShown() throws Exception {
+        long user = newUser();
+        String imageId = upload(user, "avatar", "image/png", "<html>definitely not a png</html>".getBytes());
+
+        HttpResponse<String> refused = commit(user, "avatar", imageId);
+
+        assertThat(refused.statusCode()).isEqualTo(422);
+        assertThat(refused.body()).contains("\"code\":\"image_rejected\"");
+        assertThat(profileOf(user)).contains("\"avatarUrl\":null");
+        await().atMost(PATIENCE).untilAsserted(() -> {
+            assertThat(storedKeys(user)).isEmpty();
+            assertThat(ledgerRows(user)).isZero();
+        });
+        assertThat(commit(user, "avatar", imageId).statusCode()).isEqualTo(404);
+    }
+
+    @Test
+    void anImageTooBigInPixelsForTheSlotIsRefused() throws Exception {
+        long user = newUser();
+        String imageId = upload(user, "avatar", "image/png", ImageFixtures.png(2000, 2000));
+
+        assertThat(commit(user, "avatar", imageId).statusCode()).isEqualTo(422);
+    }
+
+    @Test
+    void aTicketRequestForAnUnallowedTypeOrSizeIsRefusedAndRecordsNothing() throws Exception {
+        long user = newUser();
+
+        assertThat(requestTicket(user, "avatar", "image/gif", 100).statusCode()).isEqualTo(422);
+        assertThat(requestTicket(user, "avatar", "image/png", 50_000_000).statusCode()).isEqualTo(422);
+        assertThat(requestTicket(user, "avatar", "image/png", 0).statusCode()).isEqualTo(400);
+
+        assertThat(ledgerRows(user)).isZero();
+    }
+
+    @Test
+    void anotherUsersTicketCannotBeCommittedAndTheirFileIsUntouched() throws Exception {
+        long alice = newUser();
+        long mallory = newUser();
+        String imageId = upload(alice, "avatar", "image/png", ImageFixtures.png(512, 512));
+
+        assertThat(commit(mallory, "avatar", imageId).statusCode()).isEqualTo(404);
+
+        assertThat(storedKeys(alice)).containsExactly(keyOf(alice, "avatar", imageId));
+        assertThat(commit(alice, "avatar", imageId).statusCode()).isEqualTo(200);
+        assertThat(profileOf(mallory)).contains("\"avatarUrl\":null");
+    }
+
+    @Test
+    void aTicketForOneSlotCannotBeCommittedIntoTheOther() throws Exception {
+        long user = newUser();
+        String imageId = upload(user, "avatar", "image/png", ImageFixtures.png(512, 512));
+
+        assertThat(commit(user, "banner", imageId).statusCode()).isEqualTo(404);
+    }
+
+    @Test
+    void unknownAndMalformedImageIdsAreNotFound() throws Exception {
+        long user = newUser();
+
+        assertThat(commit(user, "avatar", "0197aaab-0000-7000-8000-00000000ffff").statusCode()).isEqualTo(404);
+        assertThat(commit(user, "avatar", "not-a-uuid").statusCode()).isEqualTo(404);
+    }
+
+    @Test
+    void everyEndpointNeedsAToken() throws Exception {
+        assertThat(send("POST", "/api/v1/profiles/@me/images/avatar/upload", null, "{}").statusCode()).isEqualTo(401);
+        assertThat(send("POST", "/api/v1/profiles/@me/images/avatar/commit", null, "{}").statusCode()).isEqualTo(401);
+        assertThat(send("DELETE", "/api/v1/profiles/@me/images/avatar", null, null).statusCode()).isEqualTo(401);
+    }
+
+    // ---- removal
+
+    @Test
+    void removingAnImageEmptiesTheSlotAndDeletesTheFile() throws Exception {
+        long user = newUser();
+        setImage(user, "avatar", 512);
+
+        assertThat(remove(user, "avatar").statusCode()).isEqualTo(204);
+
+        assertThat(profileOf(user)).contains("\"avatarUrl\":null");
+        await().atMost(PATIENCE).untilAsserted(() -> {
+            assertThat(storedKeys(user)).isEmpty();
+            assertThat(ledgerRows(user)).isZero();
+        });
+        assertThat(remove(user, "avatar").statusCode()).isEqualTo(204);
+    }
+
+    // ---- orphan prevention
+
+    @Test
+    void anUploadThatWasNeverCommittedIsSweptOnceItsTicketAndGraceHavePassed() throws Exception {
+        long user = newUser();
+        String imageId = upload(user, "avatar", "image/png", ImageFixtures.png(512, 512));
+        assertThat(storedKeys(user)).hasSize(1);
+
+        // not yet due: the sweeper leaves it alone
+        Thread.sleep(1500);
+        assertThat(storedKeys(user)).hasSize(1);
+
+        jdbc.sql("UPDATE pending_upload SET delete_after = now() - interval '1 second' WHERE image_id = :id")
+                .param("id", java.util.UUID.fromString(imageId))
+                .update();
+
+        await().atMost(PATIENCE).untilAsserted(() -> {
+            assertThat(storedKeys(user)).isEmpty();
+            assertThat(ledgerRows(user)).isZero();
         });
     }
 
     @Test
-    void theSameConfirmationTwiceChangesNothing() throws Exception {
-        long user = IDS.incrementAndGet();
-        uploadAndConfirm(user, ImageSlot.AVATAR, uploadId(1));
-        String before = profileOf(user);
+    void aFileThatCannotBeDeletedNowIsDeletedByTheSweeperAsSoonAsStorageIsBack() throws Exception {
+        long user = newUser();
+        String first = setImage(user, "avatar", 512);
+        STORAGE.failingDeletes = true;
 
-        assertThat(uploadAndConfirm(user, ImageSlot.AVATAR, uploadId(1)).statusCode()).isEqualTo(204);
+        String second = setImage(user, "avatar", 256);
 
-        assertThat(profileOf(user)).isEqualTo(before);
-        assertThat(STORAGE.files).containsKey(FakeCloudStorage.publicId(user, ImageSlot.AVATAR, uploadId(1)));
-        assertThat(jdbc.sql("SELECT count(*) FROM pending_image_removal").query(Long.class).single()).isZero();
+        assertThat(profileOf(user)).contains(addressOf(user, "avatar", second));
+        assertThat(storedKeys(user)).contains(keyOf(user, "avatar", first));
+        assertThat(ledgerRows(user)).isEqualTo(1);
+
+        STORAGE.failingDeletes = false;
+
+        await().atMost(PATIENCE).untilAsserted(() -> {
+            assertThat(storedKeys(user)).containsExactly(keyOf(user, "avatar", second));
+            assertThat(ledgerRows(user)).isZero();
+        });
     }
 
     @Test
-    void anInvalidSignatureIsRefusedAndChangesNothing() throws Exception {
-        long user = IDS.incrementAndGet();
-        String body = FakeCloudStorage.body(user, ImageSlot.AVATAR, uploadId(1), "png", 2048);
-        STORAGE.upload(user, ImageSlot.AVATAR, uploadId(1));
-
-        HttpResponse<String> response = notify(body, "sig:forged");
-
-        assertThat(response.statusCode()).isEqualTo(401);
-        assertThat(response.body()).contains("\"code\":\"unauthenticated\"");
-        assertThat(profileOf(user)).contains("\"avatarUrl\":null");
-    }
-
-    @Test
-    void aFileOverItsLimitIsForbiddenAndQueuedForRemoval() throws Exception {
-        long user = IDS.incrementAndGet();
-        STORAGE.failing = true; // keep the worker from clearing the row before it is observed
-        STORAGE.upload(user, ImageSlot.AVATAR, uploadId(1));
-        String body = FakeCloudStorage.body(user, ImageSlot.AVATAR, uploadId(1), "png", 6L * 1024 * 1024);
-
-        HttpResponse<String> response = notify(body, FakeCloudStorage.signatureFor(body));
-
-        assertThat(response.statusCode()).isEqualTo(403);
-        assertThat(profileOf(user)).contains("\"avatarUrl\":null");
-        assertThat(attemptsFor(FakeCloudStorage.publicId(user, ImageSlot.AVATAR, uploadId(1)))).isNotNull();
-    }
-
-    @Test
-    void whenTheProviderFailsTheProfileStillShowsTheNewImageAndRemovalRetriesUntilItRecovers() throws Exception {
-        long user = IDS.incrementAndGet();
-        String first = FakeCloudStorage.publicId(user, ImageSlot.AVATAR, uploadId(1));
-        String second = FakeCloudStorage.publicId(user, ImageSlot.AVATAR, uploadId(2));
-        uploadAndConfirm(user, ImageSlot.AVATAR, uploadId(1));
+    void aStorageOutageIsServiceUnavailableAndChangesNothing() throws Exception {
+        long user = newUser();
+        String imageId = upload(user, "avatar", "image/png", ImageFixtures.png(512, 512));
         STORAGE.failing = true;
 
-        assertThat(uploadAndConfirm(user, ImageSlot.AVATAR, uploadId(2)).statusCode()).isEqualTo(204);
+        HttpResponse<String> response = commit(user, "avatar", imageId);
 
-        assertThat(profileOf(user)).contains(FakeCloudStorage.urlOf(second));
-        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> assertThat(attemptsFor(first)).isGreaterThanOrEqualTo(2));
-        assertThat(STORAGE.files).containsKey(first);
-
+        assertThat(response.statusCode()).isEqualTo(503);
         STORAGE.failing = false;
-
-        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
-            assertThat(attemptsFor(first)).isNull();
-            assertThat(STORAGE.files.keySet()).containsExactly(second);
-        });
-    }
-
-    @Test
-    void aNeverConfirmedOldFileIsRemovedBySweep() throws Exception {
-        long user = IDS.incrementAndGet();
-        STORAGE.upload(user, ImageSlot.AVATAR, UUID.randomUUID().toString());
-        Thread.sleep(50); // the grace period is zero: the file just has to be older than "now"
-
-        var result = sweep.handle(new SweepUnreferencedImagesUseCase.Command());
-
-        assertThat(result.removed()).isEqualTo(1);
-        assertThat(STORAGE.files).isEmpty();
-    }
-
-    @Test
-    void sweepKeepsAFileThatAProfileStillShows() throws Exception {
-        long user = IDS.incrementAndGet();
-        uploadAndConfirm(user, ImageSlot.AVATAR, uploadId(1));
-        Thread.sleep(50);
-
-        sweep.handle(new SweepUnreferencedImagesUseCase.Command());
-
-        assertThat(STORAGE.files).containsKey(FakeCloudStorage.publicId(user, ImageSlot.AVATAR, uploadId(1)));
+        assertThat(profileOf(user)).contains("\"avatarUrl\":null");
+        assertThat(commit(user, "avatar", imageId).statusCode()).isEqualTo(200);
     }
 }

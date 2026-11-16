@@ -4,7 +4,6 @@ import com.minewaku.chatter.profilenext.profile.internal.model.Bio;
 import com.minewaku.chatter.profilenext.profile.internal.model.DisplayName;
 import com.minewaku.chatter.profilenext.profile.internal.model.ImageId;
 import com.minewaku.chatter.profilenext.profile.internal.model.ImageSlot;
-import com.minewaku.chatter.profilenext.profile.internal.model.Profile;
 import com.minewaku.chatter.profilenext.profile.internal.model.UserId;
 import java.time.Instant;
 import java.util.Optional;
@@ -17,20 +16,18 @@ public interface ProfileRepository {
      */
     boolean applyEdit(UserId userId, DisplayName displayName, Bio bio, Instant now);
 
-    /**
-     * Loads the user's profile and holds an exclusive lock on it until the surrounding transaction ends, so concurrent
-     * image confirmations for one user serialise. Empty when there is no row. Must be called inside a transaction.
-     */
-    Optional<Profile> findForUpdate(UserId userId);
-
-    /** Sets one slot (and the update time) on an existing row. Not called when there is no row. */
-    void setImage(UserId userId, ImageSlot slot, ImageId imageId, Instant now);
+    /** The image the user holds in the slot, or empty when the slot is empty or there is no row. */
+    Optional<ImageId> currentImage(UserId userId, ImageSlot slot);
 
     /**
-     * Empties a slot, but only if it currently holds {@code imageId}. Returns whether it did; false (and no change)
-     * when the slot holds something else or there is no row.
+     * Makes {@code imageId} the slot's image, creating the row when there is none, and returns the image it replaced
+     * (empty when the slot was empty). Concurrent calls for one user serialise on the row. Must be called inside a
+     * transaction.
      */
-    boolean clearImageIf(UserId userId, ImageSlot slot, ImageId imageId, Instant now);
+    Optional<ImageId> replaceImage(UserId userId, ImageSlot slot, ImageId imageId, Instant now);
+
+    /** Empties the slot and returns the image it held; empty (and no change) when it was already empty. */
+    Optional<ImageId> removeImage(UserId userId, ImageSlot slot, Instant now);
 
     /** Removes the user's row and returns the images it held; empty when there was no row. */
     Optional<DeletedProfile> deleteByUserId(UserId userId);

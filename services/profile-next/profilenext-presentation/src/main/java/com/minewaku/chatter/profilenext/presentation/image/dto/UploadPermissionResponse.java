@@ -4,10 +4,20 @@ import com.minewaku.chatter.profilenext.profile.api.command.RequestImageUploadUs
 import java.time.Instant;
 import java.util.Map;
 
-/** Send {@code fields} plus the file, as multipart form data, to {@code uploadUrl}. */
-public record UploadPermissionResponse(String uploadUrl, String method, Map<String, String> fields, Instant expiresAt) {
+/**
+ * Send {@code method} to {@code uploadUrl} with {@code headers} and the file as the body; for providers that take a form
+ * upload, also send {@code fields}. Hand {@code imageId} back to the commit call once the upload has finished.
+ */
+public record UploadPermissionResponse(
+        String imageId,
+        String uploadUrl,
+        String method,
+        Map<String, String> headers,
+        Map<String, String> fields,
+        Instant expiresAt) {
 
     public static UploadPermissionResponse from(RequestImageUploadUseCase.Result result) {
-        return new UploadPermissionResponse(result.uploadUrl(), result.method(), result.fields(), result.expiresAt());
+        return new UploadPermissionResponse(
+                result.imageId(), result.uploadUrl(), result.method(), result.headers(), result.fields(), result.expiresAt());
     }
 }

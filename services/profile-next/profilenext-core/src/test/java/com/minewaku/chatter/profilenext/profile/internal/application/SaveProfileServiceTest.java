@@ -110,8 +110,8 @@ class SaveProfileServiceTest {
     void savingTextLeavesBothImageSlotsUntouched() {
         FakeProfileStore store = new FakeProfileStore();
         store.applyEdit(UserId.of(7), DisplayName.of("Before"), null, NOW);
-        store.setImage(UserId.of(7), ImageSlot.AVATAR, ImageIds.at(1), NOW);
-        store.setImage(UserId.of(7), ImageSlot.BANNER, ImageIds.at(2), NOW);
+        store.replaceImage(UserId.of(7), ImageSlot.AVATAR, ImageIds.at(1), NOW);
+        store.replaceImage(UserId.of(7), ImageSlot.BANNER, ImageIds.at(2), NOW);
 
         var result = new SaveProfileService(store, Clock.fixed(NOW.plusSeconds(60), ZoneOffset.UTC))
                 .handle(new SaveProfileUseCase.Command(7, "After", "New bio"));

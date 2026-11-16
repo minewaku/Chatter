@@ -1,5 +1,6 @@
 package com.minewaku.chatter.profilenext.start.support;
 
+import com.minewaku.chatter.profilenext.infrastructure.adapter.outbound.image.storage.s3.ObjectStoreClient;
 import com.minewaku.chatter.profilenext.infrastructure.security.PemKeys;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -38,7 +39,9 @@ public abstract class StartTestSupport {
 
     protected static final RsaKeyFixtures KEYS = new RsaKeyFixtures();
 
-    protected static final FakeCloudStorage STORAGE = new FakeCloudStorage();
+    protected static final FakeObjectStore STORAGE = new FakeObjectStore();
+
+    protected static final String BUCKET = "media";
 
     static {
         POSTGRES.start();
@@ -73,12 +76,13 @@ public abstract class StartTestSupport {
         registry.add("spring.datasource.username", POSTGRES::getUsername);
         registry.add("spring.datasource.password", POSTGRES::getPassword);
         registry.add("spring.kafka.bootstrap-servers", KAFKA::getBootstrapServers);
-        // fast, observable image maintenance: the worker polls every half second, a failed removal is retried after a
-        // second, and the sweep treats every unreferenced file as old enough
-        registry.add("profile-next.images.removal.poll-interval", () -> "PT0.5S");
-        registry.add("profile-next.images.removal.delays", () -> "1s");
-        registry.add("profile-next.images.removal.lease", () -> "PT2S");
-        registry.add("profile-next.images.sweep.grace-period", () -> "PT0S");
+        // a configured (fake) bucket, a fast sweeper, and a quick retry for a delete that failed
+        registry.add("profile-next.images.access-key", () -> "test-access");
+        registry.add("profile-next.images.secret-key", () -> "test-secret");
+        registry.add("profile-next.images.bucket", () -> BUCKET);
+        registry.add("profile-next.images.public-base-url", () -> "https://media.test");
+        registry.add("profile-next.images.sweep.interval", () -> "PT0.5S");
+        registry.add("profile-next.images.sweep.retry-delay", () -> "PT1S");
     }
 
     @TestConfiguration
@@ -86,7 +90,7 @@ public abstract class StartTestSupport {
 
         @Bean
         @Primary
-        FakeCloudStorage fakeCloudStorage() {
+        ObjectStoreClient fakeObjectStore() {
             return STORAGE;
         }
 

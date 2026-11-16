@@ -1,24 +1,24 @@
 package com.minewaku.chatter.profilenext.profile.internal.application.command;
 
 import com.minewaku.chatter.profilenext.profile.api.command.DeleteProfileDataUseCase;
-import com.minewaku.chatter.profilenext.profile.internal.model.ImageSlot;
 import com.minewaku.chatter.profilenext.profile.internal.model.ImageId;
+import com.minewaku.chatter.profilenext.profile.internal.model.ImageSlot;
 import com.minewaku.chatter.profilenext.profile.internal.model.OwnedImage;
 import com.minewaku.chatter.profilenext.profile.internal.model.UserId;
-import com.minewaku.chatter.profilenext.profile.internal.port.repository.PendingImagePromotionRepository;
-import com.minewaku.chatter.profilenext.profile.internal.port.repository.PendingImageRemovalRepository;
+import com.minewaku.chatter.profilenext.profile.internal.port.repository.PendingUploadRepository;
 import com.minewaku.chatter.profilenext.profile.internal.port.repository.ProfileRepository;
 import java.time.Clock;
+import java.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Removes a deleted account's profile row, queues its images for removal and drops its pending promotions, in one
- * transaction. Naturally idempotent: with no row
- * there is nothing to delete and nothing to queue, and that is success. The stored images are deleted later by the
- * removal worker, so a storage outage never fails the notice.
+ * Handles an account-deleted notice: removes the profile row, retires both current images and every pending ticket of
+ * the user, in one transaction. Retired pending tickets keep their sweep time, so an upload that was already under way
+ * is still cleaned up after it lands; and they can no longer be committed. No storage call happens here, so a storage
+ * outage never fails the notice, and a repeat of the notice finds nothing left to do.
  */
 @Service
 @Transactional
@@ -27,36 +27,31 @@ public class DeleteProfileDataService implements DeleteProfileDataUseCase {
     private static final Logger log = LoggerFactory.getLogger(DeleteProfileDataService.class);
 
     private final ProfileRepository profiles;
-    private final PendingImageRemovalRepository removals;
-    private final PendingImagePromotionRepository promotions;
+    private final PendingUploadRepository pending;
     private final Clock clock;
 
-    public DeleteProfileDataService(
-            ProfileRepository profiles,
-            PendingImageRemovalRepository removals,
-            PendingImagePromotionRepository promotions,
-            Clock clock) {
+    public DeleteProfileDataService(ProfileRepository profiles, PendingUploadRepository pending, Clock clock) {
         this.profiles = profiles;
-        this.removals = removals;
-        this.promotions = promotions;
+        this.pending = pending;
         this.clock = clock;
     }
 
     @Override
     public Result handle(Command command) {
         UserId userId = UserId.of(command.userId());
+        Instant now = clock.instant();
         profiles.deleteByUserId(userId).ifPresent(deleted -> {
-            queue(userId, deleted.avatar(), ImageSlot.AVATAR);
-            queue(userId, deleted.banner(), ImageSlot.BANNER);
+            retire(userId, ImageSlot.AVATAR, deleted.avatar(), now);
+            retire(userId, ImageSlot.BANNER, deleted.banner(), now);
         });
-        promotions.deleteByUserId(userId);
+        pending.discardAllPending(userId);
         log.info("account data deleted eventId={} userId={}", command.eventId(), userId.value());
         return new Result();
     }
 
-    private void queue(UserId userId, ImageId imageId, ImageSlot slot) {
+    private void retire(UserId userId, ImageSlot slot, ImageId imageId, Instant now) {
         if (imageId != null) {
-            removals.enqueue(new OwnedImage(userId, slot, imageId), clock.instant());
+            pending.discard(new OwnedImage(userId, slot, imageId), now);
         }
     }
 }

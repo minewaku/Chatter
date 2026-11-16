@@ -25,13 +25,13 @@ public final class StructureRules {
     /** Each row names an outbound port, its single adapter and the adapter package. */
     public static final List<PortRow> PORT_MAP = List.of(
             new PortRow(
-                    "com.minewaku.chatter.profilenext.profile.internal.port.repository.PendingImageRemovalRepository",
-                    "JdbcPendingImageRemovalRepository",
-                    INFRA + ".adapter.outbound.image.removal.jdbc"),
+                    "com.minewaku.chatter.profilenext.profile.internal.port.repository.PendingUploadRepository",
+                    "JdbcPendingUploadRepository",
+                    INFRA + ".adapter.outbound.image.pending.jdbc"),
             new PortRow(
                     "com.minewaku.chatter.profilenext.profile.internal.port.ImageStorage",
-                    "CloudinaryImageStorage",
-                    INFRA + ".adapter.outbound.image.storage.cloudinary"),
+                    "S3ImageStorage",
+                    INFRA + ".adapter.outbound.image.storage.s3"),
             new PortRow(
                     "com.minewaku.chatter.profilenext.profile.internal.port.repository.ProfileRepository",
                     "JdbcProfileRepository",

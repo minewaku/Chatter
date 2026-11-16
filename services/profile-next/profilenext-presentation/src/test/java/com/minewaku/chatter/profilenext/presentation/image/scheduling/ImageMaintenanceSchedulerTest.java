@@ -3,43 +3,38 @@ package com.minewaku.chatter.profilenext.presentation.image.scheduling;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
-import com.minewaku.chatter.profilenext.profile.api.command.RemoveObsoleteImagesUseCase;
-import com.minewaku.chatter.profilenext.profile.api.command.SweepUnreferencedImagesUseCase;
+import com.minewaku.chatter.profilenext.profile.api.command.SweepPendingUploadsUseCase;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 class ImageMaintenanceSchedulerTest {
 
     @Test
-    void aFailingRemovalRunIsLoggedAndTheNextRunStillHappens() {
+    void aRunCallsTheSweepOnce() {
         AtomicInteger calls = new AtomicInteger();
-        RemoveObsoleteImagesUseCase failing = command -> {
-            if (calls.incrementAndGet() == 1) {
-                throw new IllegalStateException("database is down");
-            }
-            return new RemoveObsoleteImagesUseCase.Result(1, 0, 0);
-        };
-        var scheduler = new ImageMaintenanceScheduler(failing, command -> new SweepUnreferencedImagesUseCase.Result(0));
+        var scheduler = new ImageMaintenanceScheduler(command -> {
+            calls.incrementAndGet();
+            return new SweepPendingUploadsUseCase.Result(3, 0);
+        });
 
-        assertThatCode(scheduler::drainRemovalQueue).doesNotThrowAnyException();
-        assertThatCode(scheduler::drainRemovalQueue).doesNotThrowAnyException();
+        scheduler.sweepPendingUploads();
 
-        assertThat(calls).hasValue(2);
+        assertThat(calls).hasValue(1);
     }
 
     @Test
     void aFailingSweepIsLoggedAndTheNextRunStillHappens() {
         AtomicInteger calls = new AtomicInteger();
-        SweepUnreferencedImagesUseCase failing = command -> {
+        SweepPendingUploadsUseCase failing = command -> {
             if (calls.incrementAndGet() == 1) {
-                throw new IllegalStateException("provider down");
+                throw new IllegalStateException("database is down");
             }
-            return new SweepUnreferencedImagesUseCase.Result(2);
+            return new SweepPendingUploadsUseCase.Result(2, 0);
         };
-        var scheduler = new ImageMaintenanceScheduler(command -> new RemoveObsoleteImagesUseCase.Result(0, 0, 0), failing);
+        var scheduler = new ImageMaintenanceScheduler(failing);
 
-        assertThatCode(scheduler::sweepStrayImages).doesNotThrowAnyException();
-        assertThatCode(scheduler::sweepStrayImages).doesNotThrowAnyException();
+        assertThatCode(scheduler::sweepPendingUploads).doesNotThrowAnyException();
+        assertThatCode(scheduler::sweepPendingUploads).doesNotThrowAnyException();
 
         assertThat(calls).hasValue(2);
     }

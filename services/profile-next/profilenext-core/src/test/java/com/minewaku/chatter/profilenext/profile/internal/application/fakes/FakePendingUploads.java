@@ -1,0 +1,80 @@
+package com.minewaku.chatter.profilenext.profile.internal.application.fakes;
+
+import com.minewaku.chatter.profilenext.profile.internal.model.ImageId;
+import com.minewaku.chatter.profilenext.profile.internal.model.ImageSlot;
+import com.minewaku.chatter.profilenext.profile.internal.model.OwnedImage;
+import com.minewaku.chatter.profilenext.profile.internal.model.PendingUpload;
+import com.minewaku.chatter.profilenext.profile.internal.model.UserId;
+import com.minewaku.chatter.profilenext.profile.internal.port.repository.PendingUploadRepository;
+import java.time.Instant;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Optional;
+
+/** The upload ledger in memory, with the same rules as the SQL adapter (one pending ticket per user and slot). */
+public class FakePendingUploads implements PendingUploadRepository {
+
+    public final Map<ImageId, PendingUpload> rows = new LinkedHashMap<>();
+
+    @Override
+    public Optional<PendingUpload> findPending(UserId userId, ImageSlot slot) {
+        return rows.values().stream()
+                .filter(PendingUpload::isPending)
+                .filter(u -> u.image().userId().equals(userId) && u.image().slot() == slot)
+                .findFirst();
+    }
+
+    @Override
+    public Optional<PendingUpload> findPending(UserId userId, ImageId imageId) {
+        return Optional.ofNullable(rows.get(imageId))
+                .filter(PendingUpload::isPending)
+                .filter(u -> u.image().userId().equals(userId));
+    }
+
+    @Override
+    public Optional<PendingUpload> lockPending(UserId userId, ImageId imageId) {
+        return findPending(userId, imageId);
+    }
+
+    @Override
+    public boolean insertPending(PendingUpload upload) {
+        if (findPending(upload.image().userId(), upload.image().slot()).isPresent()) {
+            return false;
+        }
+        rows.put(upload.image().imageId(), upload);
+        return true;
+    }
+
+    @Override
+    public void discard(OwnedImage image, Instant deleteAfter) {
+        rows.put(image.imageId(), PendingUpload.discard(image, deleteAfter));
+    }
+
+    @Override
+    public void discardAllPending(UserId userId) {
+        for (PendingUpload upload : java.util.List.copyOf(rows.values())) {
+            if (upload.isPending() && upload.image().userId().equals(userId)) {
+                rows.put(upload.image().imageId(), PendingUpload.discard(upload.image(), upload.deleteAfter()));
+            }
+        }
+    }
+
+    @Override
+    public void delete(ImageId imageId) {
+        rows.remove(imageId);
+    }
+
+    @Override
+    public Optional<PendingUpload> lockNextDue(Instant now) {
+        return rows.values().stream()
+                .filter(u -> u.isDueAt(now))
+                .min(Comparator.comparing(PendingUpload::deleteAfter));
+    }
+
+    @Override
+    public void postpone(ImageId imageId, Instant deleteAfter) {
+        PendingUpload row = rows.get(imageId);
+        rows.put(imageId, new PendingUpload(row.image(), row.state(), row.expiresAt(), deleteAfter));
+    }
+}
