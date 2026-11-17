@@ -15,7 +15,7 @@ import com.minewaku.chatter.profilenext.presentation.image.ImageUrlResolver;
 import com.minewaku.chatter.profilenext.presentation.support.TestSecurityConfiguration;
 import com.minewaku.chatter.profilenext.profile.api.command.CommitImageUploadUseCase;
 import com.minewaku.chatter.profilenext.profile.api.command.RemoveImageUseCase;
-import com.minewaku.chatter.profilenext.profile.api.command.RequestImageUploadUseCase;
+import com.minewaku.chatter.profilenext.profile.api.command.RequestImageUploadTicketUseCase;
 import com.minewaku.chatter.profilenext.profile.api.exception.ImageStorageUnavailableException;
 import com.minewaku.chatter.profilenext.profile.api.exception.ImageUploadRejectedException;
 import com.minewaku.chatter.profilenext.profile.api.exception.ImageUploadRejectedException.Reason;
@@ -46,7 +46,7 @@ class ImageUploadControllerTest {
     private MockMvc mvc;
 
     @MockitoBean
-    private RequestImageUploadUseCase requestUpload;
+    private RequestImageUploadTicketUseCase requestUpload;
 
     @MockitoBean
     private CommitImageUploadUseCase commitUpload;
@@ -54,8 +54,8 @@ class ImageUploadControllerTest {
     @MockitoBean
     private RemoveImageUseCase removeImage;
 
-    private RequestImageUploadUseCase.Result ticket() {
-        return new RequestImageUploadUseCase.Result(
+    private RequestImageUploadTicketUseCase.Result ticket() {
+        return new RequestImageUploadTicketUseCase.Result(
                 IMAGE_ID,
                 "https://storage.test/profiles/123/avatar/" + IMAGE_ID + "?sig",
                 "PUT",
@@ -92,10 +92,10 @@ class ImageUploadControllerTest {
                 .andExpect(jsonPath("$.headers['Content-Type']").value("image/png"))
                 .andExpect(jsonPath("$.expiresAt").value("2026-11-04T10:05:00Z"));
 
-        ArgumentCaptor<RequestImageUploadUseCase.Command> command =
-                ArgumentCaptor.forClass(RequestImageUploadUseCase.Command.class);
+        ArgumentCaptor<RequestImageUploadTicketUseCase.Command> command =
+                ArgumentCaptor.forClass(RequestImageUploadTicketUseCase.Command.class);
         verify(requestUpload).handle(command.capture());
-        assertThat(command.getValue()).isEqualTo(new RequestImageUploadUseCase.Command(123, "AVATAR", "image/png", 1234));
+        assertThat(command.getValue()).isEqualTo(new RequestImageUploadTicketUseCase.Command(123, "AVATAR", "image/png", 1234));
     }
 
     @Test
@@ -108,8 +108,8 @@ class ImageUploadControllerTest {
                         .content(BODY))
                 .andExpect(status().isOk());
 
-        ArgumentCaptor<RequestImageUploadUseCase.Command> command =
-                ArgumentCaptor.forClass(RequestImageUploadUseCase.Command.class);
+        ArgumentCaptor<RequestImageUploadTicketUseCase.Command> command =
+                ArgumentCaptor.forClass(RequestImageUploadTicketUseCase.Command.class);
         verify(requestUpload).handle(command.capture());
         assertThat(command.getValue().slot()).isEqualTo("BANNER");
         assertThat(command.getValue().userId()).isEqualTo(5);

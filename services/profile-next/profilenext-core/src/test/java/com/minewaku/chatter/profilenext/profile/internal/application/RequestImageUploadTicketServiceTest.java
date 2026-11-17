@@ -3,11 +3,11 @@ package com.minewaku.chatter.profilenext.profile.internal.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.minewaku.chatter.profilenext.profile.api.command.RequestImageUploadUseCase.Command;
-import com.minewaku.chatter.profilenext.profile.api.command.RequestImageUploadUseCase.Result;
+import com.minewaku.chatter.profilenext.profile.api.command.RequestImageUploadTicketUseCase.Command;
+import com.minewaku.chatter.profilenext.profile.api.command.RequestImageUploadTicketUseCase.Result;
 import com.minewaku.chatter.profilenext.profile.api.exception.ImageUploadRejectedException;
 import com.minewaku.chatter.profilenext.profile.api.exception.ImageUploadRejectedException.Reason;
-import com.minewaku.chatter.profilenext.profile.internal.application.command.RequestImageUploadService;
+import com.minewaku.chatter.profilenext.profile.internal.application.command.RequestImageUploadTicketService;
 import com.minewaku.chatter.profilenext.profile.internal.application.fakes.FakeImageStorage;
 import com.minewaku.chatter.profilenext.profile.internal.application.fakes.FakePendingUploads;
 import com.minewaku.chatter.profilenext.profile.internal.application.fakes.ImageIds;
@@ -24,7 +24,7 @@ import java.time.Duration;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
-class RequestImageUploadServiceTest {
+class RequestImageUploadTicketServiceTest {
 
     private static final UserId USER = UserId.of(7);
 
@@ -33,8 +33,8 @@ class RequestImageUploadServiceTest {
     private FakePendingUploads ledger = new FakePendingUploads();
     private FakeImageStorage storage = new FakeImageStorage();
 
-    private RequestImageUploadService service() {
-        return new RequestImageUploadService(
+    private RequestImageUploadTicketService service() {
+        return new RequestImageUploadTicketService(
                 storage, ledger, Policies.standard(), new SequentialIds(), clock, transactions.template());
     }
 
@@ -77,7 +77,7 @@ class RequestImageUploadServiceTest {
 
     @Test
     void askingAgainWhileTheTicketIsUsableReusesTheSameImageId() {
-        RequestImageUploadService service = service();
+        RequestImageUploadTicketService service = service();
         Result first = service.handle(avatar("image/png", 1000));
         clock.advance(Duration.ofMinutes(2));
 
@@ -91,7 +91,7 @@ class RequestImageUploadServiceTest {
 
     @Test
     void anExpiredTicketIsRetiredKeepingItsSweepTimeAndANewOneStarts() {
-        RequestImageUploadService service = service();
+        RequestImageUploadTicketService service = service();
         Result first = service.handle(avatar("image/png", 1000));
         Instant firstSweep = ledger.rows.get(ImageIds.at(1)).deleteAfter();
         clock.advance(Duration.ofMinutes(6));
@@ -107,7 +107,7 @@ class RequestImageUploadServiceTest {
 
     @Test
     void aTicketAboutToExpireIsReplacedInsteadOfHandedOutAgain() {
-        RequestImageUploadService service = service();
+        RequestImageUploadTicketService service = service();
         Result first = service.handle(avatar("image/png", 1000));
         clock.advance(Duration.ofMinutes(5).minusSeconds(10));
 
@@ -118,7 +118,7 @@ class RequestImageUploadServiceTest {
 
     @Test
     void eachSlotAndEachUserHasItsOwnTicket() {
-        RequestImageUploadService service = service();
+        RequestImageUploadTicketService service = service();
 
         Result avatar = service.handle(avatar("image/png", 1000));
         Result banner = service.handle(new Command(7, "BANNER", "image/png", 1000));

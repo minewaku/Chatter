@@ -6,12 +6,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.minewaku.chatter.profilenext.profile.api.command.CommitImageUploadUseCase.Command;
 import com.minewaku.chatter.profilenext.profile.api.command.CommitImageUploadUseCase.Outcome;
 import com.minewaku.chatter.profilenext.profile.api.command.CommitImageUploadUseCase.Result;
-import com.minewaku.chatter.profilenext.profile.api.command.RequestImageUploadUseCase;
+import com.minewaku.chatter.profilenext.profile.api.command.RequestImageUploadTicketUseCase;
 import com.minewaku.chatter.profilenext.profile.api.exception.ImageStorageUnavailableException;
 import com.minewaku.chatter.profilenext.profile.api.exception.ImageUploadRejectedException;
 import com.minewaku.chatter.profilenext.profile.api.exception.ImageUploadRejectedException.Reason;
 import com.minewaku.chatter.profilenext.profile.internal.application.command.CommitImageUploadService;
-import com.minewaku.chatter.profilenext.profile.internal.application.command.RequestImageUploadService;
+import com.minewaku.chatter.profilenext.profile.internal.application.command.RequestImageUploadTicketService;
 import com.minewaku.chatter.profilenext.profile.internal.application.fakes.FakeImageStorage;
 import com.minewaku.chatter.profilenext.profile.internal.application.fakes.FakePendingUploads;
 import com.minewaku.chatter.profilenext.profile.internal.application.fakes.FakeProfileStore;
@@ -46,14 +46,14 @@ class CommitImageUploadServiceTest {
                 storage, profiles, ledger, Policies.standard(), clock, transactions.template());
     }
 
-    private RequestImageUploadService requestService() {
-        return new RequestImageUploadService(
+    private RequestImageUploadTicketService requestService() {
+        return new RequestImageUploadTicketService(
                 storage, ledger, Policies.standard(), ids, clock, transactions.template());
     }
 
     /** Asks for a ticket the way a client would and returns the image it can now upload. */
     private OwnedImage ticket(ImageSlot slot) {
-        var result = requestService().handle(new RequestImageUploadUseCase.Command(7, slot.name(), "image/png", 1000));
+        var result = requestService().handle(new RequestImageUploadTicketUseCase.Command(7, slot.name(), "image/png", 1000));
         return new OwnedImage(USER, slot, ImageId.of(result.imageId()));
     }
 

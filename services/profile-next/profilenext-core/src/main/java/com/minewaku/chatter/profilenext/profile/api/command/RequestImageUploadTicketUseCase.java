@@ -4,8 +4,8 @@ import com.minewaku.chatter.profilenext.shared.handler.UseCaseHandler;
 import java.time.Instant;
 import java.util.Map;
 
-public interface RequestImageUploadUseCase
-        extends UseCaseHandler<RequestImageUploadUseCase.Command, RequestImageUploadUseCase.Result> {
+public interface RequestImageUploadTicketUseCase
+        extends UseCaseHandler<RequestImageUploadTicketUseCase.Command, RequestImageUploadTicketUseCase.Result> {
 
     /** {@code slot} is {@code AVATAR} or {@code BANNER}; {@code contentType} and {@code sizeBytes} describe the file about to be sent. */
     record Command(long userId, String slot, String contentType, long sizeBytes) {}

@@ -8,7 +8,7 @@ import com.minewaku.chatter.profilenext.presentation.image.dto.UploadPermissionR
 import com.minewaku.chatter.profilenext.presentation.shared.security.AccessPrincipal;
 import com.minewaku.chatter.profilenext.profile.api.command.CommitImageUploadUseCase;
 import com.minewaku.chatter.profilenext.profile.api.command.RemoveImageUseCase;
-import com.minewaku.chatter.profilenext.profile.api.command.RequestImageUploadUseCase;
+import com.minewaku.chatter.profilenext.profile.api.command.RequestImageUploadTicketUseCase;
 import jakarta.validation.Valid;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class ImageUploadController {
 
-    private final RequestImageUploadUseCase requestUpload;
+    private final RequestImageUploadTicketUseCase requestUpload;
     private final CommitImageUploadUseCase commitUpload;
     private final RemoveImageUseCase removeImage;
     private final ImageUrlResolver urls;
@@ -41,7 +41,7 @@ public class ImageUploadController {
     @PostMapping("/upload")
     public UploadPermissionResponse upload(
             @AuthenticationPrincipal Jwt jwt, @PathVariable String slot, @Valid @RequestBody UploadPermissionRequest request) {
-        return UploadPermissionResponse.from(requestUpload.handle(new RequestImageUploadUseCase.Command(
+        return UploadPermissionResponse.from(requestUpload.handle(new RequestImageUploadTicketUseCase.Command(
                 AccessPrincipal.from(jwt).userId(), slotName(slot), request.contentType(), request.sizeBytes())));
     }
 

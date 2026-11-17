@@ -1,6 +1,6 @@
 package com.minewaku.chatter.profilenext.profile.internal.application.command;
 
-import com.minewaku.chatter.profilenext.profile.api.command.RequestImageUploadUseCase;
+import com.minewaku.chatter.profilenext.profile.api.command.RequestImageUploadTicketUseCase;
 import com.minewaku.chatter.profilenext.profile.api.exception.ImageUploadRejectedException;
 import com.minewaku.chatter.profilenext.profile.api.exception.ImageUploadRejectedException.Reason;
 import com.minewaku.chatter.profilenext.profile.internal.model.ImageId;
@@ -28,7 +28,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * (retries overwrite one object); asking after it expired retires it and starts a new one.
  */
 @Service
-public class RequestImageUploadService implements RequestImageUploadUseCase {
+public class RequestImageUploadTicketService implements RequestImageUploadTicketUseCase {
 
     private final ImageStorage storage;
     private final PendingUploadRepository pending;
@@ -37,7 +37,7 @@ public class RequestImageUploadService implements RequestImageUploadUseCase {
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public RequestImageUploadService(
+    public RequestImageUploadTicketService(
             ImageStorage storage,
             PendingUploadRepository pending,
             ImagePolicy policy,

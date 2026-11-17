@@ -1,6 +1,6 @@
 package com.minewaku.chatter.profilenext.presentation.image.dto;
 
-import com.minewaku.chatter.profilenext.profile.api.command.RequestImageUploadUseCase;
+import com.minewaku.chatter.profilenext.profile.api.command.RequestImageUploadTicketUseCase;
 import java.time.Instant;
 import java.util.Map;
 
@@ -16,7 +16,7 @@ public record UploadPermissionResponse(
         Map<String, String> fields,
         Instant expiresAt) {
 
-    public static UploadPermissionResponse from(RequestImageUploadUseCase.Result result) {
+    public static UploadPermissionResponse from(RequestImageUploadTicketUseCase.Result result) {
         return new UploadPermissionResponse(
                 result.imageId(), result.uploadUrl(), result.method(), result.headers(), result.fields(), result.expiresAt());
     }
