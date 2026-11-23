@@ -1,7 +1,7 @@
 package com.minewaku.chatter.profilenext.infrastructure.support;
 
 import com.minewaku.chatter.profilenext.infrastructure.adapter.outbound.shared.id.UuidV7IdGenerator;
-import com.minewaku.chatter.profilenext.infrastructure.config.TransactionConfiguration;
+import com.minewaku.chatter.profilenext.infrastructure.integration.transaction.TransactionConfiguration;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
 import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;

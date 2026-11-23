@@ -1,4 +1,4 @@
-package com.minewaku.chatter.profilenext.infrastructure.config;
+package com.minewaku.chatter.profilenext.infrastructure.integration.transaction;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
