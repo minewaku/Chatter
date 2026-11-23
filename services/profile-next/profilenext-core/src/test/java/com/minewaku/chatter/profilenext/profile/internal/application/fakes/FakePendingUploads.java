@@ -12,18 +12,10 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 
-/** The upload ledger in memory, with the same rules as the SQL adapter (one pending ticket per user and slot). */
+/** The upload ledger in memory, with the same rules as the SQL adapter. */
 public class FakePendingUploads implements PendingUploadRepository {
 
     public final Map<ImageId, PendingUpload> rows = new LinkedHashMap<>();
-
-    @Override
-    public Optional<PendingUpload> findPending(UserId userId, ImageSlot slot) {
-        return rows.values().stream()
-                .filter(PendingUpload::isPending)
-                .filter(u -> u.image().userId().equals(userId) && u.image().slot() == slot)
-                .findFirst();
-    }
 
     @Override
     public Optional<PendingUpload> findPending(UserId userId, ImageId imageId) {
@@ -38,12 +30,8 @@ public class FakePendingUploads implements PendingUploadRepository {
     }
 
     @Override
-    public boolean insertPending(PendingUpload upload) {
-        if (findPending(upload.image().userId(), upload.image().slot()).isPresent()) {
-            return false;
-        }
+    public void insert(PendingUpload upload) {
         rows.put(upload.image().imageId(), upload);
-        return true;
     }
 
     @Override
@@ -55,6 +43,15 @@ public class FakePendingUploads implements PendingUploadRepository {
     public void discardAllPending(UserId userId) {
         for (PendingUpload upload : java.util.List.copyOf(rows.values())) {
             if (upload.isPending() && upload.image().userId().equals(userId)) {
+                rows.put(upload.image().imageId(), PendingUpload.discard(upload.image(), upload.deleteAfter()));
+            }
+        }
+    }
+
+    @Override
+    public void discardPending(UserId userId, ImageSlot slot) {
+        for (PendingUpload upload : java.util.List.copyOf(rows.values())) {
+            if (upload.isPending() && upload.image().userId().equals(userId) && upload.image().slot() == slot) {
                 rows.put(upload.image().imageId(), PendingUpload.discard(upload.image(), upload.deleteAfter()));
             }
         }
@@ -75,6 +72,6 @@ public class FakePendingUploads implements PendingUploadRepository {
     @Override
     public void postpone(ImageId imageId, Instant deleteAfter) {
         PendingUpload row = rows.get(imageId);
-        rows.put(imageId, new PendingUpload(row.image(), row.state(), row.expiresAt(), deleteAfter));
+        rows.put(imageId, new PendingUpload(row.image(), row.expiresAt(), deleteAfter));
     }
 }

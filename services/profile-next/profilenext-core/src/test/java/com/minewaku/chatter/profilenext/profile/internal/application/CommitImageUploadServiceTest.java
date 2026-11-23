@@ -28,6 +28,7 @@ import com.minewaku.chatter.profilenext.profile.internal.model.PendingUpload;
 import com.minewaku.chatter.profilenext.profile.internal.model.UserId;
 import java.time.Duration;
 import java.util.Optional;
+import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
 class CommitImageUploadServiceTest {
@@ -64,7 +65,7 @@ class CommitImageUploadServiceTest {
     }
 
     private Command commit(OwnedImage image) {
-        return new Command(7, image.slot().name(), image.imageId().value().toString());
+        return new Command(7, image.imageId().value().toString());
     }
 
     private void assertRefused(Command command, Reason reason) {
@@ -83,39 +84,51 @@ class CommitImageUploadServiceTest {
 
         assertThat(result.outcome()).isEqualTo(Outcome.APPLIED);
         assertThat(result.path()).isEqualTo("profiles/7/avatar/" + image.imageId().value());
-        assertThat(profiles.currentImage(USER, ImageSlot.AVATAR)).contains(image.imageId());
+        assertThat(profiles.getOrDefault(USER).imageIn(ImageSlot.AVATAR)).isEqualTo(image.imageId());
         assertThat(ledger.rows).isEmpty();
         assertThat(storage.objects).containsKey(image);
     }
 
     @Test
-    void replacingAnImageDeletesTheOldKeyAndLeavesNoLedgerRow() {
+    void replacingAnImageLeavesTheOldKeyDueInTheLedgerForTheSweeper() {
         OwnedImage first = uploadedPng(ImageSlot.AVATAR, 512);
         commitService().handle(commit(first));
         OwnedImage second = uploadedPng(ImageSlot.AVATAR, 256);
 
         commitService().handle(commit(second));
 
-        assertThat(profiles.currentImage(USER, ImageSlot.AVATAR)).contains(second.imageId());
-        assertThat(storage.objects).doesNotContainKey(first).containsKey(second);
-        assertThat(ledger.rows).isEmpty();
+        assertThat(profiles.getOrDefault(USER).imageIn(ImageSlot.AVATAR)).isEqualTo(second.imageId());
+        assertThat(ledger.rows).containsOnlyKeys(first.imageId());
+        PendingUpload retired = ledger.rows.get(first.imageId());
+        assertThat(retired.isPending()).isFalse();
+        assertThat(retired.isDueAt(clock.instant())).isTrue();
+        assertThat(storage.calls).noneMatch(call -> call.startsWith("delete:"));
     }
 
     @Test
-    void ifTheOldKeyCannotBeDeletedNowTheLedgerKeepsItForTheSweeperAndTheCommitStillSucceeds() {
-        OwnedImage first = uploadedPng(ImageSlot.AVATAR, 512);
-        commitService().handle(commit(first));
-        OwnedImage second = uploadedPng(ImageSlot.AVATAR, 256);
-        storage.failDeletes = true;
+    void committingOneTicketRetiresTheOtherTicketsOfTheSlotKeepingTheirSweepTime() {
+        OwnedImage chosen = uploadedPng(ImageSlot.AVATAR, 512);
+        OwnedImage other = ticket(ImageSlot.AVATAR);
+        OwnedImage banner = ticket(ImageSlot.BANNER);
+        Instant otherSweep = ledger.rows.get(other.imageId()).deleteAfter();
 
-        Result result = commitService().handle(commit(second));
+        commitService().handle(commit(chosen));
 
-        assertThat(result.outcome()).isEqualTo(Outcome.APPLIED);
-        assertThat(profiles.currentImage(USER, ImageSlot.AVATAR)).contains(second.imageId());
-        assertThat(storage.objects).containsKey(first);
-        PendingUpload retired = ledger.rows.get(first.imageId());
-        assertThat(retired.state()).isEqualTo(PendingUpload.State.DISCARD);
-        assertThat(retired.isDueAt(clock.instant())).isTrue();
+        PendingUpload retired = ledger.rows.get(other.imageId());
+        assertThat(retired.isPending()).isFalse();
+        assertThat(retired.deleteAfter()).isEqualTo(otherSweep);
+        assertThat(ledger.rows).doesNotContainKey(chosen.imageId());
+        assertThat(ledger.rows.get(banner.imageId()).isPending()).isTrue();
+    }
+
+    @Test
+    void aTicketRetiredByAnotherCommitCanNoLongerBeCommitted() {
+        OwnedImage chosen = uploadedPng(ImageSlot.AVATAR, 512);
+        OwnedImage late = uploadedPng(ImageSlot.AVATAR, 256);
+        commitService().handle(commit(chosen));
+
+        assertRefused(commit(late), Reason.UPLOAD_NOT_FOUND);
+        assertThat(profiles.getOrDefault(USER).imageIn(ImageSlot.AVATAR)).isEqualTo(chosen.imageId());
     }
 
     @Test
@@ -126,8 +139,8 @@ class CommitImageUploadServiceTest {
         commitService().handle(commit(avatar));
         commitService().handle(commit(banner));
 
-        assertThat(profiles.currentImage(USER, ImageSlot.AVATAR)).contains(avatar.imageId());
-        assertThat(profiles.currentImage(USER, ImageSlot.BANNER)).contains(banner.imageId());
+        assertThat(profiles.getOrDefault(USER).imageIn(ImageSlot.AVATAR)).isEqualTo(avatar.imageId());
+        assertThat(profiles.getOrDefault(USER).imageIn(ImageSlot.BANNER)).isEqualTo(banner.imageId());
     }
 
     @Test
@@ -142,21 +155,33 @@ class CommitImageUploadServiceTest {
         assertThat(storage.calls).isEmpty();
     }
 
+    @Test
+    void theResultNamesTheSlotTheTicketWasIssuedForAlsoOnARepeat() {
+        OwnedImage banner = uploadedPng(ImageSlot.BANNER, 1500);
+
+        Result first = commitService().handle(commit(banner));
+        Result again = commitService().handle(commit(banner));
+
+        assertThat(first.slot()).isEqualTo("BANNER");
+        assertThat(again.outcome()).isEqualTo(Outcome.ALREADY_APPLIED);
+        assertThat(again.slot()).isEqualTo("BANNER");
+        assertThat(again.path()).isEqualTo("profiles/7/banner/" + banner.imageId().value());
+    }
+
     // ---- tickets that cannot be committed
 
     @Test
     void aTicketThatWasNeverIssuedOrDoesNotParseIsNotFound() {
-        assertRefused(new Command(7, "AVATAR", ImageIds.at(55).value().toString()), Reason.UPLOAD_NOT_FOUND);
-        assertRefused(new Command(7, "AVATAR", "not-a-uuid"), Reason.UPLOAD_NOT_FOUND);
-        assertRefused(new Command(7, "AVATAR", null), Reason.UPLOAD_NOT_FOUND);
+        assertRefused(new Command(7, ImageIds.at(55).value().toString()), Reason.UPLOAD_NOT_FOUND);
+        assertRefused(new Command(7, "not-a-uuid"), Reason.UPLOAD_NOT_FOUND);
+        assertRefused(new Command(7, null), Reason.UPLOAD_NOT_FOUND);
     }
 
     @Test
-    void anotherUsersTicketOrAnotherSlotIsNotFoundAndNothingIsDeleted() {
+    void anotherUsersTicketIsNotFoundAndNothingIsDeleted() {
         OwnedImage image = uploadedPng(ImageSlot.AVATAR, 512);
 
-        assertRefused(new Command(8, "AVATAR", image.imageId().value().toString()), Reason.UPLOAD_NOT_FOUND);
-        assertRefused(new Command(7, "BANNER", image.imageId().value().toString()), Reason.UPLOAD_NOT_FOUND);
+        assertRefused(new Command(8, image.imageId().value().toString()), Reason.UPLOAD_NOT_FOUND);
 
         assertThat(storage.objects).containsKey(image);
         assertThat(ledger.rows.get(image.imageId()).isPending()).isTrue();
@@ -169,7 +194,7 @@ class CommitImageUploadServiceTest {
 
         assertRefused(commit(image), Reason.UPLOAD_EXPIRED);
 
-        assertThat(profiles.currentImage(USER, ImageSlot.AVATAR)).isEmpty();
+        assertThat(profiles.getOrDefault(USER).imageIn(ImageSlot.AVATAR)).isNull();
         assertThat(storage.objects).containsKey(image);
         assertThat(ledger.rows).containsKey(image.imageId());
     }
@@ -188,33 +213,17 @@ class CommitImageUploadServiceTest {
     // ---- files that are refused
 
     @Test
-    void aFileTooLargeForTheSlotIsRefusedAndDeleted() {
-        OwnedImage image = ticket(ImageSlot.AVATAR);
-        storage.upload(image, new byte[5_000_001], "image/png");
-
-        assertRefused(commit(image), Reason.FILE_TOO_LARGE);
-
-        assertThat(storage.objects).doesNotContainKey(image);
-        assertThat(ledger.rows).isEmpty();
-        assertThat(profiles.currentImage(USER, ImageSlot.AVATAR)).isEmpty();
-    }
-
-    @Test
     void bytesThatAreNotAnImageAreRefusedEvenWhenTheyClaimToBeOne() {
         OwnedImage image = ticket(ImageSlot.AVATAR);
         storage.upload(image, "<html>not an image</html>".getBytes(), "image/png");
 
         assertRefused(commit(image), Reason.UNREADABLE_IMAGE);
 
-        assertThat(storage.objects).doesNotContainKey(image);
-    }
-
-    @Test
-    void aFileWhoseBytesDisagreeWithTheRecordedTypeIsRefused() {
-        OwnedImage image = ticket(ImageSlot.AVATAR);
-        storage.upload(image, ImageFixtures.png(512, 512), "image/jpeg");
-
-        assertRefused(commit(image), Reason.CONTENT_TYPE_MISMATCH);
+        PendingUpload row = ledger.rows.get(image.imageId());
+        assertThat(row.isPending()).isFalse();
+        assertThat(row.isDueAt(clock.instant())).isTrue();
+        assertThat(profiles.getOrDefault(USER).imageIn(ImageSlot.AVATAR)).isNull();
+        assertThat(storage.calls).noneMatch(call -> call.startsWith("delete:"));
     }
 
     @Test
@@ -222,20 +231,6 @@ class CommitImageUploadServiceTest {
         OwnedImage image = uploadedPng(ImageSlot.AVATAR, 1025);
 
         assertRefused(commit(image), Reason.DIMENSIONS_NOT_ALLOWED);
-    }
-
-    @Test
-    void aRefusalRecordsItsIntentBeforeDeletingSoAFailedDeleteIsStillCleanedUpLater() {
-        OwnedImage image = ticket(ImageSlot.AVATAR);
-        storage.upload(image, "garbage".getBytes(), "image/png");
-        storage.failDeletes = true;
-
-        assertRefused(commit(image), Reason.UNREADABLE_IMAGE);
-
-        PendingUpload row = ledger.rows.get(image.imageId());
-        assertThat(row.state()).isEqualTo(PendingUpload.State.DISCARD);
-        assertThat(row.isDueAt(clock.instant())).isTrue();
-        assertThat(storage.objects).containsKey(image);
     }
 
     @Test
@@ -247,29 +242,18 @@ class CommitImageUploadServiceTest {
         assertRefused(commit(image), Reason.UPLOAD_NOT_FOUND);
     }
 
-    // ---- the provider validates for us
+    // ---- reads
 
     @Test
-    void aProviderThatValidatesOnUploadSkipsTheHeaderRead() {
-        storage.validatesOnUpload = true;
+    void theFileIsReadOnceAndItsLengthIsNotJudged() {
         OwnedImage image = ticket(ImageSlot.AVATAR);
-        storage.upload(image, "provider already checked this".getBytes(), "image/png");
-
-        Result result = commitService().handle(commit(image));
-
-        assertThat(result.outcome()).isEqualTo(Outcome.APPLIED);
-        assertThat(storage.calls).noneMatch(call -> call.startsWith("header:"));
-    }
-
-    @Test
-    void otherwiseTheHeaderIsReadAfterTheStat() {
-        OwnedImage image = uploadedPng(ImageSlot.AVATAR, 512);
+        storage.upload(image, java.util.Arrays.copyOf(ImageFixtures.png(512, 512), 6_000_000), "image/png"); // 6 MB, over the avatar limit
         storage.calls.clear();
 
         commitService().handle(commit(image));
 
-        assertThat(storage.calls.get(0)).startsWith("stat:");
-        assertThat(storage.calls.get(1)).startsWith("header:");
+        assertThat(storage.calls).hasSize(1);
+        assertThat(storage.calls.get(0)).startsWith("read:");
     }
 
     // ---- failures change nothing
@@ -277,14 +261,14 @@ class CommitImageUploadServiceTest {
     @Test
     void aStorageOutageIsNotAVerdictAndChangesNothing() {
         OwnedImage image = uploadedPng(ImageSlot.AVATAR, 512);
-        storage.failStat = true;
+        storage.failRead = true;
 
         assertThatThrownBy(() -> commitService().handle(commit(image)))
                 .isInstanceOf(ImageStorageUnavailableException.class);
 
         assertThat(storage.objects).containsKey(image);
         assertThat(ledger.rows.get(image.imageId()).isPending()).isTrue();
-        assertThat(profiles.currentImage(USER, ImageSlot.AVATAR)).isEmpty();
+        assertThat(profiles.getOrDefault(USER).imageIn(ImageSlot.AVATAR)).isNull();
         assertThat(storage.calls).noneMatch(call -> call.startsWith("delete:"));
     }
 
@@ -301,7 +285,7 @@ class CommitImageUploadServiceTest {
 
         assertRefused(commit(image), Reason.UPLOAD_NOT_FOUND);
 
-        assertThat(profiles.currentImage(USER, ImageSlot.AVATAR)).isEmpty();
+        // the profile write happens first inside the transaction; the rollback is what undoes it in a real database
         assertThat(transactions.events).endsWith("rollback");
     }
 
@@ -310,11 +294,14 @@ class CommitImageUploadServiceTest {
         OwnedImage image = uploadedPng(ImageSlot.AVATAR, 512);
         ledger = new FakePendingUploads() {
             @Override
-            public Optional<PendingUpload> lockPending(UserId userId, ImageId imageId) {
-                // the winner commits between our checks and our lock
-                profiles.replaceImage(userId, ImageSlot.AVATAR, imageId, clock.instant());
-                rows.remove(imageId);
-                return Optional.empty();
+            public Optional<PendingUpload> findPending(UserId userId, ImageId imageId) {
+                Optional<PendingUpload> found = super.findPending(userId, imageId);
+                if (found.isPresent()) {
+                    // the winner commits right after we read the ticket
+                    profiles.replaceImage(userId, ImageSlot.AVATAR, imageId, clock.instant());
+                    rows.remove(imageId);
+                }
+                return found;
             }
         };
         ledger.rows.put(image.imageId(), PendingUpload.issue(image, clock.instant(), Duration.ofMinutes(5), Duration.ofMinutes(10)));
@@ -322,7 +309,7 @@ class CommitImageUploadServiceTest {
         Result result = commitService().handle(commit(image));
 
         assertThat(result.outcome()).isEqualTo(Outcome.ALREADY_APPLIED);
-        assertThat(profiles.currentImage(USER, ImageSlot.AVATAR)).contains(image.imageId());
+        assertThat(profiles.getOrDefault(USER).imageIn(ImageSlot.AVATAR)).isEqualTo(image.imageId());
     }
 
     @Test
@@ -333,21 +320,9 @@ class CommitImageUploadServiceTest {
         transactions.events.clear();
         FakeImageStorage watching = new FakeImageStorage() {
             @Override
-            public Optional<StoredObject> stat(OwnedImage image) {
+            public Optional<byte[]> readFirstBytes(OwnedImage image, int maxBytes) {
                 assertThat(transactions.events).isEmpty();
-                return storage.stat(image);
-            }
-
-            @Override
-            public byte[] readHeader(OwnedImage image, int maxBytes) {
-                assertThat(transactions.events).isEmpty();
-                return storage.readHeader(image, maxBytes);
-            }
-
-            @Override
-            public void delete(OwnedImage image) {
-                assertThat(transactions.events).endsWith("commit");
-                storage.delete(image);
+                return storage.readFirstBytes(image, maxBytes);
             }
         };
 

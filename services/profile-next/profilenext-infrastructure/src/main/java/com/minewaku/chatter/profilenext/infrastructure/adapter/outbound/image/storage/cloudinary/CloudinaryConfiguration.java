@@ -77,7 +77,7 @@ public class CloudinaryConfiguration {
         }
 
         @Override
-        public byte[] readHeader(String publicId, int maxBytes) {
+        public byte[] readLeadingBytes(String publicId, int maxBytes) {
             throw unavailable();
         }
 

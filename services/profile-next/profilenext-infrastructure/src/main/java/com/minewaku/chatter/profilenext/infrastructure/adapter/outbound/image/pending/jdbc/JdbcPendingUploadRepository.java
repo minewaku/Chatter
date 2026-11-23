@@ -17,14 +17,14 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
 /**
- * The upload ledger in PostgreSQL. A partial unique index allows one pending ticket per user and slot, which is what
- * turns two racing ticket requests into one winner; {@code lockNextDue} skips rows another worker holds, so sweepers on
+ * The upload ledger in PostgreSQL. A row with an expiry is a pending ticket and one without is a key waiting to be
+ * deleted; there is no limit on pending tickets per user. {@code lockNextDue} skips rows another worker holds, so sweepers on
  * several instances never share a row.
  */
 @Component
 public class JdbcPendingUploadRepository implements PendingUploadRepository {
 
-    private static final String COLUMNS = "image_id, user_id, slot, state, expires_at, delete_after";
+    private static final String COLUMNS = "image_id, user_id, slot, expires_at, delete_after";
 
     private final JdbcClient jdbc;
 
@@ -37,17 +37,8 @@ public class JdbcPendingUploadRepository implements PendingUploadRepository {
     }
 
     @Override
-    public Optional<PendingUpload> findPending(UserId userId, ImageSlot slot) {
-        return jdbc.sql("SELECT " + COLUMNS + " FROM pending_upload WHERE user_id = :userId AND slot = :slot AND state = 'PENDING'")
-                .param("userId", userId.value())
-                .param("slot", slot.name())
-                .query(JdbcPendingUploadRepository::map)
-                .optional();
-    }
-
-    @Override
     public Optional<PendingUpload> findPending(UserId userId, ImageId imageId) {
-        return jdbc.sql("SELECT " + COLUMNS + " FROM pending_upload WHERE image_id = :imageId AND user_id = :userId AND state = 'PENDING'")
+        return jdbc.sql("SELECT " + COLUMNS + " FROM pending_upload WHERE image_id = :imageId AND user_id = :userId AND expires_at IS NOT NULL")
                 .param("imageId", imageId.value())
                 .param("userId", userId.value())
                 .query(JdbcPendingUploadRepository::map)
@@ -56,7 +47,7 @@ public class JdbcPendingUploadRepository implements PendingUploadRepository {
 
     @Override
     public Optional<PendingUpload> lockPending(UserId userId, ImageId imageId) {
-        return jdbc.sql("SELECT " + COLUMNS + " FROM pending_upload WHERE image_id = :imageId AND user_id = :userId AND state = 'PENDING' FOR UPDATE")
+        return jdbc.sql("SELECT " + COLUMNS + " FROM pending_upload WHERE image_id = :imageId AND user_id = :userId AND expires_at IS NOT NULL FOR UPDATE")
                 .param("imageId", imageId.value())
                 .param("userId", userId.value())
                 .query(JdbcPendingUploadRepository::map)
@@ -64,11 +55,10 @@ public class JdbcPendingUploadRepository implements PendingUploadRepository {
     }
 
     @Override
-    public boolean insertPending(PendingUpload upload) {
-        int inserted = jdbc.sql("""
-                        INSERT INTO pending_upload (image_id, user_id, slot, state, expires_at, delete_after, created_at)
-                        VALUES (:imageId, :userId, :slot, 'PENDING', :expiresAt, :deleteAfter, now())
-                        ON CONFLICT (user_id, slot) WHERE state = 'PENDING' DO NOTHING
+    public void insert(PendingUpload upload) {
+        jdbc.sql("""
+                        INSERT INTO pending_upload (image_id, user_id, slot, expires_at, delete_after, created_at)
+                        VALUES (:imageId, :userId, :slot, :expiresAt, :deleteAfter, now())
                         """)
                 .param("imageId", upload.image().imageId().value())
                 .param("userId", upload.image().userId().value())
@@ -76,16 +66,15 @@ public class JdbcPendingUploadRepository implements PendingUploadRepository {
                 .param("expiresAt", at(upload.expiresAt()))
                 .param("deleteAfter", at(upload.deleteAfter()))
                 .update();
-        return inserted > 0;
     }
 
     @Override
     public void discard(OwnedImage image, Instant deleteAfter) {
         jdbc.sql("""
-                        INSERT INTO pending_upload (image_id, user_id, slot, state, expires_at, delete_after, created_at)
-                        VALUES (:imageId, :userId, :slot, 'DISCARD', NULL, :deleteAfter, now())
+                        INSERT INTO pending_upload (image_id, user_id, slot, expires_at, delete_after, created_at)
+                        VALUES (:imageId, :userId, :slot, NULL, :deleteAfter, now())
                         ON CONFLICT (image_id) DO UPDATE
-                        SET state = 'DISCARD', expires_at = NULL, delete_after = :deleteAfter
+                        SET expires_at = NULL, delete_after = :deleteAfter
                         """)
                 .param("imageId", image.imageId().value())
                 .param("userId", image.userId().value())
@@ -96,8 +85,16 @@ public class JdbcPendingUploadRepository implements PendingUploadRepository {
 
     @Override
     public void discardAllPending(UserId userId) {
-        jdbc.sql("UPDATE pending_upload SET state = 'DISCARD', expires_at = NULL WHERE user_id = :userId AND state = 'PENDING'")
+        jdbc.sql("UPDATE pending_upload SET expires_at = NULL WHERE user_id = :userId AND expires_at IS NOT NULL")
                 .param("userId", userId.value())
+                .update();
+    }
+
+    @Override
+    public void discardPending(UserId userId, ImageSlot slot) {
+        jdbc.sql("UPDATE pending_upload SET expires_at = NULL WHERE user_id = :userId AND slot = :slot AND expires_at IS NOT NULL")
+                .param("userId", userId.value())
+                .param("slot", slot.name())
                 .update();
     }
 
@@ -138,7 +135,6 @@ public class JdbcPendingUploadRepository implements PendingUploadRepository {
         OffsetDateTime expiresAt = rs.getObject("expires_at", OffsetDateTime.class);
         return new PendingUpload(
                 image,
-                PendingUpload.State.valueOf(rs.getString("state")),
                 expiresAt == null ? null : expiresAt.toInstant(),
                 rs.getObject("delete_after", OffsetDateTime.class).toInstant());
     }

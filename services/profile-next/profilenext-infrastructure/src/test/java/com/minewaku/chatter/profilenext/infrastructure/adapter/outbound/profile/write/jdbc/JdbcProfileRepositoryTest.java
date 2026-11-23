@@ -219,18 +219,18 @@ class JdbcProfileRepositoryTest extends PostgreSqlTestSupport {
 
         profiles.applyEdit(user, DisplayName.of("Mine"), null, T2);
 
-        assertThat(profiles.currentImage(user, ImageSlot.AVATAR)).contains(OLD_ID);
-        assertThat(profiles.currentImage(user, ImageSlot.BANNER)).contains(NEW_ID);
+        assertThat(profiles.getOrDefault(user).imageIn(ImageSlot.AVATAR)).isEqualTo(OLD_ID);
+        assertThat(profiles.getOrDefault(user).imageIn(ImageSlot.BANNER)).isEqualTo(NEW_ID);
     }
 
     @Test
-    void currentImageIsEmptyForAnEmptySlotAndForNoRow() {
+    void findHasNoImageForAnEmptySlotAndForNoRow() {
         UserId user = freshUser();
-        assertThat(profiles.currentImage(user, ImageSlot.AVATAR)).isEmpty();
+        assertThat(profiles.getOrDefault(user).imageIn(ImageSlot.AVATAR)).isNull();
 
         profiles.applyEdit(user, DisplayName.of("Mine"), null, T1);
 
-        assertThat(profiles.currentImage(user, ImageSlot.AVATAR)).isEmpty();
+        assertThat(profiles.getOrDefault(user).imageIn(ImageSlot.AVATAR)).isNull();
     }
 
     @Test
@@ -280,7 +280,7 @@ class JdbcProfileRepositoryTest extends PostgreSqlTestSupport {
             // a chain, not a fork: exactly one saw the original, the other saw the winner of the first
             assertThat(previous).contains(OLD_ID);
             assertThat(previous).doesNotHaveDuplicates();
-            assertThat(profiles.currentImage(user, ImageSlot.AVATAR)).isPresent().get().isIn(a, b);
+            assertThat(profiles.getOrDefault(user).imageIn(ImageSlot.AVATAR)).isIn(a, b);
         } finally {
             pool.shutdownNow();
         }

@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 class ImageSnifferTest {
 
     private static Optional<SniffedImage> sniff(byte[] bytes) {
-        return ImageSniffer.sniff(bytes, bytes.length);
+        return ImageSniffer.sniff(bytes);
     }
 
     @Test
@@ -51,7 +51,7 @@ class ImageSnifferTest {
     @Test
     void anEmptyOrUnknownFileIsNotAnImage() {
         assertThat(sniff(new byte[0])).isEmpty();
-        assertThat(ImageSniffer.sniff(null, 10)).isEmpty();
+        assertThat(ImageSniffer.sniff(null)).isEmpty();
         assertThat(sniff("<html><body>hi</body></html>".getBytes(StandardCharsets.UTF_8))).isEmpty();
         assertThat(sniff("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"10\" height=\"10\"/>"
                         .getBytes(StandardCharsets.UTF_8)))

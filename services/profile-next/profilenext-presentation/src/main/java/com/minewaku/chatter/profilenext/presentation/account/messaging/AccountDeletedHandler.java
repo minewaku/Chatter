@@ -1,7 +1,7 @@
 package com.minewaku.chatter.profilenext.presentation.account.messaging;
 
 import com.minewaku.chatter.profilenext.presentation.shared.messaging.EventHandler;
-import com.minewaku.chatter.profilenext.profile.api.command.DeleteProfileDataUseCase;
+import com.minewaku.chatter.profilenext.profile.api.command.DeleteProfileUseCase;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -15,7 +15,7 @@ public class AccountDeletedHandler implements EventHandler<AccountDeletedMessage
 
     static final String EVENT_TYPE = "UserSoftDeleted";
 
-    private final DeleteProfileDataUseCase deleteProfileData;
+    private final DeleteProfileUseCase deleteProfile;
 
     @Override
     public String eventType() {
@@ -29,7 +29,7 @@ public class AccountDeletedHandler implements EventHandler<AccountDeletedMessage
 
     @Override
     public void handle(AccountDeletedMessage message) {
-        deleteProfileData.handle(
-                new DeleteProfileDataUseCase.Command(message.eventId(), message.userIdAsLong(), message.occurredAt()));
+        deleteProfile.handle(
+                new DeleteProfileUseCase.Command(message.eventId(), message.userIdAsLong(), message.occurredAt()));
     }
 }

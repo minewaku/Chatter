@@ -4,8 +4,11 @@ import com.minewaku.chatter.profilenext.profile.internal.model.Bio;
 import com.minewaku.chatter.profilenext.profile.internal.model.DisplayName;
 import com.minewaku.chatter.profilenext.profile.internal.model.ImageSlot;
 import com.minewaku.chatter.profilenext.profile.internal.model.ImageId;
+import com.minewaku.chatter.profilenext.profile.internal.model.Profile;
 import com.minewaku.chatter.profilenext.profile.internal.model.UserId;
 import com.minewaku.chatter.profilenext.profile.internal.port.repository.ProfileRepository;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -51,12 +54,28 @@ public class JdbcProfileRepository implements ProfileRepository {
     }
 
     @Override
-    public Optional<ImageId> currentImage(UserId userId, ImageSlot slot) {
-        return jdbc.sql("SELECT " + column(slot) + " FROM profile WHERE user_id = :userId")
+    public Profile getOrDefault(UserId userId) {
+        return jdbc.sql("""
+                        SELECT user_id, display_name, bio, avatar_image_id, banner_image_id, created_at, updated_at
+                        FROM profile
+                        WHERE user_id = :userId
+                        """)
                 .param("userId", userId.value())
-                .query((rs, rowNum) -> Optional.ofNullable(rs.getObject(1, UUID.class)).map(ImageId::new))
+                .query(JdbcProfileRepository::map)
                 .optional()
-                .flatMap(image -> image);
+                .orElseGet(() -> Profile.defaultsFor(userId));
+    }
+
+    private static Profile map(ResultSet rs, int rowNum) throws SQLException {
+        String name = rs.getString("display_name");
+        return new Profile(
+                UserId.of(rs.getLong("user_id")),
+                name == null || name.isBlank() ? null : DisplayName.of(name),
+                Bio.of(rs.getString("bio")),
+                imageId(rs.getObject("avatar_image_id", UUID.class)),
+                imageId(rs.getObject("banner_image_id", UUID.class)),
+                rs.getTimestamp("created_at").toInstant(),
+                rs.getTimestamp("updated_at").toInstant());
     }
 
     /**

@@ -53,7 +53,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     /**
      * A refused upload or commit. A file the rules reject is a 422 naming the rule in a fixed sentence; a ticket that is
-     * unknown, expired, unfinished or contended has its own status, so a client knows whether to retry or start over.
+     * unknown, expired or unfinished has its own status, so a client knows whether to retry or start over.
      */
     @ExceptionHandler(ImageUploadRejectedException.class)
     ResponseEntity<ApiError> imageRejected(ImageUploadRejectedException exception) {
@@ -61,7 +61,6 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
             case UPLOAD_NOT_FOUND -> body(ErrorCode.NOT_FOUND);
             case UPLOAD_EXPIRED -> body(ErrorCode.UPLOAD_EXPIRED);
             case UPLOAD_INCOMPLETE -> body(ErrorCode.UPLOAD_INCOMPLETE);
-            case UPLOAD_CONFLICT -> body(ErrorCode.CONFLICT);
             default -> ResponseEntity.status(ErrorCode.IMAGE_REJECTED.status())
                     .body(ApiError.of(
                             ErrorCode.IMAGE_REJECTED,
@@ -75,7 +74,6 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
             case FILE_TOO_LARGE -> "The file is larger than this image allows.";
             case DIMENSIONS_NOT_ALLOWED -> "The image is wider or taller than this image allows.";
             case UNREADABLE_IMAGE -> "The file could not be read as an image.";
-            case CONTENT_TYPE_MISMATCH -> "The file is not the type it was declared as.";
             default -> "The image was rejected.";
         };
     }

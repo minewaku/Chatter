@@ -1,6 +1,6 @@
 package com.minewaku.chatter.profilenext.profile.internal.application.command;
 
-import com.minewaku.chatter.profilenext.profile.api.command.DeleteProfileDataUseCase;
+import com.minewaku.chatter.profilenext.profile.api.command.DeleteProfileUseCase;
 import com.minewaku.chatter.profilenext.profile.internal.model.ImageId;
 import com.minewaku.chatter.profilenext.profile.internal.model.ImageSlot;
 import com.minewaku.chatter.profilenext.profile.internal.model.OwnedImage;
@@ -22,15 +22,15 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 @Transactional
-public class DeleteProfileDataService implements DeleteProfileDataUseCase {
+public class DeleteProfileService implements DeleteProfileUseCase {
 
-    private static final Logger log = LoggerFactory.getLogger(DeleteProfileDataService.class);
+    private static final Logger log = LoggerFactory.getLogger(DeleteProfileService.class);
 
     private final ProfileRepository profiles;
     private final PendingUploadRepository pending;
     private final Clock clock;
 
-    public DeleteProfileDataService(ProfileRepository profiles, PendingUploadRepository pending, Clock clock) {
+    public DeleteProfileService(ProfileRepository profiles, PendingUploadRepository pending, Clock clock) {
         this.profiles = profiles;
         this.pending = pending;
         this.clock = clock;

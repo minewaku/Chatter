@@ -4,6 +4,7 @@ import com.minewaku.chatter.profilenext.profile.internal.model.Bio;
 import com.minewaku.chatter.profilenext.profile.internal.model.DisplayName;
 import com.minewaku.chatter.profilenext.profile.internal.model.ImageId;
 import com.minewaku.chatter.profilenext.profile.internal.model.ImageSlot;
+import com.minewaku.chatter.profilenext.profile.internal.model.Profile;
 import com.minewaku.chatter.profilenext.profile.internal.model.UserId;
 import java.time.Instant;
 import java.util.Optional;
@@ -16,8 +17,8 @@ public interface ProfileRepository {
      */
     boolean applyEdit(UserId userId, DisplayName displayName, Bio bio, Instant now);
 
-    /** The image the user holds in the slot, or empty when the slot is empty or there is no row. */
-    Optional<ImageId> currentImage(UserId userId, ImageSlot slot);
+    /** The user's profile, or {@link Profile#defaultsFor} when there is no row. Does not lock. */
+    Profile getOrDefault(UserId userId);
 
     /**
      * Makes {@code imageId} the slot's image, creating the row when there is none, and returns the image it replaced

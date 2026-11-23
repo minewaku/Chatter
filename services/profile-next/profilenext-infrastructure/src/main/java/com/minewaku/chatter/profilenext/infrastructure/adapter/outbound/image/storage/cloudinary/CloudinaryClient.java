@@ -16,7 +16,7 @@ public interface CloudinaryClient {
     Optional<Asset> asset(String publicId);
 
     /** The first {@code maxBytes} bytes of the stored original (all of it when it is shorter). */
-    byte[] readHeader(String publicId, int maxBytes);
+    byte[] readLeadingBytes(String publicId, int maxBytes);
 
     /** Deletes an asset and invalidates its CDN copies. An asset that is already gone counts as success. */
     void destroy(String publicId);

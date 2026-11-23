@@ -69,7 +69,7 @@ class ImageUploadControllerTest {
         mvc.perform(post("/api/v1/profiles/@me/images/avatar/upload").contentType(MediaType.APPLICATION_JSON).content(BODY))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("unauthenticated"));
-        mvc.perform(post("/api/v1/profiles/@me/images/avatar/commit")
+        mvc.perform(post("/api/v1/profiles/@me/images/commit")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"imageId\":\"x\"}"))
                 .andExpect(status().isUnauthorized());
@@ -146,9 +146,9 @@ class ImageUploadControllerTest {
     void aCommitReturnsTheImageAddress() throws Exception {
         when(commitUpload.handle(any()))
                 .thenReturn(new CommitImageUploadUseCase.Result(
-                        CommitImageUploadUseCase.Outcome.APPLIED, IMAGE_ID, "profiles/123/avatar/" + IMAGE_ID));
+                        CommitImageUploadUseCase.Outcome.APPLIED, "AVATAR", IMAGE_ID, "profiles/123/avatar/" + IMAGE_ID));
 
-        mvc.perform(post("/api/v1/profiles/@me/images/avatar/commit")
+        mvc.perform(post("/api/v1/profiles/@me/images/commit")
                         .with(jwt().jwt(t -> t.subject("123")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"imageId\":\"" + IMAGE_ID + "\"}"))
@@ -161,16 +161,16 @@ class ImageUploadControllerTest {
         ArgumentCaptor<CommitImageUploadUseCase.Command> command =
                 ArgumentCaptor.forClass(CommitImageUploadUseCase.Command.class);
         verify(commitUpload).handle(command.capture());
-        assertThat(command.getValue()).isEqualTo(new CommitImageUploadUseCase.Command(123, "AVATAR", IMAGE_ID));
+        assertThat(command.getValue()).isEqualTo(new CommitImageUploadUseCase.Command(123, IMAGE_ID));
     }
 
     @Test
     void aRepeatedCommitIsReportedAsAlreadyApplied() throws Exception {
         when(commitUpload.handle(any()))
                 .thenReturn(new CommitImageUploadUseCase.Result(
-                        CommitImageUploadUseCase.Outcome.ALREADY_APPLIED, IMAGE_ID, "profiles/5/banner/" + IMAGE_ID));
+                        CommitImageUploadUseCase.Outcome.ALREADY_APPLIED, "BANNER", IMAGE_ID, "profiles/5/banner/" + IMAGE_ID));
 
-        mvc.perform(post("/api/v1/profiles/@me/images/banner/commit")
+        mvc.perform(post("/api/v1/profiles/@me/images/commit")
                         .with(jwt().jwt(t -> t.subject("5")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"imageId\":\"" + IMAGE_ID + "\"}"))
@@ -180,7 +180,7 @@ class ImageUploadControllerTest {
 
     @Test
     void aCommitWithoutAnImageIdIsAValidationFailure() throws Exception {
-        mvc.perform(post("/api/v1/profiles/@me/images/avatar/commit")
+        mvc.perform(post("/api/v1/profiles/@me/images/commit")
                         .with(jwt().jwt(t -> t.subject("5")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
@@ -195,16 +195,14 @@ class ImageUploadControllerTest {
         "FILE_TOO_LARGE,422,image_rejected",
         "DIMENSIONS_NOT_ALLOWED,422,image_rejected",
         "UNREADABLE_IMAGE,422,image_rejected",
-        "CONTENT_TYPE_MISMATCH,422,image_rejected",
         "UPLOAD_NOT_FOUND,404,not_found",
         "UPLOAD_EXPIRED,410,upload_expired",
-        "UPLOAD_INCOMPLETE,409,upload_incomplete",
-        "UPLOAD_CONFLICT,409,conflict"
+        "UPLOAD_INCOMPLETE,409,upload_incomplete"
     })
     void eachRefusalHasItsOwnStatusAndCode(Reason reason, int status, String code) throws Exception {
         when(commitUpload.handle(any())).thenThrow(new ImageUploadRejectedException(reason));
 
-        mvc.perform(post("/api/v1/profiles/@me/images/avatar/commit")
+        mvc.perform(post("/api/v1/profiles/@me/images/commit")
                         .with(jwt().jwt(t -> t.subject("5")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"imageId\":\"" + IMAGE_ID + "\"}"))

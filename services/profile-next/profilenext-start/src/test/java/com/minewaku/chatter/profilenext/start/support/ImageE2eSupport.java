@@ -44,9 +44,8 @@ public abstract class ImageE2eSupport extends StartTestSupport {
                 "{\"contentType\":\"" + contentType + "\",\"sizeBytes\":" + size + "}");
     }
 
-    protected HttpResponse<String> commit(long user, String slot, String imageId) throws Exception {
-        return send(
-                "POST", "/api/v1/profiles/@me/images/" + slot + "/commit", bearer(user), "{\"imageId\":\"" + imageId + "\"}");
+    protected HttpResponse<String> commit(long user, String imageId) throws Exception {
+        return send("POST", "/api/v1/profiles/@me/images/commit", bearer(user), "{\"imageId\":\"" + imageId + "\"}");
     }
 
     protected HttpResponse<String> remove(long user, String slot) throws Exception {
@@ -68,7 +67,7 @@ public abstract class ImageE2eSupport extends StartTestSupport {
     /** Upload and commit of a small valid PNG; returns the image id. */
     protected String setImage(long user, String slot, int size) throws Exception {
         String imageId = upload(user, slot, "image/png", ImageFixtures.png(size, size));
-        HttpResponse<String> committed = commit(user, slot, imageId);
+        HttpResponse<String> committed = commit(user, imageId);
         assertThat(committed.statusCode()).as(committed.body()).isEqualTo(200);
         return imageId;
     }

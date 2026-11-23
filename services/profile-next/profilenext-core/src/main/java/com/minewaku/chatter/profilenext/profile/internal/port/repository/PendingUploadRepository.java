@@ -14,9 +14,6 @@ import java.util.Optional;
  */
 public interface PendingUploadRepository {
 
-    /** The one pending ticket of this user and slot, if any (expired or not). */
-    Optional<PendingUpload> findPending(UserId userId, ImageSlot slot);
-
     /** The pending (not discarded) ticket of this user with this image id, if any. */
     Optional<PendingUpload> findPending(UserId userId, ImageId imageId);
 
@@ -26,11 +23,8 @@ public interface PendingUploadRepository {
      */
     Optional<PendingUpload> lockPending(UserId userId, ImageId imageId);
 
-    /**
-     * Adds a pending ticket. Returns false, and changes nothing, when the user and slot already have a pending ticket
-     * (a concurrent request won); the caller then reads that one.
-     */
-    boolean insertPending(PendingUpload upload);
+    /** Adds a pending ticket. A user may hold any number of them, also for one slot. */
+    void insert(PendingUpload upload);
 
     /**
      * Makes the image a key to delete once {@code deleteAfter} has passed: updates its row when there is one, adds one
@@ -40,6 +34,12 @@ public interface PendingUploadRepository {
 
     /** Turns every pending ticket of the user into a discard row, keeping its {@code deleteAfter}. */
     void discardAllPending(UserId userId);
+
+    /**
+     * Turns every pending ticket of the user for this slot into a discard row, keeping its {@code deleteAfter}: an
+     * upload of such a ticket may still arrive, so its key is swept only after the grace.
+     */
+    void discardPending(UserId userId, ImageSlot slot);
 
     /** Removes the row of an image: it became current, or its key is gone. No-op when there is none. */
     void delete(ImageId imageId);

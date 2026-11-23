@@ -16,12 +16,10 @@ import com.minewaku.chatter.profilenext.profile.internal.application.fakes.Recor
 import com.minewaku.chatter.profilenext.profile.internal.application.fakes.SequentialIds;
 import com.minewaku.chatter.profilenext.profile.internal.application.fakes.TestClock;
 import com.minewaku.chatter.profilenext.profile.internal.model.ImageId;
-import com.minewaku.chatter.profilenext.profile.internal.model.ImageSlot;
 import com.minewaku.chatter.profilenext.profile.internal.model.OwnedImage;
 import com.minewaku.chatter.profilenext.profile.internal.model.PendingUpload;
 import com.minewaku.chatter.profilenext.profile.internal.model.UserId;
 import java.time.Duration;
-import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
 class RequestImageUploadTicketServiceTest {
@@ -51,7 +49,7 @@ class RequestImageUploadTicketServiceTest {
         assertThat(result.uploadUrl()).endsWith("profiles/7/avatar/" + ImageIds.at(1).value());
         assertThat(result.expiresAt()).isEqualTo(clock.instant().plus(Duration.ofMinutes(5)));
         PendingUpload row = ledger.rows.get(ImageIds.at(1));
-        assertThat(row.state()).isEqualTo(PendingUpload.State.PENDING);
+        assertThat(row.isPending()).isTrue();
         assertThat(row.expiresAt()).isEqualTo(clock.instant().plus(Duration.ofMinutes(5)));
         assertThat(row.deleteAfter()).isEqualTo(clock.instant().plus(Duration.ofMinutes(15)));
         assertThat(storage.lastValidFor).isEqualTo(Duration.ofMinutes(5));
@@ -76,44 +74,17 @@ class RequestImageUploadTicketServiceTest {
     }
 
     @Test
-    void askingAgainWhileTheTicketIsUsableReusesTheSameImageId() {
+    void everyRequestGetsItsOwnTicketAndEarlierOnesStayUsable() {
         RequestImageUploadTicketService service = service();
+
         Result first = service.handle(avatar("image/png", 1000));
         clock.advance(Duration.ofMinutes(2));
-
-        Result second = service.handle(avatar("image/jpeg", 2000));
-
-        assertThat(second.imageId()).isEqualTo(first.imageId());
-        assertThat(ledger.rows).hasSize(1);
-        assertThat(second.expiresAt()).isEqualTo(first.expiresAt());
-        assertThat(storage.lastValidFor).isEqualTo(Duration.ofMinutes(3));
-    }
-
-    @Test
-    void anExpiredTicketIsRetiredKeepingItsSweepTimeAndANewOneStarts() {
-        RequestImageUploadTicketService service = service();
-        Result first = service.handle(avatar("image/png", 1000));
-        Instant firstSweep = ledger.rows.get(ImageIds.at(1)).deleteAfter();
-        clock.advance(Duration.ofMinutes(6));
-
         Result second = service.handle(avatar("image/png", 1000));
 
         assertThat(second.imageId()).isNotEqualTo(first.imageId());
-        PendingUpload retired = ledger.rows.get(ImageIds.at(1));
-        assertThat(retired.state()).isEqualTo(PendingUpload.State.DISCARD);
-        assertThat(retired.deleteAfter()).isEqualTo(firstSweep);
-        assertThat(ledger.rows.get(ImageIds.at(2)).isPending()).isTrue();
-    }
-
-    @Test
-    void aTicketAboutToExpireIsReplacedInsteadOfHandedOutAgain() {
-        RequestImageUploadTicketService service = service();
-        Result first = service.handle(avatar("image/png", 1000));
-        clock.advance(Duration.ofMinutes(5).minusSeconds(10));
-
-        Result second = service.handle(avatar("image/png", 1000));
-
-        assertThat(second.imageId()).isNotEqualTo(first.imageId());
+        assertThat(ledger.rows).hasSize(2);
+        assertThat(ledger.rows.values()).allSatisfy(row -> assertThat(row.isPending()).isTrue());
+        assertThat(second.expiresAt()).isEqualTo(clock.instant().plus(Duration.ofMinutes(5)));
     }
 
     @Test
@@ -125,41 +96,6 @@ class RequestImageUploadTicketServiceTest {
         Result other = service.handle(new Command(8, "AVATAR", "image/png", 1000));
 
         assertThat(java.util.Set.of(avatar.imageId(), banner.imageId(), other.imageId())).hasSize(3);
-    }
-
-    @Test
-    void aLostRaceUsesTheTicketThatWon() {
-        PendingUpload winner = PendingUpload.issue(
-                new OwnedImage(USER, ImageSlot.AVATAR, ImageIds.at(99)),
-                clock.instant(),
-                Duration.ofMinutes(5),
-                Duration.ofMinutes(10));
-        ledger = new FakePendingUploads() {
-            @Override
-            public boolean insertPending(PendingUpload upload) {
-                rows.put(winner.image().imageId(), winner); // the other request commits first
-                return super.insertPending(upload);
-            }
-        };
-
-        Result result = service().handle(avatar("image/png", 1000));
-
-        assertThat(result.imageId()).isEqualTo(ImageIds.at(99).value().toString());
-        assertThat(ledger.rows).hasSize(1);
-    }
-
-    @Test
-    void aRaceThatLeavesNothingUsableIsReportedAsAConflict() {
-        ledger = new FakePendingUploads() {
-            @Override
-            public boolean insertPending(PendingUpload upload) {
-                return false;
-            }
-        };
-
-        assertThatThrownBy(() -> service().handle(avatar("image/png", 1000)))
-                .isInstanceOfSatisfying(
-                        ImageUploadRejectedException.class, e -> assertThat(e.reason()).isEqualTo(Reason.UPLOAD_CONFLICT));
     }
 
     @Test

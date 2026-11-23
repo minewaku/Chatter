@@ -2,7 +2,6 @@ package com.minewaku.chatter.profilenext.profile.internal.application.command;
 
 import com.minewaku.chatter.profilenext.profile.api.command.RequestImageUploadTicketUseCase;
 import com.minewaku.chatter.profilenext.profile.api.exception.ImageUploadRejectedException;
-import com.minewaku.chatter.profilenext.profile.api.exception.ImageUploadRejectedException.Reason;
 import com.minewaku.chatter.profilenext.profile.internal.model.ImageId;
 import com.minewaku.chatter.profilenext.profile.internal.model.ImageSlot;
 import com.minewaku.chatter.profilenext.profile.internal.model.OwnedImage;
@@ -15,7 +14,6 @@ import com.minewaku.chatter.profilenext.shared.port.UniqueStringIdGenerator;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -24,8 +22,9 @@ import org.springframework.transaction.support.TransactionTemplate;
  * row for a key that never received a file, which the sweeper deletes as a no-op; the reverse order could leave a file
  * nothing knows about.
  *
- * <p>A user and slot have at most one pending ticket. Asking again while it is still usable hands out the same image id
- * (retries overwrite one object); asking after it expired retires it and starts a new one.
+ * <p>Every request gets a new image id; a user may hold any number of tickets. Which one ends up as the profile's image
+ * is decided when one is committed, and that commit retires the others. Limiting how often or how many tickets a
+ * client may ask for is not decided here: it belongs to the layer in front of this service.
  */
 @Service
 public class RequestImageUploadTicketService implements RequestImageUploadTicketUseCase {
@@ -75,21 +74,9 @@ public class RequestImageUploadTicketService implements RequestImageUploadTicket
     }
 
     private PendingUpload reserve(UserId userId, ImageSlot slot, Instant now) {
-        Optional<PendingUpload> existing = pending.findPending(userId, slot);
-        if (existing.isPresent() && existing.get().isReusableAt(now)) {
-            return existing.get();
-        }
-        // an old ticket is retired but keeps its sweep time: its upload may still arrive until it expires
-        existing.ifPresent(old -> pending.discard(old.image(), old.deleteAfter()));
-
         OwnedImage image = new OwnedImage(userId, slot, ImageId.of(ids.nextId()));
         PendingUpload fresh = PendingUpload.issue(image, now, policy.ticketLifetime(), policy.grace());
-        if (pending.insertPending(fresh)) {
-            return fresh;
-        }
-        // a concurrent request for the same slot won the unique slot; use its ticket
-        return pending.findPending(userId, slot)
-                .filter(winner -> winner.isReusableAt(now))
-                .orElseThrow(() -> new ImageUploadRejectedException(Reason.UPLOAD_CONFLICT));
+        pending.insert(fresh);
+        return fresh;
     }
 }

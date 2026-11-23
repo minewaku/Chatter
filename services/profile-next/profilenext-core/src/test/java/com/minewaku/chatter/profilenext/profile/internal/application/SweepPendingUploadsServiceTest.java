@@ -60,7 +60,7 @@ class SweepPendingUploadsServiceTest {
     void anAbandonedUploadIsDeletedOnlyAfterItsTicketAndGraceHavePassed() {
         OwnedImage image = image(1, ImageSlot.BANNER);
         storage.upload(image, new byte[10], "image/png");
-        ledger.insertPending(PendingUpload.issue(image, clock.instant(), Duration.ofMinutes(5), Duration.ofMinutes(10)));
+        ledger.insert(PendingUpload.issue(image, clock.instant(), Duration.ofMinutes(5), Duration.ofMinutes(10)));
 
         service(10).handle(new Command());
         assertThat(storage.objects).containsKey(image);

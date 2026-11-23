@@ -20,12 +20,11 @@ public class FakeImageStorage implements ImageStorage {
 
     public final Map<OwnedImage, Stored> objects = new LinkedHashMap<>();
 
-    /** Calls in order: {@code issue:<path>}, {@code stat:<path>}, {@code header:<path>}, {@code delete:<path>}. */
+    /** Calls in order: {@code issue:<path>}, {@code read:<path>}, {@code delete:<path>}. */
     public final List<String> calls = new ArrayList<>();
 
-    public boolean validatesOnUpload;
     public boolean failDeletes;
-    public boolean failStat;
+    public boolean failRead;
     public Duration lastValidFor;
     public String lastContentType;
     public long lastSizeBytes;
@@ -52,23 +51,16 @@ public class FakeImageStorage implements ImageStorage {
     }
 
     @Override
-    public Optional<StoredObject> stat(OwnedImage image) {
-        calls.add("stat:" + ImagePath.of(image));
-        if (failStat) {
-            throw new ImageStorageUnavailableException("stat failed");
+    public Optional<byte[]> readFirstBytes(OwnedImage image, int maxBytes) {
+        calls.add("read:" + ImagePath.of(image));
+        if (failRead) {
+            throw new ImageStorageUnavailableException("read failed");
         }
-        Stored stored = objects.get(image);
-        return stored == null ? Optional.empty() : Optional.of(new StoredObject(stored.bytes().length, stored.contentType()));
-    }
-
-    @Override
-    public byte[] readHeader(OwnedImage image, int maxBytes) {
-        calls.add("header:" + ImagePath.of(image));
         Stored stored = objects.get(image);
         if (stored == null) {
-            throw new ImageStorageUnavailableException("nothing stored");
+            return Optional.empty();
         }
-        return Arrays.copyOf(stored.bytes(), Math.min(maxBytes, stored.bytes().length));
+        return Optional.of(Arrays.copyOf(stored.bytes(), Math.min(maxBytes, stored.bytes().length)));
     }
 
     @Override
@@ -78,10 +70,5 @@ public class FakeImageStorage implements ImageStorage {
             throw new ImageStorageUnavailableException("delete failed");
         }
         objects.remove(image);
-    }
-
-    @Override
-    public boolean validatesOnUpload() {
-        return validatesOnUpload;
     }
 }

@@ -12,6 +12,7 @@ import com.minewaku.chatter.profilenext.profile.internal.model.UserId;
 import com.minewaku.chatter.profilenext.profile.internal.port.repository.PendingUploadRepository;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
@@ -66,58 +67,48 @@ class JdbcPendingUploadRepositoryTest extends PostgreSqlTestSupport {
         UserId user = freshUser();
         PendingUpload ticket = ticket(image(user, ImageSlot.AVATAR), NOW);
 
-        assertThat(ledger.insertPending(ticket)).isTrue();
+        ledger.insert(ticket);
 
-        assertThat(ledger.findPending(user, ImageSlot.AVATAR)).contains(ticket);
         assertThat(ledger.findPending(user, ticket.image().imageId())).contains(ticket);
     }
 
     @Test
-    void aSecondPendingTicketForTheSameUserAndSlotIsNotInserted() {
+    void aUserMayHoldManyPendingTicketsForOneSlot() {
         UserId user = freshUser();
-        PendingUpload winner = ticket(image(user, ImageSlot.AVATAR), NOW);
-        assertThat(ledger.insertPending(winner)).isTrue();
+        PendingUpload first = ticket(image(user, ImageSlot.AVATAR), NOW);
+        PendingUpload second = ticket(image(user, ImageSlot.AVATAR), NOW);
 
-        assertThat(ledger.insertPending(ticket(image(user, ImageSlot.AVATAR), NOW))).isFalse();
+        ledger.insert(first);
+        ledger.insert(second);
 
-        assertThat(ledger.findPending(user, ImageSlot.AVATAR)).contains(winner);
-        assertThat(rows(user)).isEqualTo(1);
-    }
-
-    @Test
-    void otherSlotsAndOtherUsersMayHoldTheirOwnTicket() {
-        UserId user = freshUser();
-        UserId other = freshUser();
-
-        assertThat(ledger.insertPending(ticket(image(user, ImageSlot.AVATAR), NOW))).isTrue();
-        assertThat(ledger.insertPending(ticket(image(user, ImageSlot.BANNER), NOW))).isTrue();
-        assertThat(ledger.insertPending(ticket(image(other, ImageSlot.AVATAR), NOW))).isTrue();
+        assertThat(ledger.findPending(user, first.image().imageId())).contains(first);
+        assertThat(ledger.findPending(user, second.image().imageId())).contains(second);
+        assertThat(rows(user)).isEqualTo(2);
     }
 
     @Test
     void findingByImageIdIsScopedToTheOwnerAndToPendingTickets() {
         UserId user = freshUser();
         PendingUpload ticket = ticket(image(user, ImageSlot.AVATAR), NOW);
-        ledger.insertPending(ticket);
+        ledger.insert(ticket);
 
         assertThat(ledger.findPending(freshUser(), ticket.image().imageId())).isEmpty();
 
         ledger.discard(ticket.image(), NOW);
         assertThat(ledger.findPending(user, ticket.image().imageId())).isEmpty();
-        assertThat(ledger.findPending(user, ImageSlot.AVATAR)).isEmpty();
     }
 
     @Test
-    void discardingATicketKeepsItsRowTurnsItIntoADiscardAndFreesTheSlot() {
+    void discardingATicketKeepsItsRowAndTurnsItIntoADiscard() {
         UserId user = freshUser();
         PendingUpload old = ticket(image(user, ImageSlot.AVATAR), NOW);
-        ledger.insertPending(old);
+        ledger.insert(old);
 
         ledger.discard(old.image(), old.deleteAfter());
 
         assertThat(rows(user)).isEqualTo(1);
-        assertThat(ledger.insertPending(ticket(image(user, ImageSlot.AVATAR), NOW))).isTrue();
-        assertThat(state(old.image().imageId())).isEqualTo("DISCARD");
+        assertThat(isPending(old.image().imageId())).isFalse();
+        assertThat(deleteAfter(old.image().imageId())).isEqualTo(old.deleteAfter());
     }
 
     @Test
@@ -127,7 +118,7 @@ class JdbcPendingUploadRepositoryTest extends PostgreSqlTestSupport {
 
         ledger.discard(replaced, NOW);
 
-        assertThat(state(replaced.imageId())).isEqualTo("DISCARD");
+        assertThat(isPending(replaced.imageId())).isFalse();
         assertThat(deleteAfter(replaced.imageId())).isEqualTo(NOW);
     }
 
@@ -138,24 +129,43 @@ class JdbcPendingUploadRepositoryTest extends PostgreSqlTestSupport {
         PendingUpload avatar = ticket(image(user, ImageSlot.AVATAR), NOW);
         PendingUpload banner = ticket(image(user, ImageSlot.BANNER), NOW);
         PendingUpload untouched = ticket(image(other, ImageSlot.AVATAR), NOW);
-        ledger.insertPending(avatar);
-        ledger.insertPending(banner);
-        ledger.insertPending(untouched);
+        ledger.insert(avatar);
+        ledger.insert(banner);
+        ledger.insert(untouched);
 
         ledger.discardAllPending(user);
 
-        assertThat(ledger.findPending(user, ImageSlot.AVATAR)).isEmpty();
-        assertThat(ledger.findPending(user, ImageSlot.BANNER)).isEmpty();
-        assertThat(ledger.findPending(other, ImageSlot.AVATAR)).contains(untouched);
-        assertThat(state(avatar.image().imageId())).isEqualTo("DISCARD");
+        assertThat(ledger.findPending(user, avatar.image().imageId())).isEmpty();
+        assertThat(ledger.findPending(user, banner.image().imageId())).isEmpty();
+        assertThat(ledger.findPending(other, untouched.image().imageId())).contains(untouched);
+        assertThat(isPending(avatar.image().imageId())).isFalse();
         assertThat(deleteAfter(avatar.image().imageId())).isEqualTo(avatar.deleteAfter());
+    }
+
+    @Test
+    void discardPendingRetiresOnlyTheTicketsOfThatUserAndSlotKeepingTheirSweepTimes() {
+        UserId user = freshUser();
+        UserId other = freshUser();
+        PendingUpload first = ticket(image(user, ImageSlot.AVATAR), NOW);
+        PendingUpload second = ticket(image(user, ImageSlot.AVATAR), NOW);
+        PendingUpload banner = ticket(image(user, ImageSlot.BANNER), NOW);
+        PendingUpload others = ticket(image(other, ImageSlot.AVATAR), NOW);
+        List.of(first, second, banner, others).forEach(ledger::insert);
+
+        ledger.discardPending(user, ImageSlot.AVATAR);
+
+        assertThat(isPending(first.image().imageId())).isFalse();
+        assertThat(isPending(second.image().imageId())).isFalse();
+        assertThat(deleteAfter(first.image().imageId())).isEqualTo(first.deleteAfter());
+        assertThat(ledger.findPending(user, banner.image().imageId())).contains(banner);
+        assertThat(ledger.findPending(other, others.image().imageId())).contains(others);
     }
 
     @Test
     void deleteRemovesTheRowAndRepeatingIsHarmless() {
         UserId user = freshUser();
         PendingUpload ticket = ticket(image(user, ImageSlot.AVATAR), NOW);
-        ledger.insertPending(ticket);
+        ledger.insert(ticket);
 
         ledger.delete(ticket.image().imageId());
         ledger.delete(ticket.image().imageId());
@@ -203,10 +213,10 @@ class JdbcPendingUploadRepositoryTest extends PostgreSqlTestSupport {
         assertThat(deleteAfter(image.imageId())).isEqualTo(NOW.plus(Duration.ofMinutes(5)));
     }
 
-    private String state(ImageId id) {
-        return jdbc.sql("SELECT state FROM pending_upload WHERE image_id = :id")
+    private boolean isPending(ImageId id) {
+        return jdbc.sql("SELECT expires_at IS NOT NULL FROM pending_upload WHERE image_id = :id")
                 .param("id", id.value())
-                .query(String.class)
+                .query(Boolean.class)
                 .single();
     }
 

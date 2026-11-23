@@ -70,7 +70,7 @@ class SdkCloudinaryClientHeaderTest {
 
     @Test
     void asksForTheFirstBytesOfTheOriginalAndGetsThem() {
-        byte[] head = client.readHeader("ranged/profiles/42/avatar/x", 512);
+        byte[] head = client.readLeadingBytes("ranged/profiles/42/avatar/x", 512);
 
         assertThat(head).isEqualTo(Arrays.copyOfRange(FILE, 0, 512));
         assertThat(seenRanges).containsValue("bytes=0-511");
@@ -78,17 +78,17 @@ class SdkCloudinaryClientHeaderTest {
 
     @Test
     void aShorterFileIsReturnedWhole() {
-        assertThat(client.readHeader("ranged/profiles/42/avatar/x", 50_000)).isEqualTo(FILE);
+        assertThat(client.readLeadingBytes("ranged/profiles/42/avatar/x", 50_000)).isEqualTo(FILE);
     }
 
     @Test
     void aServerThatIgnoresRangeStillYieldsOnlyTheBytesAsked() {
-        assertThat(client.readHeader("whole/profiles/42/avatar/x", 256)).isEqualTo(Arrays.copyOfRange(FILE, 0, 256));
+        assertThat(client.readLeadingBytes("whole/profiles/42/avatar/x", 256)).isEqualTo(Arrays.copyOfRange(FILE, 0, 256));
     }
 
     @Test
     void aMissingFileIsUnavailable() {
-        assertThatThrownBy(() -> client.readHeader("gone/profiles/42/avatar/x", 256))
+        assertThatThrownBy(() -> client.readLeadingBytes("gone/profiles/42/avatar/x", 256))
                 .isInstanceOf(ImageStorageUnavailableException.class);
     }
 
@@ -96,7 +96,7 @@ class SdkCloudinaryClientHeaderTest {
     void anUnreachableServerIsUnavailable() {
         server.stop(0);
 
-        assertThatThrownBy(() -> client.readHeader("ranged/profiles/42/avatar/x", 256))
+        assertThatThrownBy(() -> client.readLeadingBytes("ranged/profiles/42/avatar/x", 256))
                 .isInstanceOf(ImageStorageUnavailableException.class);
     }
 }

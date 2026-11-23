@@ -19,16 +19,15 @@ CREATE TABLE pending_upload (
     image_id     uuid PRIMARY KEY,
     user_id      bigint      NOT NULL,
     slot         text        NOT NULL CHECK (slot IN ('AVATAR', 'BANNER')),
-    state        text        NOT NULL CHECK (state IN ('PENDING', 'DISCARD')),
+    -- set while the ticket can still be committed (a pending upload); null once the key is only waiting to be deleted
     expires_at   timestamptz NULL,
     delete_after timestamptz NOT NULL,
-    created_at   timestamptz NOT NULL,
-    CHECK ((state = 'PENDING') = (expires_at IS NOT NULL))
+    created_at   timestamptz NOT NULL
 );
 
--- at most one usable ticket per user and slot, even under concurrent requests
-CREATE UNIQUE INDEX pending_upload_one_pending_per_slot
-    ON pending_upload (user_id, slot) WHERE state = 'PENDING';
+-- a user may hold any number of pending tickets; committing one retires the others of its slot
+CREATE INDEX pending_upload_pending_slot_idx
+    ON pending_upload (user_id, slot) WHERE expires_at IS NOT NULL;
 
 -- the sweeper reads the oldest due row first
 CREATE INDEX pending_upload_due_idx ON pending_upload (delete_after);

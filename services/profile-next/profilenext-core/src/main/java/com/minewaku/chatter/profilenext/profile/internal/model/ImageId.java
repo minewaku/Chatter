@@ -1,6 +1,7 @@
 package com.minewaku.chatter.profilenext.profile.internal.model;
 
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -16,15 +17,20 @@ public record ImageId(UUID value) implements Comparable<ImageId> {
         Objects.requireNonNull(value, "image id must not be null");
     }
 
-    /** Parses the text form of a UUID; anything else is rejected. */
+    /** For text that did not come from a client: anything but a UUID is a bug, so it is rejected. */
     public static ImageId of(String text) {
+        return tryParse(text).orElseThrow(() -> new IllegalArgumentException("image id must be a UUID"));
+    }
+
+    /** For text that came from a client: anything but the text form of a UUID is an ordinary "no", not an error. */
+    public static Optional<ImageId> tryParse(String text) {
         if (text == null || text.length() != UUID_TEXT_LENGTH) {
-            throw new IllegalArgumentException("image id must be a UUID");
+            return Optional.empty();
         }
         try {
-            return new ImageId(UUID.fromString(text));
+            return Optional.of(new ImageId(UUID.fromString(text)));
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("image id must be a UUID", e);
+            return Optional.empty();
         }
     }
 

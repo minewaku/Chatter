@@ -65,7 +65,7 @@ public class SdkCloudinaryClient implements CloudinaryClient {
     }
 
     @Override
-    public byte[] readHeader(String publicId, int maxBytes) {
+    public byte[] readLeadingBytes(String publicId, int maxBytes) {
         HttpRequest request = HttpRequest.newBuilder(URI.create(deliveryUrl + "/" + publicId))
                 .timeout(callTimeout)
                 .header("Range", "bytes=0-" + (maxBytes - 1L))

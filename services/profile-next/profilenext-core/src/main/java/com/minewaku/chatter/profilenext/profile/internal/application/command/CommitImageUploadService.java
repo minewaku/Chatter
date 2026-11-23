@@ -10,7 +10,6 @@ import com.minewaku.chatter.profilenext.profile.internal.model.OwnedImage;
 import com.minewaku.chatter.profilenext.profile.internal.model.PendingUpload;
 import com.minewaku.chatter.profilenext.profile.internal.model.UserId;
 import com.minewaku.chatter.profilenext.profile.internal.port.ImageStorage;
-import com.minewaku.chatter.profilenext.profile.internal.port.ImageStorage.StoredObject;
 import com.minewaku.chatter.profilenext.profile.internal.port.repository.PendingUploadRepository;
 import com.minewaku.chatter.profilenext.profile.internal.port.repository.ProfileRepository;
 import java.time.Clock;
@@ -24,11 +23,16 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * Commits an upload: makes the file the user sent straight to storage the profile's image for a slot.
  *
- * <p>Everything before the final transaction only <em>reads</em> storage, so any failure there changes nothing and the
- * client can repeat the call. The transaction is the commit point: it removes the ledger row (the key is now current),
- * flips the profile pointer, and records the replaced key for deletion, all or nothing. Deleting the replaced key
- * comes after, best-effort, because its ledger row already guarantees the sweeper will do it. A refusal records its
- * intent in the ledger <em>before</em> deleting the file, for the same reason.
+ * <p>The steps, in order: find the ticket, check the file arrived and is the kind of image the slot allows, then commit.
+ * Only what the file's bytes say is judged here; the length the client declared was checked when the ticket was
+ * requested and is the storage's to enforce.
+ *
+ * <p>This service never deletes from storage. The only storage call is the read of the file's first bytes, before the
+ * final transaction, so a failure there changes nothing and the client can repeat the call. Every key that stops being
+ * wanted, a refused file or the image a commit replaces, is recorded in the ledger as due for deletion and the sweeper
+ * deletes it. The transaction is the commit point: it removes the ledger row (the key is now current), retires the
+ * user's other tickets for the slot, flips the profile pointer, and records the replaced key for deletion, all or
+ * nothing.
  *
  * <p>No storage call runs inside a transaction.
  */
@@ -62,102 +66,73 @@ public class CommitImageUploadService implements CommitImageUploadUseCase {
     @Override
     public Result handle(Command command) {
         UserId userId = UserId.of(command.userId());
-        ImageSlot slot = ImageSlot.valueOf(command.slot());
-        ImageId imageId = parse(command.imageId());
+        ImageId imageId = ImageId.tryParse(command.imageId())
+                .orElseThrow(() -> new ImageUploadRejectedException(Reason.UPLOAD_NOT_FOUND)); // never echo the client's text
         Instant now = clock.instant();
 
-        // 1. a repeat of a commit that already went through
-        if (profiles.currentImage(userId, slot).filter(imageId::equals).isPresent()) {
-            return new Result(Outcome.ALREADY_APPLIED, text(imageId), ImagePath.of(userId, slot, imageId));
+        // 1. a repeat of a commit that already went through: its ticket is gone, the profile holds the image
+        Optional<ImageSlot> held = profiles.getOrDefault(userId).slotHolding(imageId);
+        if (held.isPresent()) {
+            return alreadyApplied(userId, held.get(), imageId);
         }
         PendingUpload upload = pending.findPending(userId, imageId)
-                .filter(found -> found.image().slot() == slot)
                 .orElseThrow(() -> new ImageUploadRejectedException(Reason.UPLOAD_NOT_FOUND));
         if (upload.isExpiredAt(now)) {
             throw new ImageUploadRejectedException(Reason.UPLOAD_EXPIRED);
         }
         OwnedImage image = upload.image();
+        ImageSlot slot = image.slot();
 
-        // 2. what the storage holds
-        StoredObject stored =
-                storage.stat(image).orElseThrow(() -> new ImageUploadRejectedException(Reason.UPLOAD_INCOMPLETE));
-        policy.checkStored(slot, stored).ifPresent(reason -> {
-            throw refuse(image, reason, now);
+        // 2. the file must have arrived; only its first bytes are read
+        byte[] firstBytes = storage.readFirstBytes(image, policy.inspectBytes())
+                .orElseThrow(() -> new ImageUploadRejectedException(Reason.UPLOAD_INCOMPLETE));
+
+        // 3. what the file's own bytes say it is, whatever the provider did on upload. The length is not judged
+        // here: the ticket carried it and the storage holds the upload to it.
+        SniffedImage sniffed = ImageSniffer.sniff(firstBytes)
+                .orElseThrow(() -> discardAndRefuse(image, Reason.UNREADABLE_IMAGE, now));
+        policy.checkContent(slot, sniffed).ifPresent(reason -> {
+            throw discardAndRefuse(image, reason, now);
         });
 
-        // 3. what the file's own bytes say, unless the provider already validated them
-        if (!storage.validatesOnUpload()) {
-            SniffedImage sniffed = ImageSniffer.sniff(storage.readHeader(image, policy.headerBytes()), stored.sizeBytes())
-                    .orElseThrow(() -> refuse(image, Reason.UNREADABLE_IMAGE, now));
-            policy.checkContent(slot, stored, sniffed).ifPresent(reason -> {
-                throw refuse(image, reason, now);
-            });
-        }
-
-        // 4. the commit point
-        Optional<ImageId> previous;
-        try {
-            previous = transaction.execute(status -> {
-                pending.lockPending(userId, imageId)
-                        .orElseThrow(() -> new ImageUploadRejectedException(Reason.UPLOAD_NOT_FOUND));
-                pending.delete(imageId);
-                Optional<ImageId> replaced = profiles.replaceImage(userId, slot, imageId, now);
-                replaced.ifPresent(old -> pending.discard(new OwnedImage(userId, slot, old), now));
+        // 4. the commit point. Replacing the image comes first: it locks the profile row, so of two commits of one
+        // ticket the second sees the ticket already current and has nothing left to do.
+        Optional<ImageId> previous = transaction.execute(status -> {
+            Optional<ImageId> replaced = profiles.replaceImage(userId, slot, imageId, now);
+            if (replaced.filter(imageId::equals).isPresent()) {
                 return replaced;
-            });
-        } catch (ImageUploadRejectedException e) {
-            // two commits of one ticket raced and the other one won: this one is the repeat it would have been
-            if (e.reason() == Reason.UPLOAD_NOT_FOUND
-                    && profiles.currentImage(userId, slot).filter(imageId::equals).isPresent()) {
-                return new Result(Outcome.ALREADY_APPLIED, text(imageId), ImagePath.of(userId, slot, imageId));
             }
-            throw e;
+            pending.lockPending(userId, imageId)
+                    .orElseThrow(() -> new ImageUploadRejectedException(Reason.UPLOAD_NOT_FOUND));
+            pending.delete(imageId);
+            pending.discardPending(userId, slot); // the tickets that lost: their uploads may still arrive
+            replaced.ifPresent(old -> pending.discard(new OwnedImage(userId, slot, old), now));
+            return replaced;
+        });
+        if (previous.filter(imageId::equals).isPresent()) {
+            return alreadyApplied(userId, slot, imageId);
         }
 
-        // 5. the fast path for the replaced key; the sweeper is the safety net
-        previous.ifPresent(old -> deleteNow(new OwnedImage(userId, slot, old)));
+        // 5. nothing left to do for the replaced key: the transaction recorded it and the sweeper deletes it
         log.info("image committed userId={} slot={} imageId={} replaced={}", userId.value(), slot, text(imageId), previous.isPresent());
-        return new Result(Outcome.APPLIED, text(imageId), ImagePath.of(userId, slot, imageId));
+        return new Result(Outcome.APPLIED, slot.name(), text(imageId), ImagePath.of(userId, slot, imageId));
     }
 
-    /** Records that the key is to be deleted, tries to delete it now, and returns the refusal for the caller to throw. */
-    private ImageUploadRejectedException refuse(OwnedImage image, Reason reason, Instant now) {
+    private static Result alreadyApplied(UserId userId, ImageSlot slot, ImageId imageId) {
+        return new Result(Outcome.ALREADY_APPLIED, slot.name(), text(imageId), ImagePath.of(userId, slot, imageId));
+    }
+
+    /**
+     * Retires the rejected file: records in the ledger that its key is due for deletion, which the sweeper carries out,
+     * and returns the refusal for the caller to throw. The ledger write happens here, before the throw, so call it only
+     * on the way out.
+     */
+    private ImageUploadRejectedException discardAndRefuse(OwnedImage image, Reason reason, Instant now) {
         pending.discard(image, now);
-        deleteNow(image);
-        log.info(
-                "image commit refused rule={} userId={} slot={} imageId={}",
-                reason.name().toLowerCase(java.util.Locale.ROOT),
-                image.userId().value(),
-                image.slot(),
-                text(image.imageId()));
         return new ImageUploadRejectedException(reason);
-    }
-
-    /** Deletes the key and its ledger row; on any failure the row stays and the sweeper retries. */
-    private void deleteNow(OwnedImage image) {
-        try {
-            storage.delete(image);
-            pending.delete(image.imageId());
-        } catch (RuntimeException e) {
-            log.warn(
-                    "image delete postponed to the sweeper userId={} slot={} imageId={}",
-                    image.userId().value(),
-                    image.slot(),
-                    text(image.imageId()),
-                    e);
-        }
     }
 
     private static String text(ImageId id) {
         return id.value().toString();
-    }
-
-    /** Whatever does not parse is "not found"; the client's text is never echoed or logged. */
-    private static ImageId parse(String text) {
-        try {
-            return ImageId.of(text);
-        } catch (IllegalArgumentException e) {
-            throw new ImageUploadRejectedException(Reason.UPLOAD_NOT_FOUND);
-        }
     }
 }

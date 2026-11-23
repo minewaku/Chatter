@@ -1,6 +1,7 @@
 package com.minewaku.chatter.profilenext.profile.internal.model;
 
 import java.time.Instant;
+import java.util.Optional;
 
 /**
  * What the service knows about one user. {@code displayName}, {@code avatar} and {@code banner} are null until the user
@@ -20,6 +21,14 @@ public record Profile(
     /** The profile of a user who never saved anything: no name, empty bio, no images, no timestamps. */
     public static Profile defaultsFor(UserId userId) {
         return new Profile(userId, null, Bio.of(""), null, null, null, null);
+    }
+
+    /** The slot that holds this image, if either does. */
+    public Optional<ImageSlot> slotHolding(ImageId imageId) {
+        if (imageId.equals(avatar)) {
+            return Optional.of(ImageSlot.AVATAR);
+        }
+        return imageId.equals(banner) ? Optional.of(ImageSlot.BANNER) : Optional.empty();
     }
 
     /** The image held in {@code slot}, or null when the slot is empty. */

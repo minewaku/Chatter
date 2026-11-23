@@ -25,7 +25,7 @@ class ImageFlowE2eTest extends ImageE2eSupport {
         String imageId = upload(user, "avatar", "image/png", ImageFixtures.png(512, 512));
         assertThat(profileOf(user)).contains("\"avatarUrl\":null");
 
-        HttpResponse<String> committed = commit(user, "avatar", imageId);
+        HttpResponse<String> committed = commit(user, imageId);
 
         assertThat(committed.statusCode()).isEqualTo(200);
         assertThat(committed.body())
@@ -70,7 +70,7 @@ class ImageFlowE2eTest extends ImageE2eSupport {
 
         String avatar = setImage(user, "avatar", 512);
         String banner = upload(user, "banner", "image/png", ImageFixtures.png(1500, 500));
-        assertThat(commit(user, "banner", banner).statusCode()).isEqualTo(200);
+        assertThat(commit(user, banner).statusCode()).isEqualTo(200);
 
         assertThat(profileOf(user))
                 .contains(addressOf(user, "avatar", avatar))
@@ -82,7 +82,7 @@ class ImageFlowE2eTest extends ImageE2eSupport {
         long user = newUser();
         String imageId = setImage(user, "avatar", 512);
 
-        HttpResponse<String> again = commit(user, "avatar", imageId);
+        HttpResponse<String> again = commit(user, imageId);
 
         assertThat(again.statusCode()).isEqualTo(200);
         assertThat(again.body()).contains("\"outcome\":\"already_applied\"");
@@ -98,7 +98,7 @@ class ImageFlowE2eTest extends ImageE2eSupport {
         for (int i = 0; i < 8; i++) {
             calls.add(CompletableFuture.runAsync(() -> {
                 try {
-                    HttpResponse<String> response = commit(user, "avatar", imageId);
+                    HttpResponse<String> response = commit(user, imageId);
                     assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
                     if (response.body().contains("\"outcome\":\"applied\"")) {
                         applied.incrementAndGet();
@@ -123,13 +123,13 @@ class ImageFlowE2eTest extends ImageE2eSupport {
         HttpResponse<String> ticket = requestTicket(user, "avatar", "image/png", 33);
         String imageId = string(ticket.body(), "imageId");
 
-        HttpResponse<String> early = commit(user, "avatar", imageId);
+        HttpResponse<String> early = commit(user, imageId);
 
         assertThat(early.statusCode()).isEqualTo(409);
         assertThat(early.body()).contains("\"code\":\"upload_incomplete\"");
 
         STORAGE.upload(string(ticket.body(), "public_id"), ImageFixtures.png(512, 512), "image/png");
-        assertThat(commit(user, "avatar", imageId).statusCode()).isEqualTo(200);
+        assertThat(commit(user, imageId).statusCode()).isEqualTo(200);
     }
 
     @Test
@@ -150,7 +150,7 @@ class ImageFlowE2eTest extends ImageE2eSupport {
         long user = newUser();
         String imageId = upload(user, "avatar", "image/png", "<html>definitely not a png</html>".getBytes());
 
-        HttpResponse<String> refused = commit(user, "avatar", imageId);
+        HttpResponse<String> refused = commit(user, imageId);
 
         assertThat(refused.statusCode()).isEqualTo(422);
         assertThat(refused.body()).contains("\"code\":\"image_rejected\"");
@@ -159,7 +159,7 @@ class ImageFlowE2eTest extends ImageE2eSupport {
             assertThat(storedKeys(user)).isEmpty();
             assertThat(ledgerRows(user)).isZero();
         });
-        assertThat(commit(user, "avatar", imageId).statusCode()).isEqualTo(404);
+        assertThat(commit(user, imageId).statusCode()).isEqualTo(404);
     }
 
     @Test
@@ -167,7 +167,7 @@ class ImageFlowE2eTest extends ImageE2eSupport {
         long user = newUser();
         String imageId = upload(user, "avatar", "image/png", ImageFixtures.png(2000, 2000));
 
-        assertThat(commit(user, "avatar", imageId).statusCode()).isEqualTo(422);
+        assertThat(commit(user, imageId).statusCode()).isEqualTo(422);
     }
 
     @Test
@@ -187,33 +187,25 @@ class ImageFlowE2eTest extends ImageE2eSupport {
         long mallory = newUser();
         String imageId = upload(alice, "avatar", "image/png", ImageFixtures.png(512, 512));
 
-        assertThat(commit(mallory, "avatar", imageId).statusCode()).isEqualTo(404);
+        assertThat(commit(mallory, imageId).statusCode()).isEqualTo(404);
 
         assertThat(storedKeys(alice)).containsExactly(keyOf(alice, "avatar", imageId));
-        assertThat(commit(alice, "avatar", imageId).statusCode()).isEqualTo(200);
+        assertThat(commit(alice, imageId).statusCode()).isEqualTo(200);
         assertThat(profileOf(mallory)).contains("\"avatarUrl\":null");
-    }
-
-    @Test
-    void aTicketForOneSlotCannotBeCommittedIntoTheOther() throws Exception {
-        long user = newUser();
-        String imageId = upload(user, "avatar", "image/png", ImageFixtures.png(512, 512));
-
-        assertThat(commit(user, "banner", imageId).statusCode()).isEqualTo(404);
     }
 
     @Test
     void unknownAndMalformedImageIdsAreNotFound() throws Exception {
         long user = newUser();
 
-        assertThat(commit(user, "avatar", "0197aaab-0000-7000-8000-00000000ffff").statusCode()).isEqualTo(404);
-        assertThat(commit(user, "avatar", "not-a-uuid").statusCode()).isEqualTo(404);
+        assertThat(commit(user, "0197aaab-0000-7000-8000-00000000ffff").statusCode()).isEqualTo(404);
+        assertThat(commit(user, "not-a-uuid").statusCode()).isEqualTo(404);
     }
 
     @Test
     void everyEndpointNeedsAToken() throws Exception {
         assertThat(send("POST", "/api/v1/profiles/@me/images/avatar/upload", null, "{}").statusCode()).isEqualTo(401);
-        assertThat(send("POST", "/api/v1/profiles/@me/images/avatar/commit", null, "{}").statusCode()).isEqualTo(401);
+        assertThat(send("POST", "/api/v1/profiles/@me/images/commit", null, "{}").statusCode()).isEqualTo(401);
         assertThat(send("DELETE", "/api/v1/profiles/@me/images/avatar", null, null).statusCode()).isEqualTo(401);
     }
 
@@ -282,11 +274,11 @@ class ImageFlowE2eTest extends ImageE2eSupport {
         String imageId = upload(user, "avatar", "image/png", ImageFixtures.png(512, 512));
         STORAGE.failing = true;
 
-        HttpResponse<String> response = commit(user, "avatar", imageId);
+        HttpResponse<String> response = commit(user, imageId);
 
         assertThat(response.statusCode()).isEqualTo(503);
         STORAGE.failing = false;
         assertThat(profileOf(user)).contains("\"avatarUrl\":null");
-        assertThat(commit(user, "avatar", imageId).statusCode()).isEqualTo(200);
+        assertThat(commit(user, imageId).statusCode()).isEqualTo(200);
     }
 }

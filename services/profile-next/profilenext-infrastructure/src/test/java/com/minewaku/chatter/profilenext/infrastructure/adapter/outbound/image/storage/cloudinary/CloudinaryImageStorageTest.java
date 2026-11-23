@@ -11,7 +11,6 @@ import com.minewaku.chatter.profilenext.profile.internal.model.ImageId;
 import com.minewaku.chatter.profilenext.profile.internal.model.ImageSlot;
 import com.minewaku.chatter.profilenext.profile.internal.model.OwnedImage;
 import com.minewaku.chatter.profilenext.profile.internal.model.UserId;
-import com.minewaku.chatter.profilenext.profile.internal.port.ImageStorage.StoredObject;
 import com.minewaku.chatter.profilenext.profile.internal.port.ImageStorage.UploadTicket;
 import java.time.Clock;
 import java.time.Duration;
@@ -56,8 +55,8 @@ class CloudinaryImageStorageTest {
         }
 
         @Override
-        public byte[] readHeader(String publicId, int maxBytes) {
-            calls.add("header:" + publicId + ":" + maxBytes);
+        public byte[] readLeadingBytes(String publicId, int maxBytes) {
+            calls.add("leading:" + publicId + ":" + maxBytes);
             fail();
             return new byte[] {1, 2, 3};
         }
@@ -115,33 +114,22 @@ class CloudinaryImageStorageTest {
     }
 
     @Test
-    void aStoredAssetIsReportedWithItsSizeAndContentTypeFromTheFormat() {
+    void aStoredAssetIsReadAsItsLeadingBytes() {
         client.assets.put(PUBLIC_ID, new Asset(1234, "jpg"));
-
-        Optional<StoredObject> stored = storage().stat(IMAGE);
-
-        assertThat(stored).contains(new StoredObject(1234, "image/jpeg"));
-    }
-
-    @Test
-    void otherFormatsKeepTheirOwnNameSoThePolicyCanRefuseThem() {
-        client.assets.put(PUBLIC_ID, new Asset(10, "gif"));
-
-        assertThat(storage().stat(IMAGE)).contains(new StoredObject(10, "image/gif"));
-    }
-
-    @Test
-    void nothingStoredIsEmpty() {
-        assertThat(storage().stat(IMAGE)).isEmpty();
-    }
-
-    @Test
-    void theHeaderIsReadFromTheImagePathAndTheServiceSniffsItItself() {
         CloudinaryImageStorage storage = storage();
 
-        assertThat(storage.readHeader(IMAGE, 512)).containsExactly(1, 2, 3);
-        assertThat(client.calls).containsExactly("header:" + PUBLIC_ID + ":512");
+        Optional<byte[]> leading = storage.readLeadingBytes(IMAGE, 512);
+
+        assertThat(leading).isPresent();
+        assertThat(leading.get()).containsExactly(1, 2, 3);
+        assertThat(client.calls).containsExactly("asset:" + PUBLIC_ID, "leading:" + PUBLIC_ID + ":512");
         assertThat(storage.validatesOnUpload()).isFalse();
+    }
+
+    @Test
+    void nothingStoredIsEmptyAndNoBytesAreRead() {
+        assertThat(storage().readLeadingBytes(IMAGE, 512)).isEmpty();
+        assertThat(client.calls).containsExactly("asset:" + PUBLIC_ID);
     }
 
     @Test
@@ -158,8 +146,7 @@ class CloudinaryImageStorageTest {
 
         assertThatThrownBy(() -> storage.issueUpload(IMAGE, "image/png", 1, Duration.ofMinutes(1)))
                 .isInstanceOf(ImageStorageUnavailableException.class);
-        assertThatThrownBy(() -> storage.stat(IMAGE)).isInstanceOf(ImageStorageUnavailableException.class);
-        assertThatThrownBy(() -> storage.readHeader(IMAGE, 10)).isInstanceOf(ImageStorageUnavailableException.class);
+        assertThatThrownBy(() -> storage.readLeadingBytes(IMAGE, 10)).isInstanceOf(ImageStorageUnavailableException.class);
         assertThatThrownBy(() -> storage.delete(IMAGE)).isInstanceOf(ImageStorageUnavailableException.class);
     }
 
@@ -170,7 +157,7 @@ class CloudinaryImageStorageTest {
 
         assertThatThrownBy(() -> unconfigured.issueUpload(IMAGE, "image/png", 1, Duration.ofMinutes(1)))
                 .isInstanceOf(ImageStorageUnavailableException.class);
-        assertThatThrownBy(() -> unconfigured.stat(IMAGE)).isInstanceOf(ImageStorageUnavailableException.class);
+        assertThatThrownBy(() -> unconfigured.readLeadingBytes(IMAGE, 10)).isInstanceOf(ImageStorageUnavailableException.class);
         assertThat(client.calls).isEmpty();
     }
 

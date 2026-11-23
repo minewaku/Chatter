@@ -66,7 +66,7 @@ public class FakeCloudinary implements CloudinaryClient {
     }
 
     @Override
-    public byte[] readHeader(String publicId, int maxBytes) {
+    public byte[] readLeadingBytes(String publicId, int maxBytes) {
         checkAvailable();
         Stored stored = assets.get(publicId);
         if (stored == null) {

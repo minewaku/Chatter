@@ -17,16 +17,12 @@ public class ImageUploadRejectedException extends RuntimeException {
         DIMENSIONS_NOT_ALLOWED,
         /** The stored bytes are not an image we can read. */
         UNREADABLE_IMAGE,
-        /** The stored bytes are a different format than the one the upload declared. */
-        CONTENT_TYPE_MISMATCH,
         /** No upload ticket of this user has this id (never issued, already used, or discarded). */
         UPLOAD_NOT_FOUND,
         /** The ticket expired; request a new one. */
         UPLOAD_EXPIRED,
         /** The ticket is valid but the file has not arrived at the storage yet. */
-        UPLOAD_INCOMPLETE,
-        /** Two requests for the same slot collided; repeat the call. */
-        UPLOAD_CONFLICT
+        UPLOAD_INCOMPLETE
     }
 
     private final Reason reason;

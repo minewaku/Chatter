@@ -41,9 +41,8 @@ public class FakeProfileStore implements ProfileRepository, ProfileQueryReposito
     }
 
     @Override
-    public Optional<ImageId> currentImage(UserId userId, ImageSlot slot) {
-        Profile profile = rows.get(userId.value());
-        return profile == null ? Optional.empty() : Optional.ofNullable(profile.imageIn(slot));
+    public Profile getOrDefault(UserId userId) {
+        return rows.getOrDefault(userId.value(), Profile.defaultsFor(userId));
     }
 
     @Override

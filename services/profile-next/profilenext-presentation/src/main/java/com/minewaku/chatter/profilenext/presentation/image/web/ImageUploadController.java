@@ -26,10 +26,11 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * The three steps of an image change, for the caller only (the token's subject; no path or body field can name another
  * user). The file itself never passes through here: the client uploads it straight to the storage with the ticket from
- * {@code upload}, then calls {@code commit}. Any slot other than {@code avatar} or {@code banner} does not match a route.
+ * {@code upload}, then calls {@code commit} with the ticket's image id; the ticket already knows its slot. Any slot other
+ * than {@code avatar} or {@code banner} does not match a route.
  */
 @RestController
-@RequestMapping("/api/v1/profiles/@me/images/{slot:avatar|banner}")
+@RequestMapping("/api/v1/profiles/@me/images")
 @RequiredArgsConstructor
 public class ImageUploadController {
 
@@ -38,7 +39,7 @@ public class ImageUploadController {
     private final RemoveImageUseCase removeImage;
     private final ImageUrlResolver urls;
 
-    @PostMapping("/upload")
+    @PostMapping("/{slot:avatar|banner}/upload")
     public UploadPermissionResponse upload(
             @AuthenticationPrincipal Jwt jwt, @PathVariable String slot, @Valid @RequestBody UploadPermissionRequest request) {
         return UploadPermissionResponse.from(requestUpload.handle(new RequestImageUploadTicketUseCase.Command(
@@ -46,14 +47,13 @@ public class ImageUploadController {
     }
 
     @PostMapping("/commit")
-    public CommitUploadResponse commit(
-            @AuthenticationPrincipal Jwt jwt, @PathVariable String slot, @Valid @RequestBody CommitUploadRequest request) {
-        var result = commitUpload.handle(new CommitImageUploadUseCase.Command(
-                AccessPrincipal.from(jwt).userId(), slotName(slot), request.imageId()));
-        return CommitUploadResponse.from(slot, result, urls.resolve(result.path()));
+    public CommitUploadResponse commit(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CommitUploadRequest request) {
+        var result =
+                commitUpload.handle(new CommitImageUploadUseCase.Command(AccessPrincipal.from(jwt).userId(), request.imageId()));
+        return CommitUploadResponse.from(result, urls.resolve(result.path()));
     }
 
-    @DeleteMapping
+    @DeleteMapping("/{slot:avatar|banner}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void remove(@AuthenticationPrincipal Jwt jwt, @PathVariable String slot) {
         removeImage.handle(new RemoveImageUseCase.Command(AccessPrincipal.from(jwt).userId(), slotName(slot)));

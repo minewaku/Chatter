@@ -17,7 +17,7 @@ class PendingUploadTest {
 
     @Test
     void aTicketExpiresAfterItsLifetimeAndIsSweptAfterTheGraceOnTop() {
-        assertThat(ticket.state()).isEqualTo(PendingUpload.State.PENDING);
+        assertThat(ticket.isPending()).isTrue();
         assertThat(ticket.expiresAt()).isEqualTo(NOW.plus(Duration.ofMinutes(5)));
         assertThat(ticket.deleteAfter()).isEqualTo(NOW.plus(Duration.ofMinutes(15)));
     }
@@ -29,29 +29,17 @@ class PendingUploadTest {
     }
 
     @Test
-    void itIsReusableUntilLessThanTheMinimumWindowIsLeft() {
-        assertThat(ticket.isReusableAt(NOW)).isTrue();
-        assertThat(ticket.isReusableAt(NOW.plus(Duration.ofMinutes(5)).minus(PendingUpload.MIN_REUSE_WINDOW)))
-                .isTrue();
-        assertThat(ticket.isReusableAt(
-                        NOW.plus(Duration.ofMinutes(5)).minus(PendingUpload.MIN_REUSE_WINDOW).plusMillis(1)))
-                .isFalse();
-    }
-
-    @Test
-    void aDiscardedKeyNeverExpiresOrGetsReusedAndIsDueAtItsSweepTime() {
+    void aDiscardedKeyNeverExpiresAndIsDueAtItsSweepTime() {
         PendingUpload discarded = PendingUpload.discard(IMAGE, NOW);
 
         assertThat(discarded.isPending()).isFalse();
         assertThat(discarded.isExpiredAt(NOW.plus(Duration.ofDays(1)))).isFalse();
-        assertThat(discarded.isReusableAt(NOW)).isFalse();
         assertThat(discarded.isDueAt(NOW.minusMillis(1))).isFalse();
         assertThat(discarded.isDueAt(NOW)).isTrue();
     }
 
     @Test
-    void aPendingUploadNeedsAnExpiry() {
-        assertThatThrownBy(() -> new PendingUpload(IMAGE, PendingUpload.State.PENDING, null, NOW))
-                .isInstanceOf(IllegalArgumentException.class);
+    void aDeleteTimeIsRequired() {
+        assertThatThrownBy(() -> new PendingUpload(IMAGE, null, null)).isInstanceOf(NullPointerException.class);
     }
 }

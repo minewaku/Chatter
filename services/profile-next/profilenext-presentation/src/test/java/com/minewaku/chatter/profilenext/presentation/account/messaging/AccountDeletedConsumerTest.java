@@ -5,7 +5,7 @@ import static org.awaitility.Awaitility.await;
 
 import com.minewaku.chatter.profilenext.presentation.shared.messaging.EventDispatcher;
 import com.minewaku.chatter.profilenext.presentation.shared.messaging.KafkaConsumerConfiguration;
-import com.minewaku.chatter.profilenext.profile.api.command.DeleteProfileDataUseCase;
+import com.minewaku.chatter.profilenext.profile.api.command.DeleteProfileUseCase;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -75,7 +75,7 @@ class AccountDeletedConsumerTest {
     }
 
     /** Records every call and can be told to fail for a user. */
-    static class RecordingUseCase implements DeleteProfileDataUseCase {
+    static class RecordingUseCase implements DeleteProfileUseCase {
         final List<Command> calls = Collections.synchronizedList(new ArrayList<>());
         final Map<Long, Integer> failuresLeft = new ConcurrentHashMap<>();
         final Map<Long, Boolean> alwaysFail = new ConcurrentHashMap<>();
@@ -277,7 +277,7 @@ class AccountDeletedConsumerTest {
         publish(Long.toString(user), notice("second", user), "UserSoftDeleted");
 
         await().atMost(Duration.ofSeconds(30)).until(() -> useCase.callsFor(user).size() == 2);
-        assertThat(useCase.callsFor(user)).extracting(DeleteProfileDataUseCase.Command::eventId)
+        assertThat(useCase.callsFor(user)).extracting(DeleteProfileUseCase.Command::eventId)
                 .containsExactly("first", "second");
     }
 }

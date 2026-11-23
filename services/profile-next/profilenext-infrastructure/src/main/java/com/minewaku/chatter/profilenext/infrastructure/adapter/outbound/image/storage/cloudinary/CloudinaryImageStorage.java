@@ -7,7 +7,6 @@ import com.minewaku.chatter.profilenext.profile.internal.port.ImageStorage;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.LinkedHashMap;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -16,10 +15,11 @@ import org.springframework.stereotype.Component;
 /**
  * The adapter for {@link ImageStorage} on Cloudinary. Clients upload straight to Cloudinary with a signed form POST whose
  * {@code public_id} is the path {@link ImagePath} names and which may create that asset only, never overwrite one;
- * nothing is ever copied or renamed. Cloudinary cannot pin a file's length or content type in the signature, so the
- * service checks both after the upload: the stored size and type in {@link #stat}, and the file's own first bytes through
- * {@link #readHeader}, which is why {@link #validatesOnUpload()} stays false. Everything Cloudinary-shaped is decided here
- * and the SDK stays behind {@link CloudinaryClient}.
+ * nothing is ever copied or renamed. Cloudinary cannot pin a file's length or content type in the signature, so a
+ * ticket does not hold the upload to the length it was issued for (only the account's own upload limit does); the
+ * service reads the file's own leading bytes after the upload through {@link #readLeadingBytes}, which is why
+ * {@link #validatesOnUpload()} stays false. Everything Cloudinary-shaped is decided here and the SDK stays behind
+ * {@link CloudinaryClient}.
  */
 @Component
 public class CloudinaryImageStorage implements ImageStorage {
@@ -34,7 +34,7 @@ public class CloudinaryImageStorage implements ImageStorage {
         this.clock = clock;
     }
 
-    /** {@code contentType} and {@code sizeBytes} cannot be part of a Cloudinary signature; the commit checks them instead. */
+    /** {@code contentType} and {@code sizeBytes} cannot be part of a Cloudinary signature, so they are not enforced on upload. */
     @Override
     public UploadTicket issueUpload(OwnedImage image, String contentType, long sizeBytes, Duration validFor) {
         requireConfigured();
@@ -57,17 +57,12 @@ public class CloudinaryImageStorage implements ImageStorage {
                 clock.instant().plus(validFor));
     }
 
+    /** The asset lookup says whether the upload arrived; the bytes come from a ranged read. Not there is empty. */
     @Override
-    public Optional<StoredObject> stat(OwnedImage image) {
+    public Optional<byte[]> readLeadingBytes(OwnedImage image, int maxBytes) {
         requireConfigured();
         return guarded("the upload could not be read", () -> client.asset(publicId(image))
-                .map(asset -> new StoredObject(asset.bytes(), contentTypeOf(asset.format()))));
-    }
-
-    @Override
-    public byte[] readHeader(OwnedImage image, int maxBytes) {
-        requireConfigured();
-        return guarded("the upload could not be read", () -> client.readHeader(publicId(image), maxBytes));
+                .map(asset -> client.readLeadingBytes(publicId(image), maxBytes)));
     }
 
     @Override
@@ -87,14 +82,6 @@ public class CloudinaryImageStorage implements ImageStorage {
 
     private static String publicId(OwnedImage image) {
         return ImagePath.of(image);
-    }
-
-    private static String contentTypeOf(String format) {
-        String name = format == null ? "" : format.strip().toLowerCase(Locale.ROOT);
-        return switch (name) {
-            case "jpg", "jpeg" -> "image/jpeg";
-            default -> "image/" + name;
-        };
     }
 
     private void requireConfigured() {

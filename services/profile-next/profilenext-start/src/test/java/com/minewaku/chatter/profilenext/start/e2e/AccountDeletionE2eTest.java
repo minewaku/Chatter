@@ -85,7 +85,7 @@ class AccountDeletionE2eTest extends ImageE2eSupport {
         publishNotice(user, freshEventId(), 1);
         await().atMost(PATIENCE).until(() -> ledgerRows(user) == 1 && pendingTickets(user) == 0);
 
-        HttpResponse<String> late = commit(user, "avatar", imageId);
+        HttpResponse<String> late = commit(user, imageId);
 
         assertThat(late.statusCode()).isEqualTo(404);
         assertThat(rows(user)).isZero();

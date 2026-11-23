@@ -8,7 +8,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * An object storage provider, seen from core: four operations every provider has. No method exposes a bucket, a key or a
+ * An object storage provider, seen from core: three operations every provider has. No method exposes a bucket, a key or a
  * provider type; core names an image by owner, slot and id and the adapter alone knows where that lives. Provider
  * failures surface as {@code ImageStorageUnavailableException}.
  */
@@ -16,25 +16,20 @@ public interface ImageStorage {
 
     /**
      * Signs an upload of one file to the location of exactly this image. The client sends it straight to the provider.
-     * Constraints (content type, length, no overwrite) are applied wherever the provider can enforce them; the commit
-     * checks the stored result either way. Makes no change in storage.
+     * Constraints (content type, length, no overwrite) are applied wherever the provider can enforce them and nowhere
+     * else: the commit does not re-check the length, only what the file's own bytes say. Makes no change in storage.
      */
     UploadTicket issueUpload(OwnedImage image, String contentType, long sizeBytes, Duration validFor);
 
-    /** What is stored for the image, or empty when nothing has arrived. */
-    Optional<StoredObject> stat(OwnedImage image);
-
-    /** The first {@code maxBytes} bytes of the stored file (all of it when it is shorter). Fails when nothing is stored. */
-    byte[] readHeader(OwnedImage image, int maxBytes);
+    /**
+     * The first {@code maxBytes} bytes of the stored file's content (all of it when it is shorter), which is enough to
+     * tell what kind of image it is. Empty when nothing has arrived: this is also how the commit learns that the upload
+     * is still missing.
+     */
+    Optional<byte[]> readFirstBytes(OwnedImage image, int maxBytes);
 
     /** Deletes the stored file. A file that is already gone counts as success. */
     void delete(OwnedImage image);
-
-    /**
-     * True when the provider itself validates and re-encodes what it receives (an image CDN), which makes reading the
-     * header ourselves redundant. Raw object stores answer false.
-     */
-    boolean validatesOnUpload();
 
     /**
      * What a client needs to upload one file: send {@code method} to {@code url} with {@code headers} (and, for form
@@ -50,7 +45,4 @@ public interface ImageStorage {
             fields = Map.copyOf(fields);
         }
     }
-
-    /** A stored file as the provider reports it. {@code contentType} is what the provider recorded, never what a client claimed later. */
-    record StoredObject(long sizeBytes, String contentType) {}
 }

@@ -8,7 +8,6 @@ import com.minewaku.chatter.profilenext.profile.internal.application.command.Sni
 import com.minewaku.chatter.profilenext.profile.internal.application.fakes.Policies;
 import com.minewaku.chatter.profilenext.profile.internal.model.ImageDimensions;
 import com.minewaku.chatter.profilenext.profile.internal.model.ImageSlot;
-import com.minewaku.chatter.profilenext.profile.internal.port.ImageStorage.StoredObject;
 import org.junit.jupiter.api.Test;
 
 class ImagePolicyTest {
@@ -45,30 +44,17 @@ class ImagePolicyTest {
     }
 
     @Test
-    void whatTheStorageHoldsIsCheckedAgainstTheSameLimits() {
-        assertThat(policy.checkStored(ImageSlot.AVATAR, new StoredObject(1000, "image/jpeg"))).isEmpty();
-        assertThat(policy.checkStored(ImageSlot.AVATAR, new StoredObject(6_000_000, "image/jpeg")))
-                .contains(Reason.FILE_TOO_LARGE);
-        assertThat(policy.checkStored(ImageSlot.AVATAR, new StoredObject(1000, "application/octet-stream")))
-                .contains(Reason.FORMAT_NOT_ALLOWED);
-        assertThat(policy.checkStored(ImageSlot.AVATAR, new StoredObject(1000, null)))
-                .contains(Reason.FORMAT_NOT_ALLOWED);
-    }
-
-    @Test
-    void theFilesOwnBytesMustMatchTheRecordedTypeAndFitTheDimensions() {
-        StoredObject png = new StoredObject(1000, "image/png");
+    void theFilesOwnBytesMustBeAnAllowedFormatAndFitTheDimensions() {
         SniffedImage realPng = new SniffedImage("png", "image/png", new ImageDimensions(1024, 1024));
 
-        assertThat(policy.checkContent(ImageSlot.AVATAR, png, realPng)).isEmpty();
+        assertThat(policy.checkContent(ImageSlot.AVATAR, realPng)).isEmpty();
+        assertThat(policy.checkContent(ImageSlot.AVATAR, new SniffedImage("gif", "image/gif", new ImageDimensions(10, 10))))
+                .contains(Reason.FORMAT_NOT_ALLOWED);
         assertThat(policy.checkContent(
-                        ImageSlot.AVATAR, new StoredObject(1000, "image/jpeg"), realPng))
-                .contains(Reason.CONTENT_TYPE_MISMATCH);
-        assertThat(policy.checkContent(
-                        ImageSlot.AVATAR, png, new SniffedImage("png", "image/png", new ImageDimensions(1025, 10))))
+                        ImageSlot.AVATAR, new SniffedImage("png", "image/png", new ImageDimensions(1025, 10))))
                 .contains(Reason.DIMENSIONS_NOT_ALLOWED);
         assertThat(policy.checkContent(
-                        ImageSlot.BANNER, png, new SniffedImage("png", "image/png", new ImageDimensions(2048, 2048))))
+                        ImageSlot.BANNER, new SniffedImage("png", "image/png", new ImageDimensions(2048, 2048))))
                 .isEmpty();
     }
 }

@@ -14,12 +14,9 @@ public final class ImageSniffer {
 
     private ImageSniffer() {}
 
-    /**
-     * @param head the first bytes of the file (at most a few hundred KiB)
-     * @param totalBytes the full length of the file
-     */
-    public static Optional<SniffedImage> sniff(byte[] head, long totalBytes) {
-        if (head == null || totalBytes <= 0 || head.length == 0) {
+    /** @param head the first bytes of the file (at most a few hundred KiB), not necessarily all of it */
+    public static Optional<SniffedImage> sniff(byte[] head) {
+        if (head == null || head.length == 0) {
             return Optional.empty();
         }
         try {

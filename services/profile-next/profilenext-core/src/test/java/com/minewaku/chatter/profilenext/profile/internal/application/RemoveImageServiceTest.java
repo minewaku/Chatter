@@ -42,7 +42,7 @@ class RemoveImageServiceTest {
         var result = service().handle(new Command(7, "AVATAR"));
 
         assertThat(result.removed()).isTrue();
-        assertThat(profiles.currentImage(USER, ImageSlot.AVATAR)).isEmpty();
+        assertThat(profiles.getOrDefault(USER).imageIn(ImageSlot.AVATAR)).isNull();
         assertThat(storage.objects).isEmpty();
         assertThat(ledger.rows).isEmpty();
     }
@@ -64,9 +64,9 @@ class RemoveImageServiceTest {
         var result = service().handle(new Command(7, "AVATAR"));
 
         assertThat(result.removed()).isTrue();
-        assertThat(profiles.currentImage(USER, ImageSlot.AVATAR)).isEmpty();
+        assertThat(profiles.getOrDefault(USER).imageIn(ImageSlot.AVATAR)).isNull();
         PendingUpload row = ledger.rows.get(AVATAR.imageId());
-        assertThat(row.state()).isEqualTo(PendingUpload.State.DISCARD);
+        assertThat(row.isPending()).isFalse();
         assertThat(row.isDueAt(clock.instant())).isTrue();
     }
 
@@ -77,6 +77,6 @@ class RemoveImageServiceTest {
 
         service().handle(new Command(7, "AVATAR"));
 
-        assertThat(profiles.currentImage(USER, ImageSlot.BANNER)).contains(ImageIds.at(2));
+        assertThat(profiles.getOrDefault(USER).imageIn(ImageSlot.BANNER)).isEqualTo(ImageIds.at(2));
     }
 }

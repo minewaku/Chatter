@@ -2,7 +2,6 @@ package com.minewaku.chatter.profilenext.profile.internal.application.command;
 
 import com.minewaku.chatter.profilenext.profile.api.exception.ImageUploadRejectedException.Reason;
 import com.minewaku.chatter.profilenext.profile.internal.model.ImageSlot;
-import com.minewaku.chatter.profilenext.profile.internal.port.ImageStorage.StoredObject;
 import java.time.Duration;
 import java.util.Locale;
 import java.util.Optional;
@@ -10,13 +9,15 @@ import java.util.Set;
 
 /**
  * The rules an uploaded image must meet and how long an upload ticket lives. Pure: every check returns the reason it
- * failed, or empty when the input passes. The same limits are checked three times on purpose: on the declared values when
- * the ticket is requested, on what the storage really holds, and on what the file's own bytes say.
+ * failed, or empty when the input passes. The two checks answer different questions: {@link #checkRequest} judges what
+ * the client <em>declares</em> when it asks for a ticket (type and length), {@link #checkContent} judges what the
+ * stored file <em>is</em> (format and dimensions, read from its own bytes). The real length is not checked here: it is
+ * the storage's job to hold the uploaded file to the length the ticket was issued for.
  *
  * @param allowedFormats short names ({@code jpg}, {@code png}, {@code webp})
  * @param ticketLifetime how long an upload ticket works
  * @param grace how long after a ticket expires its key may still be swept, so a slow upload is never deleted under way
- * @param headerBytes how much of the stored file is read to tell what it is
+ * @param inspectBytes how many first bytes of the stored file are read to tell what it is
  */
 public record ImagePolicy(
         long maxBytesAvatar,
@@ -26,7 +27,7 @@ public record ImagePolicy(
         Set<String> allowedFormats,
         Duration ticketLifetime,
         Duration grace,
-        int headerBytes) {
+        int inspectBytes) {
 
     public long maxBytes(ImageSlot slot) {
         return slot == ImageSlot.AVATAR ? maxBytesAvatar : maxBytesBanner;
@@ -49,7 +50,7 @@ public record ImagePolicy(
         };
     }
 
-    /** The values the client declared when asking for a ticket. */
+    /** The values the client declared when asking for a ticket; nothing here is known to be true yet. */
     public Optional<Reason> checkRequest(ImageSlot slot, String contentType, long sizeBytes) {
         if (formatOf(contentType).filter(allowedFormats::contains).isEmpty()) {
             return Optional.of(Reason.FORMAT_NOT_ALLOWED);
@@ -60,24 +61,10 @@ public record ImagePolicy(
         return Optional.empty();
     }
 
-    /** What the storage reports about the arrived file. */
-    public Optional<Reason> checkStored(ImageSlot slot, StoredObject stored) {
-        if (formatOf(stored.contentType()).filter(allowedFormats::contains).isEmpty()) {
-            return Optional.of(Reason.FORMAT_NOT_ALLOWED);
-        }
-        if (stored.sizeBytes() <= 0 || stored.sizeBytes() > maxBytes(slot)) {
-            return Optional.of(Reason.FILE_TOO_LARGE);
-        }
-        return Optional.empty();
-    }
-
-    /** What the file's own first bytes say, against what the storage recorded for it. */
-    public Optional<Reason> checkContent(ImageSlot slot, StoredObject stored, SniffedImage sniffed) {
+    /** What the file's own first bytes say it is. */
+    public Optional<Reason> checkContent(ImageSlot slot, SniffedImage sniffed) {
         if (!allowedFormats.contains(sniffed.format())) {
             return Optional.of(Reason.FORMAT_NOT_ALLOWED);
-        }
-        if (!formatOf(stored.contentType()).filter(sniffed.format()::equals).isPresent()) {
-            return Optional.of(Reason.CONTENT_TYPE_MISMATCH);
         }
         int limit = maxDimension(slot);
         if (sniffed.dimensions().width() > limit || sniffed.dimensions().height() > limit) {
