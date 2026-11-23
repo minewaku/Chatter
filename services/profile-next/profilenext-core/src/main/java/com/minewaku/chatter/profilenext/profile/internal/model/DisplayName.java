@@ -3,8 +3,9 @@ package com.minewaku.chatter.profilenext.profile.internal.model;
 import com.minewaku.chatter.profilenext.profile.api.exception.InvalidProfileValueException;
 
 /**
- * A display name: 1 to 32 user-perceived characters after trimming, no control characters. Built only from user input,
- * never from stored values, so a rule change cannot make old rows unreadable.
+ * A display name: 1 to 32 user-perceived characters after trimming, no control characters. Built from user input and
+ * when the write side loads a profile to edit it; the read side uses plain values. Tightening the rules therefore
+ * needs existing rows migrated first.
  */
 public record DisplayName(String value) {
 

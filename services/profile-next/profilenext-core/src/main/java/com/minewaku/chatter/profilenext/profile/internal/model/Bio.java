@@ -2,7 +2,10 @@ package com.minewaku.chatter.profilenext.profile.internal.model;
 
 import com.minewaku.chatter.profilenext.profile.api.exception.InvalidProfileValueException;
 
-/** A bio: at most 190 user-perceived characters after trimming, may be empty, no control characters. */
+/**
+ * A bio: at most 190 user-perceived characters after trimming, may be empty, no control characters. Built from user
+ * input and when the write side loads a profile to edit it; the read side uses plain values.
+ */
 public record Bio(String value) {
 
     public static final String FIELD = "bio";

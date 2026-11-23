@@ -1,13 +1,11 @@
 package com.minewaku.chatter.profilenext.infrastructure.adapter.outbound.profile.read.jdbc;
 
-import com.minewaku.chatter.profilenext.profile.internal.model.Bio;
-import com.minewaku.chatter.profilenext.profile.internal.model.DisplayName;
-import com.minewaku.chatter.profilenext.profile.internal.model.ImageId;
 import com.minewaku.chatter.profilenext.profile.internal.model.UserId;
 import com.minewaku.chatter.profilenext.profile.internal.port.query.ProfileQueryRepository;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -36,21 +34,13 @@ public class JdbcProfileQueryRepository implements ProfileQueryRepository {
 
     private static ProfileView map(ResultSet rs, int rowNum) throws SQLException {
         return new ProfileView(
-                UserId.of(rs.getLong("user_id")),
-                displayName(rs.getString("display_name")),
-                Bio.of(rs.getString("bio")),
-                imageId(rs.getObject("avatar_image_id", UUID.class)),
-                imageId(rs.getObject("banner_image_id", UUID.class)),
+                rs.getLong("user_id"),
+                Objects.requireNonNullElse(rs.getString("display_name"), ""),
+                Objects.requireNonNullElse(rs.getString("bio"), ""),
+                rs.getObject("avatar_image_id", UUID.class),
+                rs.getObject("banner_image_id", UUID.class),
                 instant(rs, "created_at"),
                 instant(rs, "updated_at"));
-    }
-
-    private static DisplayName displayName(String stored) {
-        return stored == null || stored.isBlank() ? null : DisplayName.of(stored);
-    }
-
-    private static ImageId imageId(UUID value) {
-        return value == null ? null : new ImageId(value);
     }
 
     private static Instant instant(ResultSet rs, String column) throws SQLException {

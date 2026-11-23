@@ -4,9 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.minewaku.chatter.profilenext.infrastructure.support.JdbcTestConfiguration;
 import com.minewaku.chatter.profilenext.infrastructure.support.PostgreSqlTestSupport;
-import com.minewaku.chatter.profilenext.profile.internal.model.Bio;
-import com.minewaku.chatter.profilenext.profile.internal.model.DisplayName;
-import com.minewaku.chatter.profilenext.profile.internal.model.ImageId;
 import com.minewaku.chatter.profilenext.profile.internal.model.UserId;
 import com.minewaku.chatter.profilenext.profile.internal.port.query.ProfileQueryRepository;
 import com.minewaku.chatter.profilenext.profile.internal.port.query.ProfileQueryRepository.ProfileView;
@@ -52,11 +49,11 @@ class JdbcProfileQueryRepositoryTest extends PostgreSqlTestSupport {
 
         assertThat(found).isPresent();
         ProfileView profile = found.get();
-        assertThat(profile.userId().value()).isEqualTo(9_000_002L);
-        assertThat(profile.displayName()).isEqualTo(DisplayName.of("Mine"));
-        assertThat(profile.bio()).isEqualTo(Bio.of("Hello"));
-        assertThat(profile.avatar()).isEqualTo(new ImageId(avatar));
-        assertThat(profile.banner()).isEqualTo(new ImageId(banner));
+        assertThat(profile.userId()).isEqualTo(9_000_002L);
+        assertThat(profile.displayName()).isEqualTo("Mine");
+        assertThat(profile.bio()).isEqualTo("Hello");
+        assertThat(profile.avatar()).isEqualTo(avatar);
+        assertThat(profile.banner()).isEqualTo(banner);
         assertThat(profile.createdAt()).isEqualTo(created);
         assertThat(profile.updatedAt()).isEqualTo(updated);
     }
@@ -70,7 +67,7 @@ class JdbcProfileQueryRepositoryTest extends PostgreSqlTestSupport {
 
         assertThat(profile.avatar()).isNull();
         assertThat(profile.banner()).isNull();
-        assertThat(profile.displayName()).isNull();
-        assertThat(profile.bio()).isEqualTo(Bio.of(""));
+        assertThat(profile.displayName()).isEmpty();
+        assertThat(profile.bio()).isEmpty();
     }
 }

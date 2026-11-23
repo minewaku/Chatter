@@ -90,11 +90,11 @@ public class FakeProfileStore implements ProfileRepository, ProfileQueryReposito
         return profile == null
                 ? Optional.empty()
                 : Optional.of(new ProfileView(
-                        profile.userId(),
-                        profile.displayName(),
-                        profile.bio(),
-                        profile.avatar(),
-                        profile.banner(),
+                        profile.userId().value(),
+                        profile.displayName() == null ? "" : profile.displayName().value(),
+                        profile.bio().value(),
+                        profile.avatar() == null ? null : profile.avatar().value(),
+                        profile.banner() == null ? null : profile.banner().value(),
                         profile.createdAt(),
                         profile.updatedAt()));
     }

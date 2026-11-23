@@ -7,6 +7,7 @@ import com.minewaku.chatter.profilenext.profile.internal.model.ImageSlot;
 import com.minewaku.chatter.profilenext.profile.internal.model.UserId;
 import com.minewaku.chatter.profilenext.profile.internal.port.query.ProfileQueryRepository;
 import com.minewaku.chatter.profilenext.profile.internal.port.query.ProfileQueryRepository.ProfileView;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,18 +28,18 @@ public class GetProfileService implements GetProfileUseCase {
     @Override
     public Result handle(Query query) {
         UserId userId = UserId.of(query.userId());
-        ProfileView profile = profiles.findByUserId(userId).orElseGet(() -> ProfileView.defaultsFor(userId));
+        ProfileView profile = profiles.findByUserId(userId).orElseGet(() -> ProfileView.defaultsFor(userId.value()));
         return new Result(
-                profile.userId().value(),
-                profile.displayName() == null ? "" : profile.displayName().value(),
-                profile.bio().value(),
+                profile.userId(),
+                profile.displayName(),
+                profile.bio(),
                 imageOf(userId, ImageSlot.AVATAR, profile.avatar()),
                 imageOf(userId, ImageSlot.BANNER, profile.banner()),
                 profile.createdAt(),
                 profile.updatedAt());
     }
 
-    private static ImageResult imageOf(UserId userId, ImageSlot slot, ImageId id) {
-        return id == null ? null : new ImageResult(id.value().toString(), ImagePath.of(userId, slot, id));
+    private static ImageResult imageOf(UserId userId, ImageSlot slot, UUID id) {
+        return id == null ? null : new ImageResult(id.toString(), ImagePath.of(userId, slot, new ImageId(id)));
     }
 }
