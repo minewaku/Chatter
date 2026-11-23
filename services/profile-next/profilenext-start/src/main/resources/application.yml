@@ -62,16 +62,17 @@ profile-next:
       max-interval: PT30S
       max-elapsed: PT2M
   images:
-    # Cloudinary: clients upload to it with a short-lived signed form POST, the service never receives the file.
-    # The three credentials come from Vault (secret/profilenext: cloudinary.cloud-name, .api-key, .api-secret); the
-    # underscore spelling that configure-secrets.sh writes is accepted too. Empty when Vault is not reachable.
-    cloud-name: ${cloudinary.cloud-name:${cloudinary.cloud_name:}}
-    api-key: ${cloudinary.api-key:${cloudinary.api_key:}}
-    api-secret: ${cloudinary.api-secret:${cloudinary.api_secret:}}
-    # must match the signature algorithm set in the Cloudinary console (SHA-1 is the default there)
-    signature-algorithm: SHA-1
+    # Cloudflare R2: clients upload to it with a short-lived presigned PUT, the service never receives the file.
+    # The two keys come from Vault (secret/profilenext: storage.access-key, storage.secret-key); they stay empty when
+    # Vault is not reachable and every storage call then fails as "unavailable". The account and the bucket are plain
+    # settings. The endpoint is https://<account-id>.r2.cloudflarestorage.com unless r2.endpoint says otherwise.
+    r2:
+      account-id: ${PROFILE_NEXT_R2_ACCOUNT_ID:}
+      bucket: ${PROFILE_NEXT_R2_BUCKET:}
+      access-key: ${storage.access-key:}
+      secret-key: ${storage.secret-key:}
     # address images are shown at: {public-base-url}/profiles/{userId}/{slot}/{imageId}
-    # for Cloudinary: https://res.cloudinary.com/<cloud-name>/image/upload (or a CDN / custom domain in front of it)
+    # for R2: a custom domain attached to the bucket (presigned uploads only work on the account endpoint, not here)
     public-base-url: ${PROFILE_NEXT_PUBLIC_BASE_URL:}
     # how long an upload ticket works, and how long after that its key is still left alone by the sweeper
     ticket-lifetime: PT5M

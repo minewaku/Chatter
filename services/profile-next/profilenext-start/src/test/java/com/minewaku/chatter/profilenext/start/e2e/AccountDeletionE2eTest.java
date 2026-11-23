@@ -102,7 +102,7 @@ class AccountDeletionE2eTest extends ImageE2eSupport {
     }
 
     private long pendingTickets(long user) {
-        return jdbc.sql("SELECT count(*) FROM pending_upload WHERE user_id = :id AND state = 'PENDING'")
+        return jdbc.sql("SELECT count(*) FROM pending_upload WHERE user_id = :id AND expires_at IS NOT NULL")
                 .param("id", user)
                 .query(Long.class)
                 .single();

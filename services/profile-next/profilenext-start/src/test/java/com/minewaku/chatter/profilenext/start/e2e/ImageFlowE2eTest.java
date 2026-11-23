@@ -37,16 +37,19 @@ class ImageFlowE2eTest extends ImageE2eSupport {
     }
 
     @Test
-    void theTicketIsASignedFormPostToCloudinaryAtTheImagePath() throws Exception {
+    void theTicketIsASignedPutToTheBucketAtTheImagePath() throws Exception {
         long user = newUser();
 
         HttpResponse<String> ticket = requestTicket(user, "banner", "image/webp", 4321);
 
         assertThat(ticket.statusCode()).isEqualTo(200);
         String imageId = string(ticket.body(), "imageId");
-        assertThat(string(ticket.body(), "uploadUrl")).isEqualTo("https://api.cloudinary.com/v1_1/demo/image/upload");
-        assertThat(string(ticket.body(), "public_id")).isEqualTo(keyOf(user, "banner", imageId));
-        assertThat(ticket.body()).contains("\"method\":\"POST\"").contains("\"overwrite\":\"false\"").contains("\"signature\":\"fake-signature\"");
+        assertThat(string(ticket.body(), "uploadUrl")).startsWith("https://fake-storage.test/" + BUCKET + "/" + keyOf(user, "banner", imageId));
+        assertThat(ticket.body())
+                .contains("\"method\":\"PUT\"")
+                .contains("\"Content-Type\":\"image/webp\"")
+                .contains("\"Content-Length\":\"4321\"")
+                .contains("\"fields\":{}");
         assertThat(ledgerRows(user)).isEqualTo(1);
     }
 
@@ -128,19 +131,25 @@ class ImageFlowE2eTest extends ImageE2eSupport {
         assertThat(early.statusCode()).isEqualTo(409);
         assertThat(early.body()).contains("\"code\":\"upload_incomplete\"");
 
-        STORAGE.upload(string(ticket.body(), "public_id"), ImageFixtures.png(512, 512), "image/png");
+        STORAGE.putViaUrl(string(ticket.body(), "uploadUrl"), ImageFixtures.png(512, 512), "image/png");
         assertThat(commit(user, imageId).statusCode()).isEqualTo(200);
     }
 
     @Test
-    void askingForTheSameSlotAgainWhileTheTicketIsUsableGivesTheSameImageId() throws Exception {
+    void everyRequestGetsItsOwnImageIdAndCommittingOneRetiresTheOthersOfTheSlot() throws Exception {
         long user = newUser();
 
         String first = string(requestTicket(user, "avatar", "image/png", 100).body(), "imageId");
         String second = string(requestTicket(user, "avatar", "image/jpeg", 200).body(), "imageId");
 
-        assertThat(second).isEqualTo(first);
-        assertThat(ledgerRows(user)).isEqualTo(1);
+        assertThat(second).isNotEqualTo(first);
+        assertThat(ledgerRows(user)).isEqualTo(2);
+
+        STORAGE.putViaUrl(
+                "https://fake-storage.test/" + BUCKET + "/" + keyOf(user, "avatar", second), ImageFixtures.png(512, 512), "image/png");
+        assertThat(commit(user, second).statusCode()).isEqualTo(200);
+
+        assertThat(commit(user, first).statusCode()).isEqualTo(404); // retired by the commit of the other ticket
     }
 
     // ---- refusals

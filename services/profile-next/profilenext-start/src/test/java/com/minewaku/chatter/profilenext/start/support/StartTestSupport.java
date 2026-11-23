@@ -1,6 +1,6 @@
 package com.minewaku.chatter.profilenext.start.support;
 
-import com.minewaku.chatter.profilenext.infrastructure.adapter.outbound.image.storage.cloudinary.CloudinaryClient;
+import com.minewaku.chatter.profilenext.infrastructure.adapter.outbound.image.storage.r2.ObjectStoreClient;
 import com.minewaku.chatter.profilenext.infrastructure.security.PemKeys;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -39,7 +39,9 @@ public abstract class StartTestSupport {
 
     protected static final RsaKeyFixtures KEYS = new RsaKeyFixtures();
 
-    protected static final FakeCloudinary STORAGE = new FakeCloudinary();
+    protected static final FakeObjectStore STORAGE = new FakeObjectStore();
+
+    protected static final String BUCKET = "media";
 
     static {
         POSTGRES.start();
@@ -75,9 +77,10 @@ public abstract class StartTestSupport {
         registry.add("spring.datasource.password", POSTGRES::getPassword);
         registry.add("spring.kafka.bootstrap-servers", KAFKA::getBootstrapServers);
         // configured (fake) credentials, a fast sweeper, and a quick retry for a delete that failed
-        registry.add("profile-next.images.cloud-name", () -> "demo");
-        registry.add("profile-next.images.api-key", () -> "test-key");
-        registry.add("profile-next.images.api-secret", () -> "test-secret");
+        registry.add("profile-next.images.r2.account-id", () -> "test-account");
+        registry.add("profile-next.images.r2.bucket", () -> BUCKET);
+        registry.add("profile-next.images.r2.access-key", () -> "test-access");
+        registry.add("profile-next.images.r2.secret-key", () -> "test-secret");
         registry.add("profile-next.images.public-base-url", () -> "https://media.test");
         registry.add("profile-next.images.sweep.interval", () -> "PT0.5S");
         registry.add("profile-next.images.sweep.retry-delay", () -> "PT1S");
@@ -88,7 +91,7 @@ public abstract class StartTestSupport {
 
         @Bean
         @Primary
-        CloudinaryClient fakeCloudinary() {
+        ObjectStoreClient fakeObjectStore() {
             return STORAGE;
         }
 

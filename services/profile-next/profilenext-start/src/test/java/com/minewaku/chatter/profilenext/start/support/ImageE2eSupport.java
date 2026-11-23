@@ -19,7 +19,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
-/** The three-step image change through the real HTTP API, with the storage side played by {@link FakeCloudinary}. */
+/** The three-step image change through the real HTTP API, with the storage side played by {@link FakeObjectStore}. */
 public abstract class ImageE2eSupport extends StartTestSupport {
 
     private static final AtomicLong IDS = new AtomicLong(6_000_000L);
@@ -56,11 +56,11 @@ public abstract class ImageE2eSupport extends StartTestSupport {
         return send("GET", "/api/v1/profiles/" + user, bearer(user), null).body();
     }
 
-    /** Asks for a ticket for {@code bytes}, then "uploads" them under the public id the ticket names. Returns the image id. */
+    /** Asks for a ticket for {@code bytes}, then "uploads" them to the address the ticket names. Returns the image id. */
     protected String upload(long user, String slot, String contentType, byte[] bytes) throws Exception {
         HttpResponse<String> ticket = requestTicket(user, slot, contentType, bytes.length);
         assertThat(ticket.statusCode()).as(ticket.body()).isEqualTo(200);
-        STORAGE.upload(string(ticket.body(), "public_id"), bytes, contentType);
+        STORAGE.putViaUrl(string(ticket.body(), "uploadUrl"), bytes, contentType);
         return string(ticket.body(), "imageId");
     }
 
@@ -89,7 +89,7 @@ public abstract class ImageE2eSupport extends StartTestSupport {
     /** The keys the storage holds for this user. */
     protected Set<String> storedKeys(long user) {
         Set<String> keys = new TreeSet<>();
-        STORAGE.publicIds().stream().filter(k -> k.startsWith("profiles/" + user + "/")).forEach(keys::add);
+        STORAGE.keys(BUCKET).stream().filter(k -> k.startsWith("profiles/" + user + "/")).forEach(keys::add);
         return keys;
     }
 

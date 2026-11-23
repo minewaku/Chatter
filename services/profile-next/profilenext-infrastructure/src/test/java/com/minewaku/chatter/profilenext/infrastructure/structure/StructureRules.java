@@ -30,8 +30,8 @@ public final class StructureRules {
                     INFRA + ".adapter.outbound.image.pending.jdbc"),
             new PortRow(
                     "com.minewaku.chatter.profilenext.profile.internal.port.ImageStorage",
-                    "CloudinaryImageStorage",
-                    INFRA + ".adapter.outbound.image.storage.cloudinary"),
+                    "R2ImageStorage",
+                    INFRA + ".adapter.outbound.image.storage.r2"),
             new PortRow(
                     "com.minewaku.chatter.profilenext.profile.internal.port.repository.ProfileRepository",
                     "JdbcProfileRepository",
