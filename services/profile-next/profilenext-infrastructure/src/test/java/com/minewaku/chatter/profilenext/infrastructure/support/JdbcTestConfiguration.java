@@ -1,7 +1,7 @@
 package com.minewaku.chatter.profilenext.infrastructure.support;
 
 import com.minewaku.chatter.profilenext.infrastructure.adapter.outbound.shared.id.UuidV7IdGenerator;
-import com.minewaku.chatter.profilenext.infrastructure.integration.postgresql.PostgreSqlConfiguration;
+import com.minewaku.chatter.profilenext.infrastructure.config.TransactionConfiguration;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
 import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
@@ -23,7 +23,7 @@ import org.springframework.context.annotation.Import;
     JacksonAutoConfiguration.class,
     TransactionAutoConfiguration.class
 })
-@Import({PostgreSqlConfiguration.class, UuidV7IdGenerator.class})
+@Import({TransactionConfiguration.class, UuidV7IdGenerator.class})
 @ComponentScan({
     "com.minewaku.chatter.profilenext.infrastructure.adapter.outbound.profile",
     "com.minewaku.chatter.profilenext.infrastructure.adapter.outbound.image.pending"
