@@ -25,6 +25,7 @@ import com.minewaku.chatter.profilenext.profile.internal.model.ImageId;
 import com.minewaku.chatter.profilenext.profile.internal.model.ImageSlot;
 import com.minewaku.chatter.profilenext.profile.internal.model.OwnedImage;
 import com.minewaku.chatter.profilenext.profile.internal.model.PendingUpload;
+import com.minewaku.chatter.profilenext.profile.internal.model.Profile;
 import com.minewaku.chatter.profilenext.profile.internal.model.UserId;
 import java.time.Duration;
 import java.util.Optional;
@@ -310,6 +311,34 @@ class CommitImageUploadServiceTest {
 
         assertThat(result.outcome()).isEqualTo(Outcome.ALREADY_APPLIED);
         assertThat(profiles.getOrDefault(USER).imageIn(ImageSlot.AVATAR)).isEqualTo(image.imageId());
+    }
+
+    @Test
+    void aCommitWhoseTicketIsGoneBecauseTheWinnerFinishedFirstIsAnAlreadyApplied() {
+        OwnedImage image = uploadedPng(ImageSlot.AVATAR, 512);
+        // the winner finishes between our read of the profile and our read of the ticket: the ticket is gone and the
+        // profile now holds the image, although our first read of it did not
+        FakeProfileStore winnerFinishedAfterOurFirstRead = new FakeProfileStore() {
+            private boolean first = true;
+
+            @Override
+            public Profile getOrDefault(UserId userId) {
+                if (first) {
+                    first = false;
+                    return Profile.defaultsFor(userId);
+                }
+                return super.getOrDefault(userId);
+            }
+        };
+        winnerFinishedAfterOurFirstRead.replaceImage(USER, ImageSlot.AVATAR, image.imageId(), clock.instant());
+        ledger.rows.remove(image.imageId());
+
+        Result result = new CommitImageUploadService(
+                        storage, winnerFinishedAfterOurFirstRead, ledger, Policies.standard(), clock, transactions.template())
+                .handle(commit(image));
+
+        assertThat(result.outcome()).isEqualTo(Outcome.ALREADY_APPLIED);
+        assertThat(result.slot()).isEqualTo("AVATAR");
     }
 
     @Test

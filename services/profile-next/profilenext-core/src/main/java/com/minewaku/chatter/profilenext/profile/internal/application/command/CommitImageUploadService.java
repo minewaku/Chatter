@@ -75,8 +75,15 @@ public class CommitImageUploadService implements CommitImageUploadUseCase {
         if (held.isPresent()) {
             return alreadyApplied(userId, held.get(), imageId);
         }
-        PendingUpload upload = pending.findPending(userId, imageId)
-                .orElseThrow(() -> new ImageUploadRejectedException(Reason.UPLOAD_NOT_FOUND));
+        Optional<PendingUpload> ticket = pending.findPending(userId, imageId);
+        if (ticket.isEmpty()) {
+            // the ticket is gone: a commit of it may have finished since the read above, or it never existed
+            return profiles.getOrDefault(userId)
+                    .slotHolding(imageId)
+                    .map(finished -> alreadyApplied(userId, finished, imageId))
+                    .orElseThrow(() -> new ImageUploadRejectedException(Reason.UPLOAD_NOT_FOUND));
+        }
+        PendingUpload upload = ticket.get();
         if (upload.isExpiredAt(now)) {
             throw new ImageUploadRejectedException(Reason.UPLOAD_EXPIRED);
         }
