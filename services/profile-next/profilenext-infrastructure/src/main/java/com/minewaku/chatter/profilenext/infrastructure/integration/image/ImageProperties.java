@@ -1,4 +1,4 @@
-package com.minewaku.chatter.profilenext.infrastructure.adapter.outbound.image;
+package com.minewaku.chatter.profilenext.infrastructure.integration.image;
 
 import java.time.Duration;
 import java.util.List;

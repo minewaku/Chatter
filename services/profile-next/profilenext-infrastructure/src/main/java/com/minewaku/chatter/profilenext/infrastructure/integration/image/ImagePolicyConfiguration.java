@@ -1,4 +1,4 @@
-package com.minewaku.chatter.profilenext.infrastructure.adapter.outbound.image;
+package com.minewaku.chatter.profilenext.infrastructure.integration.image;
 
 import com.minewaku.chatter.profilenext.profile.internal.application.command.ImagePolicy;
 import com.minewaku.chatter.profilenext.profile.internal.application.command.SweepPolicy;
@@ -12,7 +12,7 @@ import org.springframework.context.annotation.Configuration;
 /** Builds the plain-record policies the core's image services are constructed with. */
 @Configuration
 @EnableConfigurationProperties(ImageProperties.class)
-public class ImageConfiguration {
+public class ImagePolicyConfiguration {
 
     @Bean
     ImagePolicy imagePolicy(ImageProperties properties) {
