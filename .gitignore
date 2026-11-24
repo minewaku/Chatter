@@ -191,3 +191,6 @@ services/identity-access/.local/
 
 # local mail credentials for identity-access (address on line 1, app password on line 2)
 services/identity-access/email.txt
+
+# local list of gitignored files to copy into new worktrees
+.worktreeinclude
