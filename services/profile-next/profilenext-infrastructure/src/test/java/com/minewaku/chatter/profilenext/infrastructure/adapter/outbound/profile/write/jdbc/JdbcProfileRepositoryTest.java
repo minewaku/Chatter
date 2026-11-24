@@ -65,7 +65,7 @@ class JdbcProfileRepositoryTest extends PostgreSqlTestSupport {
     void theFirstSaveInsertsARowWithBothTimestampsAtNow() {
         UserId user = freshUser();
 
-        boolean written = profiles.applyEdit(user, DisplayName.of("Mine"), null, T1);
+        boolean written = profiles.save(user, DisplayName.of("Mine"), null, T1);
 
         assertThat(written).isTrue();
         Map<String, Object> row = row(user);
@@ -78,9 +78,9 @@ class JdbcProfileRepositoryTest extends PostgreSqlTestSupport {
     @Test
     void aBioOnlySaveLeavesTheDisplayNameUntouched() {
         UserId user = freshUser();
-        profiles.applyEdit(user, DisplayName.of("Mine"), null, T1);
+        profiles.save(user, DisplayName.of("Mine"), null, T1);
 
-        profiles.applyEdit(user, null, Bio.of("Hello"), T2);
+        profiles.save(user, null, Bio.of("Hello"), T2);
 
         assertThat(row(user).get("display_name")).isEqualTo("Mine");
         assertThat(row(user).get("bio")).isEqualTo("Hello");
@@ -90,7 +90,7 @@ class JdbcProfileRepositoryTest extends PostgreSqlTestSupport {
     void aBioOnlyFirstSaveCreatesTheRowWithAnEmptyName() {
         UserId user = freshUser();
 
-        profiles.applyEdit(user, null, Bio.of("Hello"), T1);
+        profiles.save(user, null, Bio.of("Hello"), T1);
 
         assertThat(row(user).get("display_name")).isEqualTo("");
         assertThat(row(user).get("bio")).isEqualTo("Hello");
@@ -99,9 +99,9 @@ class JdbcProfileRepositoryTest extends PostgreSqlTestSupport {
     @Test
     void aSaveEqualToTheStoredValuesChangesNothingAndKeepsUpdatedAt() {
         UserId user = freshUser();
-        profiles.applyEdit(user, DisplayName.of("Mine"), Bio.of("Hello"), T1);
+        profiles.save(user, DisplayName.of("Mine"), Bio.of("Hello"), T1);
 
-        boolean written = profiles.applyEdit(user, DisplayName.of("Mine"), Bio.of("Hello"), T2);
+        boolean written = profiles.save(user, DisplayName.of("Mine"), Bio.of("Hello"), T2);
 
         assertThat(written).isFalse();
         assertThat(updatedAt(user)).isEqualTo(T1);
@@ -110,21 +110,21 @@ class JdbcProfileRepositoryTest extends PostgreSqlTestSupport {
     @Test
     void updatedAtChangesOnEveryRealChange() {
         UserId user = freshUser();
-        profiles.applyEdit(user, DisplayName.of("Mine"), Bio.of("Hello"), T1);
+        profiles.save(user, DisplayName.of("Mine"), Bio.of("Hello"), T1);
 
-        assertThat(profiles.applyEdit(user, DisplayName.of("Other"), null, T2)).isTrue();
+        assertThat(profiles.save(user, DisplayName.of("Other"), null, T2)).isTrue();
         assertThat(updatedAt(user)).isEqualTo(T2);
 
-        assertThat(profiles.applyEdit(user, null, Bio.of("Changed"), T3)).isTrue();
+        assertThat(profiles.save(user, null, Bio.of("Changed"), T3)).isTrue();
         assertThat(updatedAt(user)).isEqualTo(T3);
     }
 
     @Test
     void sendingAnEmptyBioClearsIt() {
         UserId user = freshUser();
-        profiles.applyEdit(user, DisplayName.of("Mine"), Bio.of("Hello"), T1);
+        profiles.save(user, DisplayName.of("Mine"), Bio.of("Hello"), T1);
 
-        profiles.applyEdit(user, null, Bio.of(""), T2);
+        profiles.save(user, null, Bio.of(""), T2);
 
         assertThat(row(user).get("bio")).isEqualTo("");
         assertThat(row(user).get("display_name")).isEqualTo("Mine");
@@ -139,11 +139,11 @@ class JdbcProfileRepositoryTest extends PostgreSqlTestSupport {
                 CountDownLatch go = new CountDownLatch(1);
                 Future<Boolean> first = pool.submit(() -> {
                     go.await();
-                    return profiles.applyEdit(user, DisplayName.of("Alpha"), Bio.of("bio from alpha"), T1);
+                    return profiles.save(user, DisplayName.of("Alpha"), Bio.of("bio from alpha"), T1);
                 });
                 Future<Boolean> second = pool.submit(() -> {
                     go.await();
-                    return profiles.applyEdit(user, DisplayName.of("Beta"), Bio.of("bio from beta"), T2);
+                    return profiles.save(user, DisplayName.of("Beta"), Bio.of("bio from beta"), T2);
                 });
                 go.countDown();
                 first.get();
@@ -203,7 +203,7 @@ class JdbcProfileRepositoryTest extends PostgreSqlTestSupport {
     @Test
     void anImageReplacementKeepsTheSavedText() {
         UserId user = freshUser();
-        profiles.applyEdit(user, DisplayName.of("Mine"), Bio.of("Hello"), T1);
+        profiles.save(user, DisplayName.of("Mine"), Bio.of("Hello"), T1);
 
         profiles.replaceImage(user, ImageSlot.AVATAR, OLD_ID, T2);
 
@@ -217,7 +217,7 @@ class JdbcProfileRepositoryTest extends PostgreSqlTestSupport {
         profiles.replaceImage(user, ImageSlot.AVATAR, OLD_ID, T1);
         profiles.replaceImage(user, ImageSlot.BANNER, NEW_ID, T1);
 
-        profiles.applyEdit(user, DisplayName.of("Mine"), null, T2);
+        profiles.save(user, DisplayName.of("Mine"), null, T2);
 
         assertThat(profiles.getOrDefault(user).imageIn(ImageSlot.AVATAR)).isEqualTo(OLD_ID);
         assertThat(profiles.getOrDefault(user).imageIn(ImageSlot.BANNER)).isEqualTo(NEW_ID);
@@ -228,7 +228,7 @@ class JdbcProfileRepositoryTest extends PostgreSqlTestSupport {
         UserId user = freshUser();
         assertThat(profiles.getOrDefault(user).imageIn(ImageSlot.AVATAR)).isNull();
 
-        profiles.applyEdit(user, DisplayName.of("Mine"), null, T1);
+        profiles.save(user, DisplayName.of("Mine"), null, T1);
 
         assertThat(profiles.getOrDefault(user).imageIn(ImageSlot.AVATAR)).isNull();
     }
@@ -238,7 +238,7 @@ class JdbcProfileRepositoryTest extends PostgreSqlTestSupport {
         UserId user = freshUser();
         profiles.replaceImage(user, ImageSlot.AVATAR, OLD_ID, T1);
 
-        Optional<ImageId> removed = profiles.removeImage(user, ImageSlot.AVATAR, T2);
+        Optional<ImageId> removed = profiles.clearImage(user, ImageSlot.AVATAR, T2);
 
         assertThat(removed).contains(OLD_ID);
         assertThat(row(user).get("avatar_image_id")).isNull();
@@ -248,11 +248,11 @@ class JdbcProfileRepositoryTest extends PostgreSqlTestSupport {
     @Test
     void removingAnEmptySlotOrAMissingRowChangesNothing() {
         UserId user = freshUser();
-        assertThat(profiles.removeImage(user, ImageSlot.AVATAR, T1)).isEmpty();
+        assertThat(profiles.clearImage(user, ImageSlot.AVATAR, T1)).isEmpty();
         assertThat(rowCount(user)).isZero();
 
-        profiles.applyEdit(user, DisplayName.of("Mine"), null, T1);
-        assertThat(profiles.removeImage(user, ImageSlot.AVATAR, T2)).isEmpty();
+        profiles.save(user, DisplayName.of("Mine"), null, T1);
+        assertThat(profiles.clearImage(user, ImageSlot.AVATAR, T2)).isEmpty();
         assertThat(updatedAt(user)).isEqualTo(T1);
     }
 
@@ -305,7 +305,7 @@ class JdbcProfileRepositoryTest extends PostgreSqlTestSupport {
         UserId user = freshUser();
         assertThat(profiles.deleteByUserId(user)).isEmpty();
 
-        profiles.applyEdit(user, DisplayName.of("Mine"), null, T1);
+        profiles.save(user, DisplayName.of("Mine"), null, T1);
         assertThat(profiles.deleteByUserId(user)).isPresent();
         assertThat(profiles.deleteByUserId(user)).isEmpty();
     }

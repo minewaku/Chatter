@@ -33,7 +33,7 @@ public class JdbcProfileRepository implements ProfileRepository {
      * alone.
      */
     @Override
-    public boolean applyEdit(UserId userId, DisplayName displayName, Bio bio, Instant now) {
+    public boolean save(UserId userId, DisplayName displayName, Bio bio, Instant now) {
         int written = jdbc.sql("""
                         INSERT INTO profile (user_id, display_name, bio, created_at, updated_at)
                         VALUES (:userId, COALESCE(CAST(:displayName AS text), ''), COALESCE(CAST(:bio AS text), ''), :now, :now)
@@ -104,7 +104,7 @@ public class JdbcProfileRepository implements ProfileRepository {
 
     @Override
     @Transactional
-    public Optional<ImageId> removeImage(UserId userId, ImageSlot slot, Instant now) {
+    public Optional<ImageId> clearImage(UserId userId, ImageSlot slot, Instant now) {
         Optional<ImageId> previous = lockedImage(userId, slot);
         if (previous.isPresent()) {
             jdbc.sql("UPDATE profile SET " + column(slot) + " = NULL, updated_at = :now WHERE user_id = :userId")

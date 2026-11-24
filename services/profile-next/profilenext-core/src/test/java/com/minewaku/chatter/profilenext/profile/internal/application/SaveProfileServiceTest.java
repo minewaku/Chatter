@@ -28,7 +28,7 @@ class SaveProfileServiceTest {
         boolean answer = true;
 
         @Override
-        public boolean applyEdit(UserId userId, DisplayName displayName, Bio bio, Instant now) {
+        public boolean save(UserId userId, DisplayName displayName, Bio bio, Instant now) {
             calls.add(new Call(userId, displayName, bio, now));
             return answer;
         }
@@ -109,7 +109,7 @@ class SaveProfileServiceTest {
     @Test
     void savingTextLeavesBothImageSlotsUntouched() {
         FakeProfileStore store = new FakeProfileStore();
-        store.applyEdit(UserId.of(7), DisplayName.of("Before"), null, NOW);
+        store.save(UserId.of(7), DisplayName.of("Before"), null, NOW);
         store.replaceImage(UserId.of(7), ImageSlot.AVATAR, ImageIds.at(1), NOW);
         store.replaceImage(UserId.of(7), ImageSlot.BANNER, ImageIds.at(2), NOW);
 

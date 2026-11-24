@@ -20,7 +20,7 @@ public class FakeProfileStore implements ProfileRepository, ProfileQueryReposito
     public final Map<Long, Profile> rows = new HashMap<>();
 
     @Override
-    public boolean applyEdit(UserId userId, DisplayName displayName, Bio bio, Instant now) {
+    public boolean save(UserId userId, DisplayName displayName, Bio bio, Instant now) {
         Profile existing = rows.get(userId.value());
         DisplayName name = displayName != null ? displayName : existing == null ? null : existing.displayName();
         Bio text = bio != null ? bio : existing == null ? Bio.of("") : existing.bio();
@@ -57,7 +57,7 @@ public class FakeProfileStore implements ProfileRepository, ProfileQueryReposito
     }
 
     @Override
-    public Optional<ImageId> removeImage(UserId userId, ImageSlot slot, Instant now) {
+    public Optional<ImageId> clearImage(UserId userId, ImageSlot slot, Instant now) {
         Profile existing = rows.get(userId.value());
         if (existing == null || existing.imageIn(slot) == null) {
             return Optional.empty();

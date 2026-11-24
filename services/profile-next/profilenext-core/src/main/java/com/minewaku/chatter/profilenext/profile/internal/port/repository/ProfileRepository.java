@@ -15,7 +15,7 @@ public interface ProfileRepository {
      * Saves display name and/or bio in one atomic statement, creating the row on the first save. A null part is left
      * unchanged. Returns true when a row was written; false when the values equal what is stored.
      */
-    boolean applyEdit(UserId userId, DisplayName displayName, Bio bio, Instant now);
+    boolean save(UserId userId, DisplayName displayName, Bio bio, Instant now);
 
     /** The user's profile, or {@link Profile#defaultsFor} when there is no row. Does not lock. */
     Profile getOrDefault(UserId userId);
@@ -28,7 +28,7 @@ public interface ProfileRepository {
     Optional<ImageId> replaceImage(UserId userId, ImageSlot slot, ImageId imageId, Instant now);
 
     /** Empties the slot and returns the image it held; empty (and no change) when it was already empty. */
-    Optional<ImageId> removeImage(UserId userId, ImageSlot slot, Instant now);
+    Optional<ImageId> clearImage(UserId userId, ImageSlot slot, Instant now);
 
     /** Removes the user's row and returns the images it held; empty when there was no row. */
     Optional<DeletedProfile> deleteByUserId(UserId userId);

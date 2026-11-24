@@ -49,7 +49,7 @@ public class RemoveImageService implements RemoveImageUseCase {
         ImageSlot slot = ImageSlot.valueOf(command.slot());
         Instant now = clock.instant();
 
-        Optional<OwnedImage> removed = transaction.execute(status -> profiles.removeImage(userId, slot, now).map(id -> {
+        Optional<OwnedImage> removed = transaction.execute(status -> profiles.clearImage(userId, slot, now).map(id -> {
             OwnedImage image = new OwnedImage(userId, slot, id);
             pending.discard(image, now);
             return image;

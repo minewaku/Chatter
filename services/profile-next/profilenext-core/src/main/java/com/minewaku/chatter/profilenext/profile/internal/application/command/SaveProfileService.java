@@ -30,6 +30,6 @@ public class SaveProfileService implements SaveProfileUseCase {
         if (displayName == null && bio == null) {
             return new Result(false);
         }
-        return new Result(profiles.applyEdit(userId, displayName, bio, clock.instant()));
+        return new Result(profiles.save(userId, displayName, bio, clock.instant()));
     }
 }
