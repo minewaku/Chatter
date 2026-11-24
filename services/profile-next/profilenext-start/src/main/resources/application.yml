@@ -19,9 +19,10 @@ spring:
       kv:
         enabled: true
         backend: secret
-        # reads secret/profilenext; the image storage credentials are the keys storage.access-key and storage.secret-key
-        application-name: profilenext
-        default-context: profilenext
+        # reads secret/common/storage, shared by all services: storage.account-id, storage.bucket, storage.access-key and
+        # storage.secret-key. This service has no secret of its own
+        application-name: common/storage
+        default-context: common/storage
   datasource:
     url: ${PROFILE_NEXT_DB_URL:jdbc:postgresql://localhost:5432/chatter?currentSchema=profile_next}
     username: ${PROFILE_NEXT_DB_USERNAME:admin}
@@ -63,16 +64,19 @@ profile-next:
       max-elapsed: PT2M
   images:
     # Cloudflare R2: clients upload to it with a short-lived presigned PUT, the service never receives the file.
-    # The two keys come from Vault (secret/profilenext: storage.access-key, storage.secret-key); they stay empty when
-    # Vault is not reachable and every storage call then fails as "unavailable". The account and the bucket are plain
-    # settings. The endpoint is https://<account-id>.r2.cloudflarestorage.com unless r2.endpoint says otherwise.
+    # The account id, the bucket and the two keys come from Vault (secret/common/storage: storage.account-id,
+    # storage.bucket, storage.access-key, storage.secret-key). The bucket is shared by every service; this one keeps
+    # its files under the profiles/ key prefix. They stay empty when Vault is not reachable and every storage call then
+    # fails as "unavailable". The endpoint is https://<account-id>.r2.cloudflarestorage.com unless r2.endpoint says
+    # otherwise.
     r2:
-      account-id: ${PROFILE_NEXT_R2_ACCOUNT_ID:}
-      bucket: ${PROFILE_NEXT_R2_BUCKET:}
+      account-id: ${storage.account-id:}
+      bucket: ${storage.bucket:}
       access-key: ${storage.access-key:}
       secret-key: ${storage.secret-key:}
     # address images are shown at: {public-base-url}/profiles/{userId}/{slot}/{imageId}
-    # for R2: a custom domain attached to the bucket (presigned uploads only work on the account endpoint, not here)
+    # for R2: the bucket's r2.dev address in development, a custom domain attached to the bucket in production (presigned
+    # uploads only work on the account endpoint, not here). One address serves one bucket, so it is not part of the shared secret
     public-base-url: ${PROFILE_NEXT_PUBLIC_BASE_URL:}
     # how long an upload ticket works, and how long after that its key is still left alone by the sweeper
     ticket-lifetime: PT5M

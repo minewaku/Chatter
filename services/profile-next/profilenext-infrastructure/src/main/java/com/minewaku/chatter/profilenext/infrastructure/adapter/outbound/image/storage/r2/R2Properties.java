@@ -4,8 +4,9 @@ import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Cloudflare R2 settings ({@code profile-next.images.r2.*}). The two keys arrive through placeholders that read Vault;
- * {@link #toString()} leaves them out so a property dump never shows them. Either {@code accountId} or a full
+ * Cloudflare R2 settings ({@code profile-next.images.r2.*}). The account id, the bucket and the two keys arrive through
+ * placeholders that read the shared Vault secret {@code secret/common/storage}; {@link #toString()} leaves the keys out
+ * so a property dump never shows them. Either {@code accountId} or a full
  * {@code endpoint} names the account; {@code endpoint} wins when both are set (an emulator, or an EU jurisdiction
  * address).
  *

@@ -2,7 +2,7 @@
 # Push secrets from .env into Vault.
 #
 # Usage: configure-secrets.sh [--no-db] [--no-scylla] [service ...]
-#   services:   identityaccess profile profilenext apigateway message jwt   (default: all)
+#   services:   identityaccess profile apigateway message jwt storage   (default: all)
 #   --no-db     only write KV secrets and JWT keys; skip the database engine config
 #               (use it while the databases are down or the *_VAULT_* credentials are placeholders)
 #   --no-scylla skip the ScyllaDB config of the message service only
@@ -14,11 +14,12 @@
 # .env.example is the manifest: every variable it lists for a service must be set.
 # Variables named <SERVICE>_<GROUP>_<FIELD> become key <group>.<field> in secret/<service>;
 # *_DB_VAULT_* and *_SCYLLA_VAULT_* configure the database engine instead.
+# 'storage' is shared by all services: STORAGE_ACCOUNT_ID / _BUCKET / _ACCESS_KEY / _SECRET_KEY go to secret/common/storage.
 set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
-ALL_SERVICES=(identityaccess profile profilenext apigateway message jwt)
+ALL_SERVICES=(identityaccess profile apigateway message jwt storage)
 declare -A HAS_POSTGRES=([identityaccess]=1 [profile]=1 [message]=1)
 declare -A HAS_SCYLLA=([message]=1)
 POSTGRES_HOST="${VAULT_POSTGRES_HOST:-postgresql-chatter}"
@@ -145,9 +146,22 @@ configure_jwt() {
   log "kv: secret/common/jwt/rs256"
 }
 
+configure_storage() {
+  kv_upsert common/storage "$(json_obj \
+    "storage.account-id=$STORAGE_ACCOUNT_ID" \
+    "storage.bucket=$STORAGE_BUCKET" \
+    "storage.access-key=$STORAGE_ACCESS_KEY" \
+    "storage.secret-key=$STORAGE_SECRET_KEY")"
+  log "kv: secret/common/storage"
+}
+
 for svc in "${services[@]}"; do
   if [[ $svc == jwt ]]; then
     configure_jwt
+    continue
+  fi
+  if [[ $svc == storage ]]; then
+    configure_storage
     continue
   fi
   configure_kv "$svc"
