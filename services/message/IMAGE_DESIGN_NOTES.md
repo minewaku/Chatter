@@ -5,7 +5,7 @@ profile-next image redesign, and are recorded here so this service can be worked
 against this service's real code and specs first.
 
 Since then profile-next shipped a different design: a presigned PUT to Cloudflare R2 plus a pending-upload ledger, with
-no provider callback (see `services/profile-next/IMAGE_UPLOAD_DESIGN_DRAFT.md`), and all services are moving to the
+no provider callback (the commit reads the first bytes of the uploaded file itself), and all services are moving to the
 one shared R2 bucket, each under its own key prefix. Read the Cloudinary-specific points below (signed `context` and
 `tags`, the provider's upload notification, the provider webhook step in the attachment flow, the MD5 `etag`) as history;
 the parts about ids, paths, drafts, the attachment record, privacy and content-hash identity still apply.
