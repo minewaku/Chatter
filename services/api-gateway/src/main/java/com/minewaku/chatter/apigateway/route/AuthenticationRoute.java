@@ -22,11 +22,6 @@ public class AuthenticationRoute {
                         r -> r.path("/api/v*/sessions/**").filters(f -> f.filter(requestThrottlingFilter.apply(new RequestThrottlingFilter.Config()))).uri("lb://IDENTITYACCESS"))
 
                 // PROFILE
-                .route("profile websocket", r -> r.path("/api/v*/ws/profiles/**").uri("lb:ws://PROFILE"))
-                .route("avatar webhook", r -> r.path("/api/v*/webhooks/cloudinary/avatars/**").uri("lb://PROFILE"))
-                .route("banner webhook webhook", r -> r.path("/api/v*/webhooks/cloudinary/banners/**").uri("lb://PROFILE"))
-                .route("profile webhooks",
-                        r -> r.path("/api/v*/profiles/webhooks/**").filters(f -> f.filter(requestThrottlingFilter.apply(new RequestThrottlingFilter.Config()))).uri("lb://PROFILE"))
                 .route("profile",
                         r -> r.path("/api/v*/profiles/**").filters(f -> f.filter(requestThrottlingFilter.apply(new RequestThrottlingFilter.Config()))).uri("lb://PROFILE"))
 

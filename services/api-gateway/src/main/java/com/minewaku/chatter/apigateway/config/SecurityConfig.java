@@ -24,13 +24,13 @@ import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
 
     private static final String[] WHITE_LIST_URLS = {"/api/v*/webhooks/cloudinary/**", "/api/v*/auth/authenticate", "/api/v*/auth/verification/**", "/api/v*/auth/register",
-            "/api/v1/ws/guilds/**", "/api/v1/ws/channels/**", "/api/v1/ws/profiles/**",};
+            "/api/v1/ws/guilds/**", "/api/v1/ws/channels/**",};
 
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOriginPatterns(Arrays.asList("https://chatter.minewaku.id.vn", "http://localhost:*", "http://127.0.0.1:*"));
-        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(Arrays.asList("*"));
         config.setAllowCredentials(true);
 
