@@ -26,16 +26,9 @@ create_topic() {
 
 # Identity Access: account-deleted events (one topic per kind of record, see specs/013-account-deleted-outbox)
 create_topic "identityaccess.user.v1" 3
-create_topic "identityaccess.user.v1.profile-next.dlt" 3
+create_topic "identityaccess.user.v1.profile.dlt" 3
 # written by the CDC relay's heartbeat so its replication slot keeps advancing while no announcements arrive
 create_topic "__debezium-heartbeat.identityaccess" 1 --config cleanup.policy=delete --config retention.ms=3600000
-
-# Profile
-create_topic "dev.internal.event.profile.outbox" 3
-create_topic "dev.internal.event.profile.dlq" 3
-create_topic "dev.private.event.profile.file.avatarFileStorageUploaded" 3
-create_topic "dev.private.event.profile.file.bannerFileStorageUploaded" 3
-create_topic "dev.private.event.socket.profile" 3
 
 # Message
 create_topic "dev.internal.event.message.outbox" 3

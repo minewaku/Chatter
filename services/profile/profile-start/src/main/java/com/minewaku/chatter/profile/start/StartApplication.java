@@ -2,16 +2,15 @@ package com.minewaku.chatter.profile.start;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.domain.EntityScan;
-import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
-import org.springframework.data.jdbc.repository.config.EnableJdbcRepositories;
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
-@SpringBootApplication(scanBasePackages = {"com.minewaku.chatter.profile"})
-@EnableJdbcRepositories(basePackages = "com.minewaku.chatter.profile.infrastructure.persistence")
-@EntityScan(basePackages = "com.minewaku.chatter.profile.domain.model")
-@EnableDiscoveryClient
+@SpringBootApplication(scanBasePackages = "com.minewaku.chatter.profile")
+@ConfigurationPropertiesScan("com.minewaku.chatter.profile")
+@EnableScheduling
 public class StartApplication {
-	public static void main(String[] args) {
-		SpringApplication.run(StartApplication.class, args);
-	}
+
+    public static void main(String[] args) {
+        SpringApplication.run(StartApplication.class, args);
+    }
 }

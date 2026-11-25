@@ -5,7 +5,7 @@ vault kv get secret/identityaccess
 vault read database/creds/identityaccess-postgresql-approle
 ```
 
-Use the corresponding path for other services (`secret/profile`, `secret/message`, `secret/common/jwt/rs256`). See [bootstrap](bootstrap.md) for setting `VAULT_ADDR` and `VAULT_TOKEN`, or the Docker fallback when the CLI is not installed.
+Use the corresponding path for other services (`secret/message`, `secret/common/jwt/rs256`). See [bootstrap](bootstrap.md) for setting `VAULT_ADDR` and `VAULT_TOKEN`, or the Docker fallback when the CLI is not installed.
 
 ## UI
 

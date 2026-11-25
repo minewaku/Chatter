@@ -1,0 +1,87 @@
+server:
+  port: ${PROFILE_SERVER_PORT:5011}
+
+spring:
+  application:
+    name: profile
+  config:
+    import: optional:vault://
+  cloud:
+    vault:
+      # always on: the token public key can only come from Vault, so the service does not start without it
+      enabled: true
+      scheme: ${VAULT_SCHEME:http}
+      host: ${VAULT_HOST:localhost}
+      port: ${VAULT_PORT:5002}
+      authentication: TOKEN
+      token: ${VAULT_TOKEN:}
+      fail-fast: false
+      kv:
+        enabled: true
+        backend: secret
+        # reads secret/common/storage, shared by all services: storage.account-id, storage.bucket, storage.access-key and
+        # storage.secret-key. This service has no secret of its own
+        application-name: common/storage
+        default-context: common/storage
+  datasource:
+    url: ${PROFILE_DB_URL:jdbc:postgresql://localhost:5432/chatter?currentSchema=profile}
+    username: ${PROFILE_DB_USERNAME:admin}
+    password: ${PROFILE_DB_PASSWORD:123456}
+  flyway:
+    enabled: true
+    schemas: profile
+    default-schema: profile
+    create-schemas: true
+  kafka:
+    bootstrap-servers: ${PROFILE_KAFKA_BOOTSTRAP_SERVERS:localhost:5003}
+    consumer:
+      group-id: profile
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+profile:
+  security:
+    jwt:
+      # the public key is read once at start-up from Vault (secret/common/jwt/rs256: public-key); there is no local
+      # setting for it. keys.backend and keys.path can move the lookup, they default to those values
+      issuer: identity-access
+    public-endpoints: []
+    cors:
+      allowed-origins: []
+  messaging:
+    account-topic: identityaccess.user.v1
+    # a notice that fails is retried in place with this backoff, then goes to <topic>.profile.dlt
+    retry:
+      initial-interval: PT1S
+      multiplier: 2
+      max-interval: PT30S
+      max-elapsed: PT2M
+  images:
+    # Cloudflare R2: clients upload to it with a short-lived presigned PUT, the service never receives the file.
+    # The account id, the bucket and the two keys come from Vault (secret/common/storage: storage.account-id,
+    # storage.bucket, storage.access-key, storage.secret-key). The bucket is shared by every service; this one keeps
+    # its files under the profiles/ key prefix. They stay empty when Vault is not reachable and every storage call then
+    # fails as "unavailable". The endpoint is https://<account-id>.r2.cloudflarestorage.com unless r2.endpoint says
+    # otherwise.
+    r2:
+      account-id: ${storage.account-id:}
+      bucket: ${storage.bucket:}
+      access-key: ${storage.access-key:}
+      secret-key: ${storage.secret-key:}
+    # address images are shown at: {public-base-url}/profiles/{userId}/{slot}/{imageId}
+    # for R2: the bucket's r2.dev address in development, a custom domain attached to the bucket in production (presigned
+    # uploads only work on the account endpoint, not here). One address serves one bucket, so it is not part of the shared secret
+    public-base-url: ${PROFILE_PUBLIC_BASE_URL:}
+    # how long an upload ticket works, and how long after that its key is still left alone by the sweeper
+    ticket-lifetime: PT5M
+    grace: PT10M
+    sweep:
+      interval: PT1M
+      batch-size: 100
+      retry-delay: PT5M

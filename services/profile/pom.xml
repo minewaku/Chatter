@@ -1,74 +1,64 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" 
-		 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-	<modelVersion>4.0.0</modelVersion>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
 
-	<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-parent -->
+
+    <!-- Source: https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-parent -->
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.14</version>
+        <version>4.0.8</version>
         <relativePath/>
     </parent>
 
 
-	<groupId>com.minewaku.chatter</groupId>
-	<artifactId>profile</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
-	<packaging>pom</packaging>
-	<name>Chatter Profile Parent Project</name>
-  	<description>Chatter Profile Parent Project</description>
+    <groupId>com.minewaku.chatter</groupId>
+    <artifactId>profile</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>Chatter Profile Parent Project</name>
+    <description>Chatter Profile Parent Project</description>
 
 
-	<modules>
-    	<module>profile-start</module>
-    	<module>profile-infrastructure</module>
-    	<module>profile-presentation</module>
-    	<module>profile-domain</module>
-    	<module>profile-application</module>
+    <modules>
+        <module>profile-core</module>
+        <module>profile-infrastructure</module>
+        <module>profile-presentation</module>
+        <module>profile-start</module>
     </modules>
 
 
     <properties>
-		<maven.compiler.release>21</maven.compiler.release>
-		<spring-boot.version>3.5.14</spring-boot.version>
-		<spring-cloud.version>2025.0.0</spring-cloud.version>
-		<spring-dotenv.version>5.1.0</spring-dotenv.version>
-	</properties>
-    
+        <java.version>21</java.version>
+        <spring-cloud.version>2025.1.1</spring-cloud.version>
+        <aws-sdk.version>2.58.0</aws-sdk.version>
+        <java-uuid-generator.version>5.2.0</java-uuid-generator.version>
+    </properties>
+
 
     <dependencyManagement>
-    	<dependencies>
-			<dependency>
-				<groupId>org.springframework.cloud</groupId>
-				<artifactId>spring-cloud-dependencies</artifactId>
-				<version>${spring-cloud.version}</version>
-				<type>pom</type>
-				<scope>import</scope>
-			</dependency>
-
-			<dependency>
-				<groupId>me.paulschwarz</groupId>
-				<artifactId>spring-dotenv-bom</artifactId>
-				<version>${spring-dotenv.version}</version>
-				<type>pom</type>
-				<scope>import</scope>
-			</dependency>
-    	</dependencies>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
     </dependencyManagement>
-    
+
+
 
     <dependencies>
-    	<!-- 
-			*** LOMBOK PACKAGES ***
-		-->
 		<!-- https://mvnrepository.com/artifact/org.projectlombok/lombok -->
-	    <dependency>
-	        <groupId>org.projectlombok</groupId>
-	        <artifactId>lombok</artifactId>
-	        <scope>provided</scope>
-	    </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
 
@@ -76,7 +66,7 @@
         <pluginManagement>
             <plugins>
 
-				<!-- Define all the stuff for the compilation process -->
+                <!-- Define the compilation process. -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
@@ -86,13 +76,6 @@
                         <compilerArgs>
                             <arg>-parameters</arg>
                         </compilerArgs>
-
-                        <annotationProcessorPaths>
-                            <path>
-                                <groupId>org.projectlombok</groupId>
-                                <artifactId>lombok</artifactId>
-                            </path>
-                        </annotationProcessorPaths>
                     </configuration>
                 </plugin>
             </plugins>

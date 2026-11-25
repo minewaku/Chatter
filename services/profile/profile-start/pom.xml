@@ -1,91 +1,88 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
 
-  <parent>
-    <groupId>com.minewaku.chatter</groupId>
-    <artifactId>profile</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
-  </parent>
-  
-  <artifactId>profile-start</artifactId>
+    <parent>
+        <groupId>com.minewaku.chatter</groupId>
+        <artifactId>profile</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
 
-  <dependencies>
-      <dependency>
-          <groupId>com.minewaku.chatter</groupId>
-          <artifactId>profile-presentation</artifactId>
-          <version>${project.version}</version>
-      </dependency>
+    <artifactId>profile-start</artifactId>
 
-      <dependency>
-          <groupId>com.minewaku.chatter</groupId>
-          <artifactId>profile-infrastructure</artifactId>
-          <version>${project.version}</version>
-      </dependency>
-
-
-      <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter -->
-      <dependency>
-          <groupId>org.springframework.boot</groupId>
-          <artifactId>spring-boot-starter</artifactId>
-          <exclusions>
-              <exclusion>
-                  <groupId>org.springframework.boot</groupId>
-                  <artifactId>spring-boot-starter-logging</artifactId>
-              </exclusion>
-          </exclusions>
-      </dependency>
-
-      <!-- https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-starter-netflix-eureka-client -->
-      <dependency>
-        <groupId>org.springframework.cloud</groupId>
-        <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
-      </dependency>
-
-      <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-devtools -->
-      <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-devtools</artifactId>
-      </dependency>
-
-      <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-actuator -->
-      <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-actuator</artifactId>
-      </dependency>
-
-
-
-      <!--
-        ENV RELATED PACKAGES
-      -->
-
-    <!-- https://mvnrepository.com/artifact/me.paulschwarz/springboot3-dotenv -->
-    <dependency>
-        <groupId>me.paulschwarz</groupId>
-        <artifactId>springboot3-dotenv</artifactId>
-    </dependency>
-  </dependencies>
-
-  <build>
-    <plugins>
-        <plugin>
+    <dependencies>
+        <dependency>
+            <groupId>com.minewaku.chatter</groupId>
+            <artifactId>profile-presentation</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.minewaku.chatter</groupId>
+            <artifactId>profile-infrastructure</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-maven-plugin</artifactId>
-            <version>${spring-boot.version}</version>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-vault-config</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-kafka</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 
-            <executions>
-                <execution>
-                    <goals>
-                        <goal>repackage</goal>
-                    </goals>
-                </execution>
-            </executions>
-            
-            <configuration>
-                <mainClass>com.minewaku.chatter.profile.start.StartApplication</mainClass>
-            </configuration>
-        </plugin>
-    </plugins>
-  </build>
-
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <mainClass>com.minewaku.chatter.profile.start.StartApplication</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

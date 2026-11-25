@@ -26,7 +26,7 @@ PostgreSQL connector) reads the insert from the Postgres change log and publishe
    ```
 
 6. **Topics.** `bash infrastructure/components/kafka/scripts/create-topics.sh` (creates `identityaccess.user.v1`,
-   `identityaccess.user.v1.profile-next.dlt` and `__debezium-heartbeat.identityaccess`). The topics must exist before
+   `identityaccess.user.v1.profile.dlt` and `__debezium-heartbeat.identityaccess`). The topics must exist before
    the connector publishes.
 7. **Connector.** `bash infrastructure/components/kafka/scripts/register-connectors.sh` (creates or updates; safe to repeat).
 

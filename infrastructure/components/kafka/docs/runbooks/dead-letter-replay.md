@@ -1,6 +1,6 @@
 # Dead-letter topic: inspect and replay
 
-`profile-next` reads account-deleted notices from `identityaccess.user.v1` (group `profile-next`). A notice it cannot process is not dropped and does not block the ones behind it: it is published to **`identityaccess.user.v1.profile-next.dlt`**, on the same partition, with the key and headers of the original plus the failure headers Spring Kafka adds (`kafka_dlt-exception-fqcn`, `kafka_dlt-exception-message`, `kafka_dlt-original-topic`, `kafka_dlt-original-offset`).
+`profile` reads account-deleted notices from `identityaccess.user.v1` (group `profile`). A notice it cannot process is not dropped and does not block the ones behind it: it is published to **`identityaccess.user.v1.profile.dlt`**, on the same partition, with the key and headers of the original plus the failure headers Spring Kafka adds (`kafka_dlt-exception-fqcn`, `kafka_dlt-exception-message`, `kafka_dlt-original-topic`, `kafka_dlt-original-offset`).
 
 Two things land there:
 
@@ -17,7 +17,7 @@ The notice processing is idempotent (deleting a profile that is already gone is 
 
 ```bash
 docker exec kafka-chatter kafka-console-consumer --bootstrap-server kafka-chatter:5003 \
-  --topic identityaccess.user.v1.profile-next.dlt --from-beginning --timeout-ms 10000 \
+  --topic identityaccess.user.v1.profile.dlt --from-beginning --timeout-ms 10000 \
   --property print.key=true --property print.headers=true --property print.partition=true
 ```
 
@@ -25,7 +25,7 @@ The key is the user id; the headers include the original `eventType` and `id`, a
 
 ```bash
 docker exec kafka-chatter kafka-run-class kafka.tools.GetOffsetShell \
-  --broker-list kafka-chatter:5003 --topic identityaccess.user.v1.profile-next.dlt
+  --broker-list kafka-chatter:5003 --topic identityaccess.user.v1.profile.dlt
 ```
 
 (The topic is never trimmed by the service; the offsets are the total ever dead-lettered.)
@@ -47,11 +47,11 @@ Take the value and `eventId` from the dead-lettered record, not from memory.
 
 ## Replay everything since a point in time
 
-Resetting the consumer group re-reads the main topic, which re-applies every notice since that point. Because processing is idempotent this is safe, but stop `profile-next` first (a group with active members cannot be reset):
+Resetting the consumer group re-reads the main topic, which re-applies every notice since that point. Because processing is idempotent this is safe, but stop `profile` first (a group with active members cannot be reset):
 
 ```bash
 docker exec kafka-chatter kafka-consumer-groups --bootstrap-server kafka-chatter:5003 \
-  --group profile-next --topic identityaccess.user.v1 --reset-offsets --to-datetime 2026-10-29T00:00:00.000 --dry-run
+  --group profile --topic identityaccess.user.v1 --reset-offsets --to-datetime 2026-10-29T00:00:00.000 --dry-run
 # review the plan, then repeat with --execute instead of --dry-run
 ```
 
@@ -60,10 +60,10 @@ Use `--to-earliest` for everything the topic still holds, or `--shift-by -N` for
 ## Verify the outcome
 
 ```bash
-docker exec kafka-chatter kafka-consumer-groups --bootstrap-server kafka-chatter:5003 --group profile-next --describe
+docker exec kafka-chatter kafka-consumer-groups --bootstrap-server kafka-chatter:5003 --group profile --describe
 ```
 
-`LAG` should fall to 0. Then read the user's profile (`GET /api/v1/profiles/{id}` returns defaults once the row is gone) and, for the images, check `profile_next.pending_image_removal` is draining.
+`LAG` should fall to 0. Then read the user's profile (`GET /api/v1/profiles/{id}` returns defaults once the row is gone) and, for the images, check `profile.pending_image_removal` is draining.
 
 ## If the dead-letter topic is missing
 
