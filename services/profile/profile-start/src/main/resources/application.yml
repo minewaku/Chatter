@@ -7,6 +7,8 @@ spring:
   config:
     import: optional:vault://
   cloud:
+    inetutils:
+      preferred-networks: ${PREFERRED_NETWORKS:127.0.0.1}
     vault:
       # always on: the token public key can only come from Vault, so the service does not start without it
       enabled: true
@@ -38,6 +40,21 @@ spring:
       group-id: profile
       auto-offset-reset: earliest
       enable-auto-commit: false
+
+eureka:
+  instance:
+    hostname: ${EUREKA_INSTANCE_HOSTNAME:localhost}
+    instance-id: ${spring.application.name}:${spring.application.instance_id:${random.value}}
+  client:
+    # the gateway finds this service as lb://PROFILE, the application name above
+    service-url:
+      defaultZone: ${EUREKA_DEFAULT_ZONE:http://localhost:5000/eureka}
+    healthcheck:
+      enabled: true
+    fetch-registry: true
+    register-with-eureka: true
+    jersey:
+      enabled: false
 
 management:
   endpoints:

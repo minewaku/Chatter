@@ -19,12 +19,12 @@ import org.testcontainers.kafka.ConfluentKafkaContainer;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /**
- * Base class for tests that start the whole service against real PostgreSQL 17 and Kafka. Vault is switched off and
- * the token public key comes from a throwaway key pair, so tests can sign their own tokens.
+ * Base class for tests that start the whole service against real PostgreSQL 17 and Kafka. Vault and Eureka are
+ * switched off and the token public key comes from a throwaway key pair, so tests can sign their own tokens.
  */
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = "spring.cloud.vault.enabled=false")
+        properties = {"spring.cloud.vault.enabled=false", "eureka.client.enabled=false"})
 @Import(StartTestSupport.TestOverrides.class)
 public abstract class StartTestSupport {
 
