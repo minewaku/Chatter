@@ -1,8 +1,12 @@
 package com.minewaku.chatter.profilenext.presentation.image;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class ImageUrlResolverTest {
 
@@ -27,5 +31,14 @@ class ImageUrlResolverTest {
     @Test
     void noPathMeansNoImageAndGivesNull() {
         assertThat(new ImageUrlResolver("https://media.test").resolve(null)).isNull();
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"   ", "/", " /// "})
+    void aMissingBaseAddressStopsStartUp(String publicBaseUrl) {
+        assertThatThrownBy(() -> new ImageUrlResolver(publicBaseUrl))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("PROFILE_NEXT_PUBLIC_BASE_URL");
     }
 }
