@@ -2,10 +2,7 @@ package com.minewaku.chatter.profilenext.profile.api.exception;
 
 import java.util.Locale;
 
-/**
- * An upload request or an upload commit was refused. The message never contains a submitted value; {@link #ruleName()}
- * is the stable name clients and logs use.
- */
+/** An upload request or an upload commit was refused. The message never contains a submitted value. */
 public class ImageUploadRejectedException extends RuntimeException {
 
     public enum Reason {
@@ -34,10 +31,5 @@ public class ImageUploadRejectedException extends RuntimeException {
 
     public Reason reason() {
         return reason;
-    }
-
-    /** Lower-case snake form of the reason, for example {@code file_too_large}. */
-    public String ruleName() {
-        return reason.name().toLowerCase(Locale.ROOT);
     }
 }
