@@ -12,7 +12,6 @@ public enum ErrorCode {
     UNAUTHENTICATED(HttpStatus.UNAUTHORIZED, "Authentication is required."),
     FORBIDDEN(HttpStatus.FORBIDDEN, "Access is denied."),
     NOT_FOUND(HttpStatus.NOT_FOUND, "The resource was not found."),
-    CONFLICT(HttpStatus.CONFLICT, "The request conflicts with the current state."),
     UPLOAD_INCOMPLETE(HttpStatus.CONFLICT, "The file has not been fully uploaded yet."),
     UPLOAD_EXPIRED(HttpStatus.GONE, "The upload ticket has expired."),
     IMAGE_REJECTED(HttpStatus.UNPROCESSABLE_ENTITY, "The image was rejected."),

@@ -8,7 +8,7 @@ import java.util.Map;
  * Send {@code method} to {@code uploadUrl} with {@code headers} and the file as the body; for providers that take a form
  * upload, also send {@code fields}. Hand {@code imageId} back to the commit call once the upload has finished.
  */
-public record UploadPermissionResponse(
+public record UploadTicketResponse(
         String imageId,
         String uploadUrl,
         String method,
@@ -16,8 +16,8 @@ public record UploadPermissionResponse(
         Map<String, String> fields,
         Instant expiresAt) {
 
-    public static UploadPermissionResponse from(RequestImageUploadTicketUseCase.Result result) {
-        return new UploadPermissionResponse(
+    public static UploadTicketResponse from(RequestImageUploadTicketUseCase.Result result) {
+        return new UploadTicketResponse(
                 result.imageId(), result.uploadUrl(), result.method(), result.headers(), result.fields(), result.expiresAt());
     }
 }

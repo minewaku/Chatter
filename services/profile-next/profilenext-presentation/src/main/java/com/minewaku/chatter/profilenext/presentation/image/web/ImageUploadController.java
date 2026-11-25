@@ -3,8 +3,8 @@ package com.minewaku.chatter.profilenext.presentation.image.web;
 import com.minewaku.chatter.profilenext.presentation.image.ImageUrlResolver;
 import com.minewaku.chatter.profilenext.presentation.image.dto.CommitUploadRequest;
 import com.minewaku.chatter.profilenext.presentation.image.dto.CommitUploadResponse;
-import com.minewaku.chatter.profilenext.presentation.image.dto.UploadPermissionRequest;
-import com.minewaku.chatter.profilenext.presentation.image.dto.UploadPermissionResponse;
+import com.minewaku.chatter.profilenext.presentation.image.dto.UploadTicketRequest;
+import com.minewaku.chatter.profilenext.presentation.image.dto.UploadTicketResponse;
 import com.minewaku.chatter.profilenext.presentation.shared.security.AccessPrincipal;
 import com.minewaku.chatter.profilenext.profile.api.command.CommitImageUploadUseCase;
 import com.minewaku.chatter.profilenext.profile.api.command.RemoveImageUseCase;
@@ -40,9 +40,9 @@ public class ImageUploadController {
     private final ImageUrlResolver urls;
 
     @PostMapping("/{slot:avatar|banner}/upload")
-    public UploadPermissionResponse upload(
-            @AuthenticationPrincipal Jwt jwt, @PathVariable String slot, @Valid @RequestBody UploadPermissionRequest request) {
-        return UploadPermissionResponse.from(requestUpload.handle(new RequestImageUploadTicketUseCase.Command(
+    public UploadTicketResponse upload(
+            @AuthenticationPrincipal Jwt jwt, @PathVariable String slot, @Valid @RequestBody UploadTicketRequest request) {
+        return UploadTicketResponse.from(requestUpload.handle(new RequestImageUploadTicketUseCase.Command(
                 AccessPrincipal.from(jwt).userId(), slotName(slot), request.contentType(), request.sizeBytes())));
     }
 
